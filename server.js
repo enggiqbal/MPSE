@@ -8,7 +8,8 @@ const bodyParser = require("body-parser");
 app.use(bodyParser.urlencoded({
     extended: true
 }));
-
+//app.use(express.static('MPSE/outputs/'))
+app.use('/static', express.static('MPSE/outputs/'))
 // use res.render to load up an ejs view file
 
 // index page 
@@ -63,8 +64,6 @@ app.post('/run', function(req, res){
 
 
  
-
-
 
 app.listen( port);
 console.log('server is running on', port);

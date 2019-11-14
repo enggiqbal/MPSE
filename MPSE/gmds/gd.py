@@ -152,10 +152,10 @@ def coordinate_gradient_descent(x0s,dfs,fs=None,loops=1,rate=0.1,max_iters=1000,
     xs = copy.deepcopy(x0s)
     for i in range(loops):
         if feedback:
-            print(f'  Loop {i}:')
+            print('  Loop {i}:')
         for j in range(coord_num):
             if feedback:
-                print(f'  Coordinate {j}:')
+                print('  Coordinate {j}:')
             def df(xj):
                 xxs = copy.deepcopy(xs)
                 xxs[j] = xj
@@ -196,7 +196,7 @@ def example1():
                                cost_history=True,feedback=True,
                                plot_history=True)
     x = results['output'][0]
-    print(f'The minimum of f(x)=x^2 is {x}')
+    print('The minimum of f(x)=x^2 is {x}')
     plt.show()
 
 def example2():
@@ -212,7 +212,7 @@ def example2():
                                step_history=True,cost_history=True,
                                feedback=True,plot_history=True)
     x = results['output']
-    print(f'Solution: {x}')
+    print('Solution: {x}')
     plt.show()
     
 def example3():
@@ -226,7 +226,7 @@ def example3():
     results = coordinate_gradient_descent(x0s,dfs,fs=fs,rate=0.01,feedback=True)
     xs = results['output']
     (x,y) = (xs[0][0],xs[1][0])
-    print(f'The minimum of f(x,y)=x^2+(y-1)^2 is ({x},{y}).')
+    print('The minimum of f(x,y)=x^2+(y-1)^2 is ({x},{y}).')
     
 ############################### Old ###############################
 

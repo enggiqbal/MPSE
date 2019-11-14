@@ -99,7 +99,7 @@ def clean(D,epsilon=1e-3,verbose=0):
     if np.sum(D==0)>len(D):
         D += epsilon
         if verbose > 0:
-            print(f'  distances.clean(): {epsilon:0.2e} added to D')
+            print('  distances.clean(): {epsilon:0.2e} added to D')
 
 ##### Functions to add noise to distance/dissimilarity matrices #####
 

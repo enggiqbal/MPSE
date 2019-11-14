@@ -55,11 +55,11 @@ class Multiview(object):
         self.H = {}
         
         if verbose > 0:
-            print(f'  Number of views : {self.K}')
-            print(f'  Number of points : {self.N}')
-            print(f'  Embedding dimension : {self.persp.dimX}')
-            print(f'  Projection dimension : {self.persp.dimY}')
-            print(f'  Root-mean-squared of D : {self.D_rms:0.2e}\n')
+            print('  Number of views : {self.K}')
+            print('  Number of points : {self.N}')
+            print('  Embedding dimension : {self.persp.dimX}')
+            print('  Projection dimension : {self.persp.dimY}')
+            print('  Root-mean-squared of D : {self.D_rms:0.2e}\n')
             sys.stdout.flush()
 
     def setup_visualization(self,visualization='mds',**kwargs):
@@ -293,14 +293,14 @@ class Multiview(object):
             if self.verbose > 0:
                 print('  method : stochastic gradient descent')
                 if batch_number is None:
-                    print(f'  batch size : {batch_size}')
+                    print('  batch size : {batch_size}')
                 else:
-                    print(f'  batch number : {batch_number}')
+                    print('  batch number : {batch_number}')
             self.X, H = gd.mgd(self.X,F,lr=lr,**kwargs)
         self.update(H=H)
 
         if self.verbose > 0:
-            print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
+            print('  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
     def optimize_Q(self,batch_size=None,batch_number=None,lr=0.01,**kwargs):
         if self.verbose > 0:
@@ -315,7 +315,7 @@ class Multiview(object):
         self.update(H=H)
 
         if self.verbose > 0:
-            print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
+            print('  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
     def optimize_all(self,batch_size=None,batch_number=None,lr=0.01,**kwargs):
         if self.verbose:
@@ -332,7 +332,7 @@ class Multiview(object):
         self.X = XQ[0]; self.Q = XQ[1::]; self.update(H=H)
 
         if self.verbose > 0:
-            print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
+            print('  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
     def figureX(self,title='Final embedding',plot=True):
         if self.persp.dimX == 2:
