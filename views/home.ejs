@@ -1,0 +1,81 @@
+<%include header%>
+ 
+ 
+<div class="container">
+    <div class="row">
+        <div class="col-sm-12">
+            <h1> Data</h1>
+            <hr>
+            <h3> Preloaded Data</h3>
+            <input type="radio"> 1-2-3 Examples
+            <input type="radio"> Credit Data
+            <input type="radio"> Circle-Squire Data
+
+
+            <h3> Upload Distance Matrices</h3>
+            Distance Matrix 1: <input type="file" name="file1"><br>
+            Distance Matrix 2: <input type="file" name="file2"><br>
+            Distance Matrix 3: <input type="file" name="file3"><br>
+
+            <h3> Upload Tabular Data</h3>
+
+            File <input type="file" name="file3"><br>
+
+            <hr>
+            <h1> Experiment Settings</h1>
+
+            select algorithm: <select>
+                <option selected value="agd">adaptive gradient descent</option>
+                <option value="gd">gradient descent</option>
+                <option value="classic">classic implementation</option>
+            </select><br>
+
+
+            experiment name : <input type="text" value="exp" name="EXPERIMENT_NAME"><br>
+            number of projections: <input type="text" value="3" name="projections"><br>
+            projections Type: <select>
+                <optgroup label="fixed">
+                    <option value="same">same</option>
+                    <option selected="selected" value="standard">standard</option>
+                    <option value="cylinder">cylinder</option>
+                    <option value="orthogonal">orthogonal</option>
+                    <option value="normal">normal</option>
+                    <option value="uniform">uniform</option>
+                </optgroup>
+                <option value="variable">variable</option>
+            </select><br>
+
+            learning_rate: <input type="text" value="0.001" name="learning_rate"><br>
+            max iterations: <input type="text" value="1000" name="max_iters"><br>
+            sample_size: <input type="text" value="200" name="sample_size"><br>
+
+
+            initialization: <select>
+                <option value="mds">mds based</option>
+                <option value="random">random</option>
+            </select><br>
+
+            save progress <input type="checkbox" name="save_progress"><br>
+            verbose <input type="checkbox" name="verbose" checked><br>
+            <hr>
+
+
+            <h1>3D Visualization Settings</h1>
+            Background color: <select>
+                <option value="Black">Black</option>
+                <option value="White">White</option>
+            </select> <br>
+            Point color: <select>
+                <option value="Green">Green</option>
+                <option value="Purple">Purple</option>
+                <option value="Yellow">Yellow</option>
+            </select>
+            <hr>
+            You may leave your email address. If experiment takes more than 2 minutes we will send visualization link to
+            you. (optional)<br>
+            email <input type="email" name="email">
+            <hr>
+            <input type="button" value="Run">
+        </div>
+    </div>
+</div>
