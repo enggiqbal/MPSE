@@ -1,0 +1,15 @@
+number of data points 1000
+D1 33502010.22897352
+D2 43338094.427293584
+D3 43338094.427293584
+step:  1 , cost: 6333360920.97841
+early stopping at 1
+position js saved at: ../html3Dviz/cupmouse_12p1_pos.js
+position saved at: ../html3Dviz/cupmouse_12p1_pos.csv
+
+You may want to consider changing your batch submission script as follows to speed up your job run next time:
+
+#PBS -l select=1:ncpus=11:mem=11gb
+#PBS -l place=free:shared
+#PBS -l walltime=00:18:00
+

@@ -1,0 +1,488 @@
+
+Begin optimal_XQ():
+
+Begin find_X0():
+
+Begin MDS_descent():
+ initial stress = 2.45e+08
+ final stress = 4.98e+05
+
+End find_X0()
+
+Begin find_Q0():
+
+Begin MDSq_Qdescent():
+ initial stress = 7.54e+06
+ final stress = 7.44e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 2.27e+07
+ final stress = 4.40e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 7.40e+06
+ final stress = 4.99e+06
+End MDSq_Qdescent().
+
+ initial stress = 3.77e+07
+ final stress = 1.68e+07
+
+End find_Q0().
+
+Begin find_XQ():
+
+Begin mMDSq_Xdescent():
+initial stress = 1.68e+07
+final stress = 1.20e+07
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 5.56e+06
+ final stress = 5.06e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.52e+06
+ final stress = 3.09e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 2.87e+06
+ final stress = 2.71e+06
+End MDSq_Qdescent().
+
+ multiview stress = 1.09e+07
+
+Begin mMDSq_Xdescent():
+initial stress = 1.09e+07
+final stress = 9.42e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.68e+06
+ final stress = 4.14e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 2.80e+06
+ final stress = 2.18e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.94e+06
+ final stress = 1.80e+06
+End MDSq_Qdescent().
+
+ multiview stress = 8.12e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 8.12e+06
+final stress = 6.62e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 3.88e+06
+ final stress = 3.82e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.77e+06
+ final stress = 1.73e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 9.71e+05
+ final stress = 8.94e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.44e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.44e+06
+final stress = 6.19e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 3.92e+06
+ final stress = 3.91e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.57e+06
+ final stress = 1.57e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 7.02e+05
+ final stress = 6.92e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.17e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.17e+06
+final stress = 6.12e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 3.98e+06
+ final stress = 3.98e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.49e+06
+ final stress = 1.49e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.44e+05
+ final stress = 6.42e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.11e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.11e+06
+final stress = 6.10e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.01e+06
+ final stress = 4.01e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.46e+06
+ final stress = 1.46e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.26e+05
+ final stress = 6.26e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.10e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.10e+06
+final stress = 6.09e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.03e+06
+ final stress = 4.03e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.44e+06
+ final stress = 1.44e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.20e+05
+ final stress = 6.20e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.09e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.09e+06
+final stress = 6.09e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.03e+06
+ final stress = 4.03e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.44e+06
+ final stress = 1.44e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.18e+05
+ final stress = 6.18e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.09e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.09e+06
+final stress = 6.09e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.43e+06
+ final stress = 1.43e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.17e+05
+ final stress = 6.17e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.09e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.09e+06
+final stress = 6.09e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.43e+06
+ final stress = 1.43e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.17e+05
+ final stress = 6.17e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.08e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.08e+06
+final stress = 6.08e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.43e+06
+ final stress = 1.43e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.17e+05
+ final stress = 6.17e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.08e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.08e+06
+final stress = 6.08e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.42e+06
+ final stress = 1.42e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.17e+05
+ final stress = 6.17e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.08e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.08e+06
+final stress = 6.08e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.42e+06
+ final stress = 1.42e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.17e+05
+ final stress = 6.17e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.08e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.08e+06
+final stress = 6.08e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.42e+06
+ final stress = 1.42e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.18e+05
+ final stress = 6.18e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.07e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.07e+06
+final stress = 6.07e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.41e+06
+ final stress = 1.41e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.19e+05
+ final stress = 6.18e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.07e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.07e+06
+final stress = 6.07e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.40e+06
+ final stress = 1.40e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.20e+05
+ final stress = 6.19e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.06e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.06e+06
+final stress = 6.06e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.39e+06
+ final stress = 1.39e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.22e+05
+ final stress = 6.21e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.05e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.05e+06
+final stress = 6.05e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.04e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.38e+06
+ final stress = 1.38e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.24e+05
+ final stress = 6.23e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.04e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.04e+06
+final stress = 6.03e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.04e+06
+ final stress = 4.03e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.37e+06
+ final stress = 1.37e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.27e+05
+ final stress = 6.25e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.02e+06
+
+Begin mMDSq_Xdescent():
+initial stress = 6.02e+06
+final stress = 6.01e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 4.03e+06
+ final stress = 4.03e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.35e+06
+ final stress = 1.35e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.31e+05
+ final stress = 6.29e+05
+End MDSq_Qdescent().
+
+ multiview stress = 6.00e+06
+
+ initial stress = 1.68e+07
+ final stress = 6.00e+06
+
+End find_XQ().
+
+End optimal_XQ().
+
+You may want to consider changing your batch submission script as follows to speed up your job run next time:
+
+#PBS -l select=1:ncpus=11:mem=1gb
+#PBS -l place=free:shared
+#PBS -l walltime=00:59:00
+

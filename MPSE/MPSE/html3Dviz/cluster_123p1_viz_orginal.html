@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html lang="en">
+	<head>
+
+		<title>miltiview3d</title>
+		<meta charset="utf-8">
+
+		<style>
+			body {
+				background-color: #000000;
+				margin: 0px;
+				overflow: hidden;
+				font-family:Monospace;
+				font-size:13px;
+				text-align:center;
+				font-weight: bold;
+				text-align:center;
+			}
+
+			a {
+				color:#0078ff;
+			}
+
+			#info {
+				color: #fff;
+				position: absolute;
+				top: 0px; width: 100%;
+				padding: 5px;
+				z-index: 100;
+			}
+
+		</style>
+
+
+		<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.js"></script>
+		<script src="stats.js"></script>
+			 <!--		<script src="sqcirtr_123p1_coordinates_tmp.js"></script> -->
+
+		<script src="cluster_123p1_coordinates_tmp.js"></script>
+
+
+<script type="text/javascript">var zoomfactor=20; var view=Array(); view[0]=[0.3,0,35];view[1]=[0,35,0];view[2]=[35,0,0];</script>
+	<script type="text/javascript">var zoomfactor=100; var view=Array(); view[0]=[0.,1.,0.]; view[1]=[0.,0.,1.]; view[2]=[1.,0.,0.];</script>
+<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+
+
+
+	</head>
+	<body>
+
+<img src="eye.png" width="64px" onclick=viz(view[0])>
+<img src="eye.png" width="64px" onclick=viz(view[1])>
+<img src="eye.png" width="64px" onclick=viz(view[2])>
+<br>
+<div id=info></div>
+	  		<script>
+
+//document.getElementById("info").innerHTML = "Iteration:" +  steps + " cost:" +cost + ", t:" + t;
+
+
+        var scene = new THREE.Scene();
+        var camera = new THREE.PerspectiveCamera(60, window.innerWidth / window.innerHeight, 1, 1000);
+        camera.position.set(0, 0, 35);
+        camera.lookAt(scene.position);
+        var renderer = new THREE.WebGLRenderer({
+          antialias: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+				//scene.background = new THREE.Color( 0xffffff );
+
+//const fontJson = require( "./fonts/helvetiker_regular.typeface.json" );
+
+//var fontl = new THREE.FontLoader().load( "./fonts/helvetiker_regular.typeface.json" );
+//var font = new THREE.Font(fontl  );
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+var color=["red","green", "blue", "white",'yellow','orange']
+//var texture1 = new THREE.TextureLoader().load('dot.png');
+//var texture1 = new THREE.TextureLoader().load('crate.gif');
+//x=new THREE.IcosahedronBufferGeometry(2)
+
+
+
+
+
+
+
+var loader = new THREE.FontLoader();
+
+
+//var ssp;
+//var loader = new THREE.FontLoader();
+//loader.load('./fonts/helvetiker_regular.typeface.json', function(font) { ssp = font });
+
+/*
+loader.load( './fonts/helvetiker_regular.typeface.json', function ( font ) {
+
+	for (var i =0 ; i< points.length; i++)
+	{
+
+		var c=color[label[i][cluster]-1]
+		var shape=label[i][1]
+		var t=''+label[i][0] + label[i][1]+label[i][2]
+		var x=points[i][0]
+		var y=points[i][1]
+		var z=points[i][2]
+		 console.log(""+window.t + " "+  i + "( " + window.x + y + z + ")")
+
+
+	f=font;
+  var textGeometry = new THREE.TextGeometry( t, {  font: f,  size: 1,  height: .12,  curveSegments: 1,  bevelThickness: 1  });
+  var textMaterial = new THREE.MeshBasicMaterial(  {sizeAttenuation: false , color: c, specular: 'green' }  );
+  var mesh = new THREE.Mesh( textGeometry, textMaterial );
+	mesh.position.set(x,y,z)
+  scene.add( mesh );
+}
+
+});
+
+
+var geo = new THREE.PlaneBufferGeometry(10, 10, 35, 10);
+var mat = new THREE.MeshBasicMaterial({ opacity: 0.1,color: 'red', side: THREE.DoubleSide });
+var plane = new THREE.Mesh(geo, mat);
+plane.translateZ( 1 )
+plane.translateX( 1.5 )
+plane.rotation.set(new THREE.Vector3( 0.1, 0.5, Math.PI / 2));
+
+scene.add(plane);
+*/
+
+//p=proj[proj.length-1];
+//draw_plane(p[0],'coral')
+//draw_plane(p[1],'gray')
+//draw_plane(p[2],'purple')
+
+function draw_plane(p,c){
+	var f=500
+var point1 = new THREE.Vector3(- f*p[3]/p[0],0,0);//x axis intersection
+var point2 = new THREE.Vector3(0,- f* p[3]/p[1],0);//y axis intersection
+var point3 = new THREE.Vector3(0,0,-f *p[3]/p[2]);//z axis intersection
+
+
+var geom = new THREE.Geometry();
+geom.vertices.push(point1);// adding vertices to geometry
+geom.vertices.push(point2);
+geom.vertices.push(point3);
+
+
+geom.faces.push( new THREE.Face4( 0, 1, 2   ));
+var material = new THREE.MeshBasicMaterial({transparent: true, opacity: 0.5,
+    color: c, // RGB hex color for material
+    side: THREE.DoubleSide // do not hide object when viewing from back
+});
+scene.add(new THREE.Mesh(geom,material));
+}
+
+
+
+function viz(point)
+{
+	camera.position.set(point[0]*zoomfactor,point[1]*zoomfactor,point[2]*zoomfactor);
+
+camera.lookAt(scene.position);
+
+for (var i =0 ; i< points.length; i++)
+{
+var c=color[1]
+var shape=1;//label[i][1]
+var t=''//+label[i][0] + label[i][1]+label[i][2]
+var x=points[i][0]
+var y=points[i][1]
+var z=points[i][2]
+
+
+mat = new THREE.MeshBasicMaterial({ sizeAttenuation: false ,color: c});
+geom = new THREE.CubeGeometry( 0.1, 0.1,0.1);
+cube = new THREE.Mesh( geom, mat );
+cube.position.set(points[i][0],points[i][1],points[i][2])
+
+
+var geometry = new THREE.SphereGeometry( 0.1, 0.1 );
+var material = new THREE.MeshBasicMaterial( { sizeAttenuation: false , color: c } );
+var sphere = new THREE.Mesh( geometry, material );
+sphere.position.set(points[i][0],points[i][1],points[i][2])
+
+
+
+        var dotGeometry = new THREE.Geometry();
+        dotGeometry.vertices.push(new THREE.Vector3( points[i][0],points[i][1],points[i][2] ));
+        var dotMaterial = new THREE.PointsMaterial( {color: c , size: 4,  sizeAttenuation: false } );
+        var dot = new THREE.Points( dotGeometry, dotMaterial );
+scene.add( dot )
+
+//if (shape>4)
+//scene.add( words );
+
+//else
+//	scene.add( cube );
+        //scene.add( cube );
+
+}
+}
+
+viz(view[0])
+var worldAxis = new THREE.AxesHelper(40);
+   scene.add( worldAxis );
+
+        var idx = 0;
+        var maxIdx = 10;
+
+        window.addEventListener("mousemove", onMouseMove, false);
+        window.addEventListener("mousedown", onMouseDown, false);
+
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+        var intersects = [];
+
+        function onMouseMove(event) {
+          mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+          mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function onMouseDown(event) {
+          raycaster.setFromCamera(mouse, camera);
+
+        }
+
+        render();
+
+        function render() {
+          requestAnimationFrame(render);
+          renderer.render(scene, camera);
+        }
+
+		</script>
+	</body>
+</html>

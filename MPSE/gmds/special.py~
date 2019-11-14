@@ -1,0 +1,11 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+from . import gd, mds
+
+def mMDS_Xdescent_Qmultiple():
+    """\
+    Multiview MDS X optimization for different Q matrices.
+    Returns optimal Q_list
+    """
+    

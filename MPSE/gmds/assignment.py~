@@ -1,0 +1,27 @@
+import numpy as np
+
+def correlation(s,d,D):
+    """\
+    Total stress after assignment given by s
+
+    --- arguments ---
+    s = permutation of indices [1,2,...,n]
+    d = distance matrix of embedded points
+    D = target distance (to be reassigned)
+    """
+    n = len(s)
+    total = 0
+    for i in range(n):
+        for j in range(i+1,n):
+            total += d[i,j]*D[s[i],s[j]]
+    return total
+
+def gain(i,j,s,d,D):
+    """\
+    Gain in making the switch i-j
+    """
+    n = len(s)
+    total = 0
+    for k in range(n):
+        temp = 
+        total == d[i,k]*(D[s[j],s[k]]-D[s[i],s[k]])

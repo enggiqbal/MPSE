@@ -1,0 +1,448 @@
+
+Begin optimal_XQ():
+
+Begin find_X0():
+
+Begin MDS_descent():
+ initial stress = 3.54e+07
+ final stress = 3.33e+05
+
+End find_X0()
+
+Begin find_Q0():
+
+Begin MDSq_Qdescent():
+ initial stress = 5.23e+06
+ final stress = 2.84e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 2.49e+06
+ final stress = 1.56e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.62e+06
+ final stress = 1.45e+06
+End MDSq_Qdescent().
+
+ initial stress = 9.33e+06
+ final stress = 5.85e+06
+
+End find_Q0().
+
+Begin find_XQ():
+
+Begin mMDSq_Xdescent():
+initial stress = 5.85e+06
+final stress = 4.53e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.28e+06
+ final stress = 2.25e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 9.04e+05
+ final stress = 8.83e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.35e+06
+ final stress = 1.30e+06
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 4.43e+06
+final stress = 4.22e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.30e+06
+ final stress = 2.30e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 7.07e+05
+ final stress = 6.97e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.21e+06
+ final stress = 1.20e+06
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 4.19e+06
+final stress = 4.06e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.40e+06
+ final stress = 2.40e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 5.71e+05
+ final stress = 5.63e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 1.09e+06
+ final stress = 1.08e+06
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 4.04e+06
+final stress = 3.93e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.50e+06
+ final stress = 2.50e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 4.73e+05
+ final stress = 4.67e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 9.64e+05
+ final stress = 9.57e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.92e+06
+final stress = 3.84e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.56e+06
+ final stress = 2.56e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 4.16e+05
+ final stress = 4.11e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 8.66e+05
+ final stress = 8.61e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.83e+06
+final stress = 3.79e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.62e+06
+ final stress = 2.62e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.82e+05
+ final stress = 3.78e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 7.90e+05
+ final stress = 7.86e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.78e+06
+final stress = 3.75e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.66e+06
+ final stress = 2.66e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.60e+05
+ final stress = 3.57e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 7.24e+05
+ final stress = 7.22e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.74e+06
+final stress = 3.71e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.70e+06
+ final stress = 2.70e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.42e+05
+ final stress = 3.40e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 6.61e+05
+ final stress = 6.59e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.70e+06
+final stress = 3.66e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.74e+06
+ final stress = 2.73e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.28e+05
+ final stress = 3.26e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 5.95e+05
+ final stress = 5.93e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.65e+06
+final stress = 3.62e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.77e+06
+ final stress = 2.76e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.20e+05
+ final stress = 3.18e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 5.34e+05
+ final stress = 5.33e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.61e+06
+final stress = 3.58e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.79e+06
+ final stress = 2.79e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.15e+05
+ final stress = 3.14e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 4.80e+05
+ final stress = 4.79e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.58e+06
+final stress = 3.55e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.80e+06
+ final stress = 2.80e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.15e+05
+ final stress = 3.14e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 4.34e+05
+ final stress = 4.33e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.55e+06
+final stress = 3.53e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.81e+06
+ final stress = 2.81e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.17e+05
+ final stress = 3.16e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.99e+05
+ final stress = 3.98e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.52e+06
+final stress = 3.51e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.82e+06
+ final stress = 2.81e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.19e+05
+ final stress = 3.18e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.78e+05
+ final stress = 3.77e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.51e+06
+final stress = 3.50e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.82e+06
+ final stress = 2.82e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.19e+05
+ final stress = 3.19e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.63e+05
+ final stress = 3.62e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.50e+06
+final stress = 3.49e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.82e+06
+ final stress = 2.82e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.20e+05
+ final stress = 3.19e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.52e+05
+ final stress = 3.52e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.49e+06
+final stress = 3.48e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.82e+06
+ final stress = 2.82e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.20e+05
+ final stress = 3.19e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.44e+05
+ final stress = 3.44e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.48e+06
+final stress = 3.48e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.82e+06
+ final stress = 2.82e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.19e+05
+ final stress = 3.19e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.38e+05
+ final stress = 3.37e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.48e+06
+final stress = 3.47e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.82e+06
+ final stress = 2.82e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.19e+05
+ final stress = 3.19e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.33e+05
+ final stress = 3.33e+05
+End MDSq_Qdescent().
+
+Begin mMDSq_Xdescent():
+initial stress = 3.47e+06
+final stress = 3.47e+06
+End mMDSq_Xdescent():
+
+Begin MDSq_Qdescent():
+ initial stress = 2.82e+06
+ final stress = 2.82e+06
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.18e+05
+ final stress = 3.18e+05
+End MDSq_Qdescent().
+
+Begin MDSq_Qdescent():
+ initial stress = 3.30e+05
+ final stress = 3.29e+05
+End MDSq_Qdescent().
+
+ initial stress = 5.85e+06
+ final stress = 3.47e+06
+
+End find_XQ().
+
+End optimal_XQ().
+
+You may want to consider changing your batch submission script as follows to speed up your job run next time:
+
+#PBS -l select=1:ncpus=11:mem=1gb
+#PBS -l place=free:shared
+#PBS -l walltime=00:32:00
+

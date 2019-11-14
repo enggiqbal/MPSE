@@ -1,0 +1,7 @@
+
+You may want to consider changing your batch submission script as follows to speed up your job run next time:
+
+#PBS -l select=1:ncpus=11:mem=11gb
+#PBS -l place=free:shared
+#PBS -l walltime=60:06:00
+

@@ -1,0 +1,11 @@
+singularity pull --name gdocker.simg docker://hossain/gdocker
+python3 multiview_distance_martix.py cluster ../dataset_3D/dist_1.csv ../dataset_3D/dist_2.csv ../dataset_3D/dist_3.csv 0.001 10000 ../html3Dviz/
+singularity exec gdocker.simg python3 multiview_distance_martix.py cluster ../dataset_3D/dist_1.csv ../dataset_3D/dist_2.csv ../dataset_3D/dist_3.csv 0.001 10000 ../html3Dviz/
+
+
+singularity exec /extra/hossain/gdocker.simg python3 multiview_distance_martix.py shape ../dataset_3D/sq_cir_tr_dataset/750/data_mat_cir_750.csv ../dataset_3D/sq_cir_tr_dataset/750/data_mat_sq_750.csv ../dataset_3D/sq_cir_tr_dataset/750/data_mat_tr_750.csv 0.0001 10 ../html3Dviz/
+
+
+qsub -k oe multiviewpbs_shape.pbs
+
+python3 multiview_distance_martix-projection.py cluster_proj ../dataset_3D/clusters_dataset/dist_1.csv ../dataset_3D/clusters_dataset/dist_2.csv ../dataset_3D/clusters_dataset/dist_3.csv 0.001 10 ../html3Dviz/

@@ -1,0 +1,181 @@
+import numpy as np
+import matplotlib.pyplot as plt
+
+params = {
+    'rate' : 1.0,
+    'precision' : 1e-6,
+
+    'max_iters' : 2000,
+    'max_step_size' : 1e5,
+    'initial_step_size' : 1.0,
+
+    'rates' : None,
+    'coord_max_iters' : 100,
+    'coord_max_switches' : 100
+}
+
+def set_params(**kwargs):
+    for key in params.keys():
+        if key not in kwargs.keys():
+            kwargs[key] = params[key]
+    return kwargs
+
+### Gradient descent ###
+
+def gradient_descent(df,X0,**kwargs):
+    """\
+    Gradient descent algorithm
+
+    df : gradient function
+    X0 : initial point
+    rate : learning rate
+    precision : stoping criterion
+
+    Note: X0 can be a number, vector, or matrix
+    """
+    params = set_params(**kwargs)
+    
+    iters = 0
+    step_size = params['initial_step_size']
+    x = X0
+    
+    while (params['precision'] < step_size < params['max_step_size'] and
+           iters < params['max_iters']):
+        x0 = x
+        x = x - params['rate']*df(x)
+        step_size = np.linalg.norm(x-x0)
+        iters += 1
+        
+    return x
+
+def gradient_descent_trajectory(df,X0,**kwargs):
+    """\
+    Gradient descent algorithm, returning whole trajectory of X0
+
+    df : gradient function
+    X0 : initial point
+    rate : learning rate
+    precision : stoping criterion
+
+    Note: X0 can be a number, vector, or matrix
+    """
+    params = set_params(**kwargs)
+
+    (n,p) = X0.shape
+    X_trajectory = np.empty((params['max_iters']+1,n,p))
+    X_trajectory[0] = X0
+    
+    iters = 0
+    step_size = params['initial_step_size']
+    x = X0
+
+    while (params['precision'] < step_size < params['max_step_size'] and
+           iters < params['max_iters']):
+        x0 = x
+        x = x - params['rate']*df(x)
+        step_size = np.linalg.norm(x-x0)
+        X_trajectory[iters+1] = x
+        iters += 1
+
+    return X_trajectory[0:iters+1]
+
+def coord_gradient_descent(dff,XX0,rates=None,**kwargs):
+    m = len(dff)
+    params = set_params(**kwargs)
+    if params['rates'] is None:
+        params['rates'] = m*[params['rate']]
+
+    iters = 0
+    step_size = params['initial_step_size']
+    xx = XX0.copy()
+
+    while (params['precision'] < step_size < params['max_step_size'] and
+           iters < params['coord_max_switches']):
+
+        for i in range(m):
+            x0 = xx0[m].copy()
+            = gradient_descent(dff[i],X0,rate=rates[m],
+                               max_iters=kwargs['coord_max_iters'],**kwargs)
+        iters += 1
+    
+
+def coordinate_gradient_descent(dff,XX0,rates=None,**kwargs):
+    """\
+    Coordinate gradient descent
+
+    dff : list containing gradient functions for each component
+    XX0 : list containing starting positions for each component
+    rates : list containing learning rate for each component
+    """
+    K = len(dff)
+    params = set_params(**kwargs)
+    if params['rates'] is None:
+        params['rates'] = K*[params['rate']]
+        
+    iters = 0
+    step_size = params['initial_step_size']
+    xx = XX0.copy()
+    
+    while (params['precision'] < step_size < params['max_step_size'] and
+           iters < params['max_iters']):
+        xx0 = xx.copy()
+        step_size = 0
+        for k in range(K):
+            temp = params['rates'][k]*dff[k](xx0)
+            xx[k] -= temp
+            step_size += np.linalg.norm(temp)
+        iters += 1
+
+    return xx
+
+def coord_proj_gradient_descent(df,X0,g1,Y0,**kwargs):
+    """\
+    Coordinate gradient descent w/ second coordinate given by update g1
+    """
+    params = set_params(**kwargs)
+    
+    iters = 0
+    step_size = params['initial_step_size']
+    x = X0; y = Y0
+    
+    while (params['precision'] < step_size < params['max_step_size'] and
+           iters < params['max_iters']):
+        x0 = x.copy()
+        y0 = y.copy()
+        x -= params['rate']*df(x0,y0)
+        y = g1(x0,yo,params['rate'])
+        step_size = np.sqrt(np.linalg.norm(x-x0)**2+np.linalg.norm(y-y0)**2)
+        iters += 1
+        print(iters)
+
+    return (x,y)
+
+def projected_coordinate_gradient_descent(dff,pp,XX0,**kwargs):
+    """\
+    Projected coordinate gradient descent
+    
+    dff : list containing gradient functions
+    pp : list containing projection functions
+    XX0 : list containing initial configurations
+    """
+    K = len(dff)
+    params = set_params(**kwargs)
+    if params['rates'] is None:
+        params['rates'] = K*[params['rate']]
+        
+    iters = 0
+    step_size = params['initial_step_size']
+    xx = XX0.copy()
+
+    while (params['precision'] < step_size < params['max_step_size'] and
+           iters < params['max_iters']):
+        xx0 = xx.copy()
+        step_size = 0
+        for k in range(K):
+            temp1 = params['rates'][k]*dff[k](xx0)
+            temp2 = xx[k] - temp1
+            xx[k] = pp[k](temp2)
+            step_size += np.linalg.norm(xx[k]-xx0[k])
+        iters += 1
+        
+    return

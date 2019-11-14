@@ -1,0 +1,26 @@
+import numpy as np
+import matplotlib.pyplot as plt
+from mpl_toolkits.mplot3d import Axes3D
+from scipy.spatial import distance_matrix
+
+from . import mds, special
+
+### Initialization ###
+
+def initialization_test():
+    print('\n Begin initialization_test()')
+    
+    n = 10
+    X_rate = 0.01
+    X_max_its = 1000
+    Q_rate = 0.001
+    Q_max_its = 1000
+    
+    X = random_ssphere(n) #true positions
+    Qs = special.standard_projection_matrices()
+    Ds = special.distance_matrices(X,Qs)
+
+    X0 = find_X0(Ds,feedback=True,rate=X_rate,max_its=X_max_its)
+    Q0s = find_Q0(X0,Ds,feedback=True,rate=Q_rate,max_its=Q_max_its)
+
+ 

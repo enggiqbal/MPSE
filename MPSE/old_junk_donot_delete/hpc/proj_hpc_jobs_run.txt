@@ -1,0 +1,7 @@
+ qsub proj_pbs/proj123_123p2.pbs 
+ qsub proj_pbs/projcluster_123p1.pbs 
+ qsub proj_pbs/projconfname_123p1.pbs 
+ qsub proj_pbs/projsqcirtr_123p2.pbs 
+ qsub proj_pbs/proj123old_123p1.pbs 
+ qsub proj_pbs/projgrid_12p1.pbs 
+ qsub proj_pbs/projcupmouse_12p1.pbs 

@@ -1,0 +1,398 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+
+    <title>miltiview3d</title>
+    <meta charset="utf-8">
+
+    <style>
+        #tooltip {
+            position: fixed;
+            left: 0;
+            top: 0;
+            min-width: 100px;
+            text-align: center;
+            padding: 5px 12px;
+            font-family: monospace;
+            background: #a0c020;
+            display: none;
+            opacity: 0;
+            border: 1px solid black;
+            box-shadow: 2px 2px 3px rgba(0, 0, 0, 0.5);
+            transition: opacity 0.25s linear;
+            border-radius: 3px;
+        }
+
+        body {
+            background-color: #000000;
+            margin: 0px;
+            overflow: hidden;
+            font-family: Monospace;
+            font-size: 13px;
+            text-align: center;
+            font-weight: bold;
+            text-align: center;
+        }
+
+        a {
+            color: #0078ff;
+        }
+
+        #info {
+            color: #fff;
+            position: absolute;
+            top: 0px;
+            width: 100%;
+            padding: 5px;
+            z-index: 100;
+        }
+    </style>
+
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.js"></script>
+    <script src="stats.js"></script>
+    <!--		<script src="sqcirtr_123p1_coordinates_tmp.js"></script> -->
+
+    <script src="cluster_123p1_coordinates_tmp.js"></script>
+
+
+    <script
+        type="text/javascript">var zoomfactor = 20; var view = Array(); view[0] = [0.3, 0, 35]; view[1] = [0, 35, 0]; view[2] = [35, 0, 0];</script>
+    <script
+        type="text/javascript">var zoomfactor = 100; var view = Array(); view[0] = [0., 1., 0.]; view[1] = [0., 0., 1.]; view[2] = [1., 0., 0.];</script>
+    <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+    <script src="labels.js"></script>
+
+    <script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+</head>
+
+<body>
+    <div id="tooltip"></div>
+    <img src="eye.png" width="64px" onclick=viz(view[0])>
+    <img src="eye.png" width="64px" onclick=viz(view[1])>
+    <img src="eye.png" width="64px" onclick=viz(view[2])>
+    <br>
+    <div id=info>xxx</div>
+    <script>
+
+        //document.getElementById("info").innerHTML = "Iteration:" +  steps + " cost:" +cost + ", t:" + t;
+        // source of tooltip: https://stackoverflow.com/questions/39177205/threejs-tooltip
+
+        var scene = new THREE.Scene();
+        camera = new THREE.PerspectiveCamera(55, window.innerWidth / window.innerHeight, 0.1, 1000);
+        camera.position.x = 5;
+        camera.position.y = 5;
+        camera.position.z = 5;
+        camera.lookAt(0, 0, 0);
+        var tooltipEnabledObjects = [];
+        var raycaster = new THREE.Raycaster();
+        var renderer = new THREE.WebGLRenderer({
+            antialias: true
+        });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        document.body.appendChild(renderer.domElement);
+        scene.background = new THREE.Color(0x000);
+
+        //const fontJson = require( "./fonts/helvetiker_regular.typeface.json" );
+
+        //var fontl = new THREE.FontLoader().load( "./fonts/helvetiker_regular.typeface.json" );
+        //var font = new THREE.Font(fontl  );
+        var controls = new THREE.OrbitControls(camera, renderer.domElement);
+        var color = ["red", "green", "blue", "white", 'yellow', 'orange']
+        //var texture1 = new THREE.TextureLoader().load('dot.png');
+        //var texture1 = new THREE.TextureLoader().load('crate.gif');
+        //x=new THREE.IcosahedronBufferGeometry(2)
+
+
+
+
+
+
+
+        var loader = new THREE.FontLoader();
+
+
+        //var ssp;
+        //var loader = new THREE.FontLoader();
+        //loader.load('./fonts/helvetiker_regular.typeface.json', function(font) { ssp = font });
+
+        /*
+        loader.load( './fonts/helvetiker_regular.typeface.json', function ( font ) {
+        
+            for (var i =0 ; i< points.length; i++)
+            {
+        
+                var c=color[label[i][cluster]-1]
+                var shape=label[i][1]
+                var t=''+label[i][0] + label[i][1]+label[i][2]
+                var x=points[i][0]
+                var y=points[i][1]
+                var z=points[i][2]
+                 console.log(""+window.t + " "+  i + "( " + window.x + y + z + ")")
+        
+        
+            f=font;
+          var textGeometry = new THREE.TextGeometry( t, {  font: f,  size: 1,  height: .12,  curveSegments: 1,  bevelThickness: 1  });
+          var textMaterial = new THREE.MeshBasicMaterial(  {sizeAttenuation: false , color: c, specular: 'green' }  );
+          var mesh = new THREE.Mesh( textGeometry, textMaterial );
+            mesh.position.set(x,y,z)
+          scene.add( mesh );
+        }
+        
+        });
+        
+        
+        var geo = new THREE.PlaneBufferGeometry(10, 10, 35, 10);
+        var mat = new THREE.MeshBasicMaterial({ opacity: 0.1,color: 'red', side: THREE.DoubleSide });
+        var plane = new THREE.Mesh(geo, mat);
+        plane.translateZ( 1 )
+        plane.translateX( 1.5 )
+        plane.rotation.set(new THREE.Vector3( 0.1, 0.5, Math.PI / 2));
+        
+        scene.add(plane);
+        */
+
+        //p=proj[proj.length-1];
+        //draw_plane(p[0],'coral')
+        //draw_plane(p[1],'gray')
+        //draw_plane(p[2],'purple')
+        /*
+        function draw_plane(p,c){
+            var f=500
+        var point1 = new THREE.Vector3(- f*p[3]/p[0],0,0);//x axis intersection
+        var point2 = new THREE.Vector3(0,- f* p[3]/p[1],0);//y axis intersection
+        var point3 = new THREE.Vector3(0,0,-f *p[3]/p[2]);//z axis intersection
+        
+        
+        var geom = new THREE.Geometry();
+        geom.vertices.push(point1);// adding vertices to geometry
+        geom.vertices.push(point2);
+        geom.vertices.push(point3);
+        
+        
+        geom.faces.push( new THREE.Face4( 0, 1, 2   ));
+        var material = new THREE.MeshBasicMaterial({transparent: true, opacity: 0.5,
+            color: c, // RGB hex color for material
+            side: THREE.DoubleSide // do not hide object when viewing from back
+        });
+        scene.add(new THREE.Mesh(geom,material));
+        }
+        
+        */
+
+
+        function drawpoints() {
+
+
+            for (var i = 0; i < points.length; i++) {
+                
+                var c = color[0];
+                var c2 = color[1];
+                //var shape=1;//label[i][1]
+                var t = ''//+label[i][0] + label[i][1]+label[i][2]
+                var x = points[i][0]
+                var y = points[i][1]
+                var z = points[i][2]
+
+                tooltiptextdata="" + labels[i]
+
+                mat = new THREE.MeshBasicMaterial({ sizeAttenuation: false, color: c, transparent: true });
+                if (labels[i][2] == 5) { mat.opacity = 0.4 }
+                geom = new THREE.CubeGeometry(0.2, 0.2, 0.2);
+                cube = new THREE.Mesh(geom, mat);
+                cube.position.set(points[i][0], points[i][1], points[i][2])
+                if (labels[i][1] == 3) { cube.material.color.set(c2); }
+
+
+                var geometry = new THREE.SphereGeometry(0.2, 0.2);
+                var material = new THREE.MeshBasicMaterial({ sizeAttenuation: false, color: c, transparent: true });
+                if (labels[i][2] == 5) { material.opacity = 0.4 }
+                var sphere = new THREE.Mesh(geometry, material);
+                sphere.position.set(points[i][0], points[i][1], points[i][2])
+                if (labels[i][1] == 3) { sphere.material.color.set(c2); }
+
+                sphere.userData.tooltipText = tooltiptextdata;
+                cube.userData.tooltipText = tooltiptextdata;
+
+                var dotGeometry = new THREE.Geometry();
+                dotGeometry.vertices.push(new THREE.Vector3(points[i][0], points[i][1], points[i][2]));
+                var dotMaterial = new THREE.PointsMaterial({ color: c, size: 4, sizeAttenuation: false });
+                var dot = new THREE.Points(dotGeometry, dotMaterial);
+
+                if (labels[i][0] == 1) {
+                    scene.add(cube);
+                    tooltipEnabledObjects.push(cube);
+                }
+                else {
+                    scene.add(sphere);
+                    tooltipEnabledObjects.push(sphere);
+                }
+            }
+        }
+                // this will be 2D coordinates of the current mouse position, [0,0] is middle of the screen.
+                var mouse = new THREE.Vector2();
+
+                var latestMouseProjection; // this is the latest projection of the mouse on object (i.e. intersection with ray)
+                var hoveredObj; // this objects is hovered at the moment
+
+                // tooltip will not appear immediately. If object was hovered shortly,
+                // - the timer will be canceled and tooltip will not appear at all.
+                var tooltipDisplayTimeout;
+
+                // This will move tooltip to the current mouse position and show it by timer.
+                function showTooltip() {
+                    var divElement = $("#tooltip");
+                   // console.log(divElement)
+                    //var divElement = document.getElementById("tooltip")
+                    console.log("showTooltip")
+                    if (divElement && latestMouseProjection) {
+                       // divElement.display="block"
+                        
+                        divElement.css({
+                            display: "block",
+                            opacity: 0.0
+                        });
+                          
+                        var canvasHalfWidth = renderer.domElement.offsetWidth / 2;
+                        var canvasHalfHeight = renderer.domElement.offsetHeight / 2;
+
+                        var tooltipPosition = latestMouseProjection.clone().project(camera);
+                        tooltipPosition.x = (tooltipPosition.x * canvasHalfWidth) + canvasHalfWidth + renderer.domElement.offsetLeft;
+                        tooltipPosition.y = -(tooltipPosition.y * canvasHalfHeight) + canvasHalfHeight + renderer.domElement.offsetTop;
+
+                        var tootipWidth =   divElement[0].offsetWidth;
+                        var tootipHeight =  divElement[0].offsetHeight;
+ 
+                        divElement.css({
+                            left: `${tooltipPosition.x - tootipWidth / 2}px`,
+                            top: `${tooltipPosition.y - tootipHeight - 5}px`
+                        });
+ 
+                        // var position = new THREE.Vector3();
+                        // var quaternion = new THREE.Quaternion();
+                        // var scale = new THREE.Vector3();
+                        // hoveredObj.matrix.decompose(position, quaternion, scale);
+                        divElement.text(hoveredObj.userData.tooltipText);
+
+                        setTimeout(function () {
+                            divElement.css({
+                                opacity: 1.0
+                            });
+                        }, 25);
+                    }
+                }
+
+                // This will immediately hide tooltip.
+                function hideTooltip() {
+                    var divElement = document.getElementById("tooltip")
+                    divElement.display="none" 
+                    //classList.remove("foo");
+                    /*
+                    if (divElement) {
+                        divElement.css({
+                            display: "none"
+                        });
+                       
+                    } */
+                }
+
+                // Following two functions will convert mouse coordinates
+                // from screen to three.js system (where [0,0] is in the middle of the screen)
+                function updateMouseCoords(event, coordsObj) {
+                    coordsObj.x = ((event.clientX - renderer.domElement.offsetLeft + 0.5) / window.innerWidth) * 2 - 1;
+                    coordsObj.y = -((event.clientY - renderer.domElement.offsetTop + 0.5) / window.innerHeight) * 2 + 1;
+                }
+
+                function handleManipulationUpdate() {
+                    console.log("handelMan...")
+                    raycaster.setFromCamera(mouse, camera); {
+                        var intersects = raycaster.intersectObjects(tooltipEnabledObjects);
+                        if (intersects.length > 0) {
+                            latestMouseProjection = intersects[0].point;
+                            hoveredObj = intersects[0].object;
+                        }
+                    }
+
+                    if (tooltipDisplayTimeout || !latestMouseProjection) {
+                        clearTimeout(tooltipDisplayTimeout);
+                        tooltipDisplayTimeout = undefined;
+                        hideTooltip();
+                    }
+
+                    if (!tooltipDisplayTimeout && latestMouseProjection) {
+                        tooltipDisplayTimeout = setTimeout(function () {
+                            tooltipDisplayTimeout = undefined;
+                            showTooltip();
+                        }, 330);
+                    }
+                }
+
+
+
+             
+     
+
+
+        function onMouseMove(event) {
+                    console.log("onMousemove")
+                    updateMouseCoords(event, mouse);
+
+                    latestMouseProjection = undefined;
+                    hoveredObj = undefined;
+                    handleManipulationUpdate();
+                }
+
+
+        function viz(point) {
+            camera.position.set(point[0] * zoomfactor, point[1] * zoomfactor, point[2] * zoomfactor);
+            camera.lookAt(scene.position);
+        }
+
+        //drawpoints()
+
+
+
+
+
+
+
+        window.addEventListener('mousemove', onMouseMove, false);
+        drawpoints();
+
+        viz(view[0])
+        var worldAxis = new THREE.AxesHelper(40);
+        scene.add(worldAxis);
+
+        var idx = 0;
+        var maxIdx = 10;
+
+        window.addEventListener("mousemove", onMouseMove, false);
+        window.addEventListener("mousedown", onMouseDown, false);
+
+        var raycaster = new THREE.Raycaster();
+        var mouse = new THREE.Vector2();
+        var intersects = [];
+
+        function onMouseMoveX(event) {
+            console.log("onMouseMove0")
+            mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
+            mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
+        }
+
+        function onMouseDown(event) {
+            raycaster.setFromCamera(mouse, camera);
+
+        }
+
+        render();
+
+        function render() {
+            requestAnimationFrame(render);
+            renderer.render(scene, camera);
+        }
+
+    </script>
+</body>
+
+</html>

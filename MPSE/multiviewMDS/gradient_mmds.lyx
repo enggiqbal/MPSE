@@ -1,0 +1,838 @@
+#LyX 2.3 created this file. For more info see http://www.lyx.org/
+\lyxformat 544
+\begin_document
+\begin_header
+\save_transient_properties true
+\origin unavailable
+\textclass article
+\use_default_options true
+\maintain_unincluded_children false
+\language english
+\language_package default
+\inputencoding auto
+\fontencoding global
+\font_roman "default" "default"
+\font_sans "default" "default"
+\font_typewriter "default" "default"
+\font_math "auto" "auto"
+\font_default_family default
+\use_non_tex_fonts false
+\font_sc false
+\font_osf false
+\font_sf_scale 100 100
+\font_tt_scale 100 100
+\use_microtype false
+\use_dash_ligatures true
+\graphics default
+\default_output_format default
+\output_sync 0
+\bibtex_command default
+\index_command default
+\paperfontsize default
+\spacing single
+\use_hyperref false
+\papersize default
+\use_geometry false
+\use_package amsmath 1
+\use_package amssymb 1
+\use_package cancel 1
+\use_package esint 1
+\use_package mathdots 1
+\use_package mathtools 1
+\use_package mhchem 1
+\use_package stackrel 1
+\use_package stmaryrd 1
+\use_package undertilde 1
+\cite_engine basic
+\cite_engine_type default
+\biblio_style plain
+\use_bibtopic false
+\use_indices false
+\paperorientation portrait
+\suppress_date true
+\justification true
+\use_refstyle 1
+\use_minted 0
+\index Index
+\shortcut idx
+\color #008000
+\end_index
+\secnumdepth 3
+\tocdepth 3
+\paragraph_separation indent
+\paragraph_indentation default
+\is_math_indent 0
+\math_numbering_side default
+\quotes_style english
+\dynamic_quotes 0
+\papercolumns 1
+\papersides 1
+\paperpagestyle default
+\tracking_changes false
+\output_changes false
+\html_math_output 0
+\html_css_as_file 0
+\html_be_strict false
+\end_header
+
+\begin_body
+
+\begin_layout Title
+Gradient of Multiview MDS stress function
+\end_layout
+
+\begin_layout Section
+Some matrix calculus
+\end_layout
+
+\begin_layout Standard
+Let 
+\begin_inset Formula $X$
+\end_inset
+
+ be an 
+\begin_inset Formula $n\times p$
+\end_inset
+
+ matrix variable and let 
+\begin_inset Formula $y=f(X)$
+\end_inset
+
+, where 
+\begin_inset Formula $f:\mathbb{R}^{n\times p}\to\mathbb{R}$
+\end_inset
+
+ is a function of 
+\begin_inset Formula $X$
+\end_inset
+
+.
+ The derivative of 
+\begin_inset Formula $y$
+\end_inset
+
+ with respect to 
+\begin_inset Formula $X$
+\end_inset
+
+ is the 
+\begin_inset Formula $p\times n$
+\end_inset
+
+ matrix given by
+\begin_inset Formula 
+\[
+\frac{dy}{dX}:=\left[\frac{\partial f}{\partial X_{ji}}\right]_{ij},
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $X_{ij}$
+\end_inset
+
+ is the 
+\begin_inset Formula $(i,j)$
+\end_inset
+
+ entry of 
+\begin_inset Formula $X$
+\end_inset
+
+.
+ The gradient of 
+\begin_inset Formula $y$
+\end_inset
+
+ with respect to 
+\begin_inset Formula $X$
+\end_inset
+
+ is the 
+\begin_inset Formula $n\times p$
+\end_inset
+
+ matrix given by
+\begin_inset Formula 
+\[
+\nabla_{X}y:=\left[\frac{\partial f}{\partial X_{ij}}\right]_{ij}=\left(\frac{dy}{dX}\right)^{T}.
+\]
+
+\end_inset
+
+The first notation is useful when deriving differentiation rules, the second
+ will be used for optimization.
+\end_layout
+
+\begin_layout Standard
+Note that
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+y(X_{0}+\Delta X) & = & y(X_{0})+\sum_{i,j}\left(\nabla_{X}y|_{X_{0}}\right)_{ij}\left(\Delta X\right)_{ij}+\mathrm{higher\ order\ terms}\\
+ & = & y(X_{0})+\mathrm{tr}\left(\frac{dy}{dX}(X_{0})\Delta X\right)+\mathrm{higher\ order\ terms}
+\end{array},
+\]
+
+\end_inset
+
+which we can write in terms of differentials as
+\begin_inset Formula 
+\[
+dy=\mathrm{tr}\left(\frac{dy}{dX}(X_{0})dX\right).
+\]
+
+\end_inset
+
+We can then use properties of differentials and the trace function to derive
+ many differentiability rules for matrix calculus.
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $g:\mathbb{R}\to\mathbb{R}$
+\end_inset
+
+ and 
+\begin_inset Formula $z=g(f(X))$
+\end_inset
+
+, the chain rule says that
+\begin_inset Formula 
+\[
+\frac{dz}{dX}(X)=g'(f(X))\frac{df}{dX}(X).
+\]
+
+\end_inset
+
+If 
+\begin_inset Formula $P$
+\end_inset
+
+ is a fixed 
+\begin_inset Formula $p\times p$
+\end_inset
+
+ matrix and 
+\begin_inset Formula $y(X)=f(XP^{T})$
+\end_inset
+
+, we have
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+y(X+\Delta X) & = & f\left((X+\Delta X)P^{T}\right)\\
+ & = & f\left(XP^{T}+\Delta XP^{T}\right)\\
+ & = & f(XP^{T})+\mathrm{tr}\left(\frac{df}{dX}(XP^{T})\Delta XP^{T}\right)+\mathcal{O}(\|\Delta XP^{T}\|^{2})\\
+ & = & f(XP^{T})+\mathrm{tr}\left(P^{T}\frac{df}{dX}(X_{0}P^{T})\Delta X\right)+\mathcal{O}(\|\Delta X\|^{2})
+\end{array},
+\]
+
+\end_inset
+
+so that
+\begin_inset Formula 
+\[
+\frac{d}{dX}\left(f(XP^{T})\right)=P^{T}\frac{df}{dX}(XP^{T})
+\]
+
+\end_inset
+
+and
+\begin_inset Formula 
+\[
+\nabla_{X}\left(f(XP^{T})\right)=\nabla f(XP^{T})P.
+\]
+
+\end_inset
+
+If we differentiate with respect to 
+\begin_inset Formula $P$
+\end_inset
+
+ instead, set 
+\begin_inset Formula $y(P)=f(XP^{T})$
+\end_inset
+
+ and note that
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+y(P+\Delta P) & = & f\left(X(P+\Delta P)^{T}\right)\\
+ & = & f(XP^{T})+\mathrm{tr}\left(\frac{df}{dX}(XP^{T})X\Delta P^{T}\right)+\mathcal{O}(\|X\Delta P^{T}\|^{2})\\
+ & = & f(XP^{T})+\mathrm{tr}\left(X^{T}\left(\frac{df}{dX}(XP^{T})\right)^{T}\Delta P\right)+\mathcal{O}(\|\Delta P^{T}\|^{2})
+\end{array},
+\]
+
+\end_inset
+
+and therefore
+\begin_inset Formula 
+\[
+\frac{d}{dP}\left(f(XP^{T})\right)=X^{T}\left(\frac{df}{dX}(XP^{T})\right)^{T}
+\]
+
+\end_inset
+
+and
+\begin_inset Formula 
+\[
+\nabla_{P}\left(f(XP^{T})\right)=\left(\nabla f(XP^{T})\right)^{T}X.
+\]
+
+\end_inset
+
+If we write 
+\begin_inset Formula $P=QQ^{T}$
+\end_inset
+
+ and differentiate with respect to 
+\begin_inset Formula $Q$
+\end_inset
+
+, we have 
+\begin_inset Formula $y(Q)=f(XQQ^{T})$
+\end_inset
+
+ and
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+y(Q+\Delta Q) & = & f\left(X(Q+\Delta Q)(Q+\Delta Q)^{T}\right)\\
+ & = & f\left(XQQ^{T}+X\left(Q\Delta Q^{T}+\Delta QQ^{T}+\Delta Q\Delta Q^{T}\right)\right)\\
+ & = & f(XQQ^{T})+\mathrm{tr}\left(\frac{df}{dX}(XQQ^{T})X\left(Q\Delta Q^{T}+\Delta QQ^{T}+\Delta Q\Delta Q^{T}\right)\right)+\mathcal{O}(\|\Delta Q\|^{2})\\
+ & = & f(XQQ^{T})+\mathrm{tr}\left(\frac{df}{dX}(XQQ^{T})XQ\Delta Q^{T}\right)+\mathrm{tr}\left(\frac{df}{dX}(XQQ^{T})X\Delta QQ^{T}\right)+\mathcal{O}(\|\Delta Q\|^{2})\\
+ & = & f(XQQ^{T})+\mathrm{tr}\left(Q^{T}X^{T}\left(\frac{df}{dX}(XQQ^{T})\right)^{T}\Delta Q\right)+\mathrm{tr}\left(Q^{T}\frac{df}{dX}(XQQ^{T})X\Delta Q\right)+\mathcal{O}(\|\Delta Q\|^{2})\\
+ & = & f(XQQ^{T})+\mathrm{tr}\left(Q^{T}\left(X^{T}\left(\frac{df}{dX}(XQQ^{T})\right)^{T}+\frac{df}{dX}(XQQ^{T})X\right)\Delta Q\right)+\mathcal{O}(\|\Delta Q\|^{2})
+\end{array},
+\]
+
+\end_inset
+
+so it follows that
+\begin_inset Formula 
+\[
+\frac{d}{dQ}\left(f(XQQ^{T})\right)=Q^{T}\left(X^{T}\left(\frac{df}{dX}(XQQ^{T})\right)^{T}+\frac{df}{dX}(XQQ^{T})X\right)
+\]
+
+\end_inset
+
+and
+\begin_inset Formula 
+\[
+\nabla_{Q}\left(f(XQQ^{T})\right)=\left(\left(\nabla f(XQQ^{T})\right)^{T}X+X^{T}\nabla f(XQQ^{T})\right)Q
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Section
+Multiview MDS using gradient descent
+\end_layout
+
+\begin_layout Subsection
+Gradients of distance function
+\end_layout
+
+\begin_layout Standard
+Given an 
+\begin_inset Formula $n\times p$
+\end_inset
+
+ matrix 
+\begin_inset Formula $X$
+\end_inset
+
+, containing the coordinates of 
+\begin_inset Formula $n$
+\end_inset
+
+ points in 
+\begin_inset Formula $\mathbb{R}^{p}$
+\end_inset
+
+, the distance between points 
+\begin_inset Formula $i$
+\end_inset
+
+ and 
+\begin_inset Formula $j$
+\end_inset
+
+ is
+\begin_inset Formula 
+\[
+d_{ij}(X)=\|X^{T}e_{i}-X^{T}e_{j}\|_{2}=\|X^{T}(e_{i}-e_{j})\|_{2},
+\]
+
+\end_inset
+
+where 
+\begin_inset Formula $e_{i},e_{j}\in\mathbb{R}^{n}$
+\end_inset
+
+ are the 
+\begin_inset Formula $i$
+\end_inset
+
+th and 
+\begin_inset Formula $j$
+\end_inset
+
+th (column) basis vectors.
+\end_layout
+
+\begin_layout Standard
+The square distance can be written as
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+d_{ij}^{2}(X) & = & \|X^{T}(e_{i}-e_{j})\|_{2}^{2}\\
+ & = & \mathrm{tr}\left(X^{T}(e_{i}-e_{j})(e_{i}-e_{j})^{T}X\right)\\
+ & = & \mathrm{tr}\left(X^{T}A_{ij}X\right)
+\end{array},
+\]
+
+\end_inset
+
+where
+\begin_inset Formula 
+\[
+A_{ij}:=(e_{i}-e_{j})(e_{i}-e_{j})^{T}.
+\]
+
+\end_inset
+
+Note that 
+\begin_inset Formula $A_{ij}$
+\end_inset
+
+ is symmetric.
+ The square distance can be writen more compactly as
+\begin_inset Formula 
+\[
+d_{ij}^{2}(X)=(e_{i}-e_{j})^{T}XX^{T}(e_{i}-e_{j}),
+\]
+
+\end_inset
+
+but the first form is easier to work with.
+ Note that
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+d\mathrm{tr}\left(X^{T}A_{ij}X\right) & = & \mathrm{tr}\left(d\left(X^{T}A_{ij}X\right)\right)\\
+ & = & \mathrm{tr}\left(dX^{T}A_{ij}X+X^{T}A_{ij}dX\right)\\
+ & = & \mathrm{tr}\left(X^{T}A_{ij}^{T}dX+X^{T}A_{ij}dX\right)\\
+ & = & \mathrm{tr}\left(\left(2X^{T}A_{ij}\right)dX\right)
+\end{array},
+\]
+
+\end_inset
+
+and so
+\begin_inset Formula 
+\[
+\frac{dd_{ij}^{2}}{dX}(X)=2X^{T}A_{ij}.
+\]
+
+\end_inset
+
+It then follows that 
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\frac{dd_{ij}}{dX}(X) & = & \frac{d}{dX}\sqrt{d_{ij}^{2}(X)}\\
+ & = & \frac{1}{2\sqrt{d_{ij}^{2}(X)}}\frac{dd_{ij}^{2}}{dX}(X)\\
+ & = & \frac{1}{d_{ij}(X)}X^{T}A_{ij}
+\end{array}
+\]
+
+\end_inset
+
+and that
+\begin_inset Formula 
+\[
+\nabla d_{ij}(X)=\frac{1}{d_{ij}(X)}A_{ij}X
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $P$
+\end_inset
+
+ is a 
+\begin_inset Formula $p\times p$
+\end_inset
+
+ matrix, we have
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{X}\left(d_{ij}(XP^{T})\right) & = & \nabla_{X}d_{ij}(XP^{T})P\\
+ & = & \left(\frac{1}{d_{ij}(XP^{T})}A_{ij}\left(XP^{T}\right)\right)P\\
+ & = & \frac{1}{d_{ij}(XP^{T})}A_{ij}XP^{T}P
+\end{array}.
+\]
+
+\end_inset
+
+If we differentiate with respect to 
+\begin_inset Formula $P$
+\end_inset
+
+ instead, we obtain
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{P}\left(d_{ij}(XP^{T})\right) & = & \left(\nabla d_{ij}(XP^{T})\right)^{T}X\\
+ & = & \left(\frac{1}{d_{ij}(XP^{T})}A_{ij}\left(XP^{T}\right)\right)^{T}X\\
+ & = & \frac{1}{d_{ij}(XP^{T})}PX^{T}A_{ij}X
+\end{array}.
+\]
+
+\end_inset
+
+Finally, if we set 
+\begin_inset Formula $P=QQ^{T}$
+\end_inset
+
+ and differentiate with respect to 
+\begin_inset Formula $Q$
+\end_inset
+
+,
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{Q}\left(d_{ij}(XQQ^{T})\right) & = & \left(\left(\nabla d_{ij}(XQQ^{T})\right)^{T}X+X^{T}\nabla d_{ij}(XQQ^{T})\right)Q\\
+ & = & \left(\left(\frac{1}{d_{ij}(XQQ^{T})}A_{ij}XQQ^{T}\right)^{T}X+X^{T}\frac{1}{d_{ij}(XQQ^{T})}A_{ij}XQQ^{T}\right)Q\\
+ & = & \frac{1}{d_{ij}(XQQ^{T})}\left(QQ^{T}X^{T}A_{ij}X+X^{T}A_{ij}XQQ^{T}\right)Q
+\end{array}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Gradient of MDS stress
+\end_layout
+
+\begin_layout Standard
+For a fixed 
+\begin_inset Formula $n\times n$
+\end_inset
+
+ distance matrix 
+\begin_inset Formula $D$
+\end_inset
+
+, the MDS stress is defined by
+\begin_inset Formula 
+\[
+\sigma^{2}(X;D)=\sum_{i<j}\left(d_{ij}(X)-D_{ij}\right)^{2}.
+\]
+
+\end_inset
+
+Its gradient is
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla\sigma^{2}(X;D) & = & \nabla_{X}\sum_{i<j}\left(d_{ij}(X)-D_{ij}\right)^{2}\\
+ & = & \sum_{i<j}2\left(d_{ij}(X)-D_{ij}\right)\nabla_{X}\left(d_{ij}(X)-D_{ij}\right)\\
+ & = & 2\sum_{i<j}\left(d_{ij}(X)-D_{ij}\right)\nabla_{X}d_{ij}(X)\\
+ &  & 2\sum_{i<j}\left(d_{ij}(X)-D_{ij}\right)\frac{1}{d_{ij}(X)}A_{ij}X\\
+ & = & \left(2\sum_{i<j}\frac{\left(d_{ij}(X)-D_{ij}\right)}{d_{ij}(X)}A_{ij}\right)X\\
+ & := & B(X;D)X
+\end{array},
+\]
+
+\end_inset
+
+where
+\begin_inset Formula 
+\[
+B(X;D):=2\sum_{i<j}\frac{\left(d_{ij}(X)-D_{ij}\right)}{d_{ij}(X)}A_{ij}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Gradient of MDS stress with fixed projections
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $P$
+\end_inset
+
+ is a 
+\begin_inset Formula $p\times p$
+\end_inset
+
+ matrix (such as a projection matrix), then the action of 
+\begin_inset Formula $P$
+\end_inset
+
+ on the rows of 
+\begin_inset Formula $X$
+\end_inset
+
+ is the matrix 
+\begin_inset Formula $XP^{T}$
+\end_inset
+
+.
+ This is an 
+\begin_inset Formula $n\times p$
+\end_inset
+
+ matrix giving the new coordinates (e.g.
+ after projecting).
+ The gradient of the MDS stress function w.r.
+ to 
+\begin_inset Formula $X$
+\end_inset
+
+ is
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{X}\left(\sigma^{2}(XP^{T};D)\right) & = & \nabla\sigma^{2}(XP^{T};D)P\\
+ & = & B(XP^{T};D)XP^{T}P
+\end{array}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+If 
+\begin_inset Formula $\left\{ \left(P_{k},D_{k}\right)\right\} _{k=1}^{K}$
+\end_inset
+
+ are 
+\begin_inset Formula $k$
+\end_inset
+
+ pairs of 
+\begin_inset Formula $p\times p$
+\end_inset
+
+ transformations and 
+\begin_inset Formula $n\times n$
+\end_inset
+
+ distance matrices, then the multiview MDS stress function is
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\sigma_{m}^{2}\left(X;\left\{ \left(P_{k},D_{k}\right)\right\} _{k=1}^{K}\right) & := & \sum_{k=1}^{K}\sigma^{2}(XP_{k}^{T};D_{k})\\
+ & = & \sum_{k}\sum_{i<j}\left(d_{ij}(XP_{k}^{T})-(D_{k})_{ij}\right)^{2}
+\end{array},
+\]
+
+\end_inset
+
+and its gradient is
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{X}\sigma_{m}^{2}\left(X;\left\{ \left(P_{k},D_{k}\right)\right\} _{k=1}^{K}\right) & = & \sum_{k}\nabla_{X}\sigma^{2}(XP_{k}^{T};D_{k})\\
+ & = & \sum_{k}B(XP_{k}^{T};D_{k})XP_{k}^{T}P_{k}
+\end{array}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Gradient with respect to transformations
+\end_layout
+
+\begin_layout Standard
+The gradient of the MDS stress function w.r.
+ to 
+\begin_inset Formula $P$
+\end_inset
+
+ is
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{P}\sigma^{2}(XP^{T};D) & = & \left(\nabla\sigma^{2}(XP^{T};D)\right)^{T}X\\
+ & = & \left(B(XP^{T};D)XP^{T}\right)^{T}X\\
+ & = & PX^{T}B(XP^{T};D)X
+\end{array}.
+\]
+
+\end_inset
+
+The gradient of the multiview MDS stress function with respect to one of
+ the transformations is
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{P_{k}}\sigma_{m}^{2}\left(X;\left\{ \left(P_{k},D_{k}\right)\right\} _{k=1}^{K}\right) & = & \nabla_{P_{k}}\sigma^{2}(XP_{k}^{T};D_{k})\\
+ & = & P_{k}X^{T}B(XP_{k}^{T};D_{k})X
+\end{array}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Subsection
+Gradient with respect to orthogonal projections
+\end_layout
+
+\begin_layout Standard
+A rank-
+\begin_inset Formula $q$
+\end_inset
+
+, 
+\begin_inset Formula $p\times p$
+\end_inset
+
+ orthogonal projection matrix is one of the form 
+\begin_inset Formula $P_{A}=QQ^{T}$
+\end_inset
+
+, where 
+\begin_inset Formula $Q$
+\end_inset
+
+ is an 
+\begin_inset Formula $p\times q$
+\end_inset
+
+ orthogonal matrix (that is, its 
+\begin_inset Formula $q$
+\end_inset
+
+ columns are orthonormal).
+ We want to restrict optimization of multi-MDS stress to this type of transforma
+tions.
+ The gradient of the MDS stress function with respect to 
+\begin_inset Formula $Q$
+\end_inset
+
+ is
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{Q}\sigma^{2}(XQQ^{T};D) & = & \left(\left(\nabla\sigma^{2}(XQQ^{T};D)\right)^{T}X+X^{T}\nabla\sigma^{2}(XQQ^{T};D)\right)Q\\
+ & = & \left(\left(B(XQQ^{T};D)XQQ^{T}\right)^{T}X+X^{T}B(XQQ^{T};D)XQQ^{T}\right)Q\\
+ & = & \left(QQ^{T}X^{T}\left(B(XQQ^{T};D)\right)^{T}X+X^{T}B(XQQ^{T};D)XQQ^{T}\right)Q
+\end{array}
+\]
+
+\end_inset
+
+The gradient for the multiview MDS stress function with respect to one of
+ the 
+\begin_inset Formula $Q$
+\end_inset
+
+ matrices is
+\begin_inset Formula 
+\[
+\begin{array}{ccc}
+\nabla_{Q_{k}}\sigma_{m}^{2}\left(X;\left\{ \left(Q_{k}Q_{k}^{T},D_{k}\right)\right\} _{k=1}^{K}\right) & = & \left(Q_{k}Q_{k}^{T}X^{T}\left(B(XQ_{k}Q_{k}^{T};D_{k})\right)^{T}X+X^{T}B(XQ_{k}Q_{k}^{T};D_{k})XQ_{k}Q_{k}^{T}\right)Q_{k}\end{array}.
+\]
+
+\end_inset
+
+
+\end_layout
+
+\begin_layout Standard
+The projection of a 
+\begin_inset Formula $p\times p$
+\end_inset
+
+ matrix 
+\begin_inset Formula $B$
+\end_inset
+
+ into the subspace of rank-
+\begin_inset Formula $q$
+\end_inset
+
+ orthogonal matrices is given by 
+\begin_inset Formula $UI_{q}V^{T}$
+\end_inset
+
+, where 
+\begin_inset Formula $U\Sigma V^{T}$
+\end_inset
+
+ is the singular-value decomposition of 
+\begin_inset Formula $B$
+\end_inset
+
+ and 
+\begin_inset Formula $I_{q}=[e_{1}\cdots e_{q}0\cdots0]$
+\end_inset
+
+.
+ That is, the matrix 
+\begin_inset Formula $UI_{q}V^{T}$
+\end_inset
+
+ minimizes 
+\begin_inset Formula $\|U\Sigma V^{T}-C\|_{F}^{2}$
+\end_inset
+
+ over all 
+\begin_inset Formula $q$
+\end_inset
+
+-rank orthogonal matrices 
+\begin_inset Formula $C$
+\end_inset
+
+.
+\end_layout
+
+\begin_layout Standard
+Since 
+\begin_inset Formula $\tilde{Q}_{k}^{(i+1)}=Q_{k}^{(i)}+\alpha\nabla_{Q_{k}}\sigma_{m}^{2}\left(X;\left\{ \left(Q_{k}^{(i)}Q_{k}^{(i)T},D_{k}\right)\right\} _{k=1}^{K}\right)$
+\end_inset
+
+ is not guaranteed to be a rank-
+\begin_inset Formula $q$
+\end_inset
+
+ orthogonal matrix, We set 
+\begin_inset Formula $Q_{k}^{(i+1)}=\mathcal{P}_{q}\left(\tilde{Q}_{k}^{(i+1)}\right)$
+\end_inset
+
+, where 
+\begin_inset Formula $\mathcal{P}_{q}$
+\end_inset
+
+ is the projection described above.
+\end_layout
+
+\end_body
+\end_document

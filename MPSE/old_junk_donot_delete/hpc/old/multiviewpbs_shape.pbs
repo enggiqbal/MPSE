@@ -1,0 +1,26 @@
+#!/bin/bash
+### script to run an mpi job using 12-core or less (using only one 12-core node)
+### Set the job name
+#PBS -N multiview3DShape
+### Specify the PI group for this job
+#PBS -W group_list=kobourov
+### Request email when job begins and ends - commented out in this case
+### PBS -m bea
+### Specify email address to use for notification - commented out in this case
+### PBS -M hossain@email.arizona.edu
+### Set the queue for this job as windfall
+#PBS -q windfall
+### Set the number of nodes, cores and memory that will be used for this job
+#PBS -l select=1:ncpus=2:mem=64gb:pcmem=6gb
+### Specify "wallclock time" required for this job, hhh:mm:ss
+#PBS -l walltime=30:00:0
+### Specify total cpu time required for this job, hhh:mm:ss
+### total cputime = walltime * ncpus
+#PBS -l cput=60:00:00
+### Load required modules/libraries if needed (openmpi example)
+### Use "module avail" command to list all available modules
+
+cd /extra/hossain/multiview3d/multiview3d/multiviewMDS/
+# run the program
+singularity exec /extra/hossain/gdocker.simg python3 multiview_distance_martix.py shape ../dataset_3D/sq_cir_tr_dataset/750/data_mat_cir_750.csv ../dataset_3D/sq_cir_tr_dataset/750/data_mat_sq_750.csv ../dataset_3D/sq_cir_tr_dataset/750/data_mat_tr_750.csv 0.0001 10000 ../html3Dviz/
+exit 0

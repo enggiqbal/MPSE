@@ -1,0 +1,28 @@
+#!/bin/bash
+### script to run an mpi job using 12-core or less (using only one 12-core node)
+### Set the job name
+#PBS -N 123_13p2
+### Specify the PI group for this job
+#PBS -W group_list=kobourov
+### Request email when job begins and ends - commented out in this case
+### PBS -m bea
+### Specify email address to use for notification - commented out in this case
+### PBS -M hossain@email.arizona.edu
+### Set the queue for this job as windfall
+#PBS -q windfall
+### Set the number of nodes, cores and memory that will be used for this job
+#PBS -l select=1:ncpus=1:mem=64gb:pcmem=6gb
+### Specify "wallclock time" required for this job, hhh:mm:ss
+#PBS -l walltime=60:00:0
+### Specify total cpu time required for this job, hhh:mm:ss
+### total cputime = walltime * ncpus
+#PBS -l cput=60:00:00
+### Load required modules/libraries if needed (openmpi example)
+### Use "module avail" command to list all available modules
+#PBS -e /extra/hossain/multiview3d/multiview3d/multiviewMDS/hpc/qsubout/e123_13p2.txt
+#PBS -o /extra/hossain/multiview3d/multiview3d/multiviewMDS/hpc/qsubout/o123_13p2.txt
+
+cd /extra/hossain/multiview3d/multiview3d/multiviewMDS/
+# run the program
+singularity exec /extra/hossain/gdocker.simg python3 multiview_distance_martix.py 123_13p2 ../dataset_3D/123_dataset_new/250/data_mat_1_250.csv ../dataset_3D/123_dataset_new/250/data_mat_3_250.csv ../dataset_3D/123_dataset_new/250/data_mat_2_250.csv 0.001 10000 ../html3Dviz/ 2 2
+exit 0
