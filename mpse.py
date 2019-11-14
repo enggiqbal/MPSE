@@ -7,6 +7,7 @@ from MPSE.multiviewMDS import data
 import numpy as np
 import os, sys
 import MPSE.mview as mview
+import matplotlib.pyplot as plt
 
 parser = argparse.ArgumentParser(description='MPSE')
 parser.add_argument('-d', '--d', type=argparse.FileType('r'), nargs='+', help='List of input files with distace matices', required=True)
@@ -87,16 +88,33 @@ elif args.algorithm=='MULTIVIEW':
 
 #print(projections)
 #write to file
-outputdir='MPSE/outputs/'+ args.experiment_name
-if not os.path.exists(outputdir):
-    os.makedirs(outputdir)
+args.output_dir='MPSE/outputs/'+ args.experiment_name
 
-js_file_path=os.path.join(args.output_dir,  args.experiment_name +"_coordinates_tmp.js")
-data.js_data_writer(pos,js_file_path,costs, projections[0],projections[1],projections[2])
+if not os.path.exists(args.output_dir):
+    os.makedirs(args.output_dir)
+ 
+#js_file_path=os.path.join(args.output_dir,  args.experiment_name +"_coordinates_tmp.js")
+#data.js_data_writer(pos,js_file_path,costs, projections[0],projections[1],projections[2])
 posfile=os.path.join(args.output_dir, args.experiment_name +"_pos.csv")
 np.savetxt(posfile, pos, delimiter=",")
 costfile=os.path.join(args.output_dir, args.experiment_name +"_costs.csv")
 np.savetxt(costfile, costs, delimiter=",")
+ 
+
+
+x=np.arange(len(costs))
+fig = plt.figure()
+ax = plt.axes()
+plt.plot(x,costs )
+costfile=os.path.join( args.output_dir, "cost.png")
+plt.savefig(costfile)
+print("cost history saved as ",costfile )
+print("<img src=/static/"+ args.experiment_name +  "cost.png" +">" )
+sys.stdout.flush()
+
+
+
+
 if (args.verbose):
     print("Cost history was saved in: ", costfile)
     print("Output 3D position was saved in: ", posfile)
