@@ -47,7 +47,7 @@ app.post('/run', function(req, res){
     //python3 mpse.py -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv -n 10 -max_iters 20
     console.log(req.body)
     sample_size=req.body.sample_size
-    mpse_process = spawn('python3', ['mpse.py', '-d', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv', '-n', sample_size])// -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv -n 10 -max_iters 20']);
+    mpse_process = spawn('python3.6', ['mpse.py', '-d', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv', '-n', sample_size])// -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv -n 10 -max_iters 20']);
     mpse_process.stdout.on('data', function(data) {
         console.log('stdout: ' + data);
         res.write(data + "<br>" , 'utf-8');
