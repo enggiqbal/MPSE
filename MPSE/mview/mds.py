@@ -69,9 +69,9 @@ class MDS(object):
         self.H = {}
         
         if verbose > 0:
-            print('  number of points : {self.N}')
-            print('  rms of D : {self.D_rms:0.2e}')
-            print('  embedding dimension : {self.dim}')
+            print(f'  number of points : {self.N}')
+            print(f'  rms of D : {self.D_rms:0.2e}')
+            print(f'  embedding dimension : {self.dim}')
             
     def initialize(self, X0=None, title='',**kwargs):
         """\
@@ -103,7 +103,7 @@ class MDS(object):
         self.X0 = self.X.copy()
         
         if self.verbose > 0:
-            print('  initial stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
+            print(f'  initial stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
     def update(self,H=None):
         self.cost = self.cost_function(self.X)
@@ -134,14 +134,14 @@ class MDS(object):
             if self.verbose > 0:
                 print('  method : stochastic gradient descent')
                 if batch_number is None:
-                    print('  batch size : {batch_size}')
+                    print(f'  batch size : {batch_size}')
                 else:
-                    print('  batch number : {batch_number}')
+                    print(f'  batch number : {batch_number}')
             self.X, H = gd.mgd(self.X,F,lr=lr,**kwargs)
         self.update(H=H)
 
         if self.verbose > 0:
-            print('  final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
+            print(f'  final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
     def figureX(self,title='mds embedding',labels=None,plot=True):
         if labels is None:

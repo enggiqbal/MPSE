@@ -529,10 +529,8 @@ def full(x0, df, f=None, p=None, algorithm='gd', max_iters=100,
             string += f'cost : {cost[r]:0.2e}'
         if verbose > 0:
             print(string)
-            
         stop = specs['stop']
         r += 1
-        sys.stdout.flush()
 
     results = {}
     results['rounds'] = r
@@ -624,7 +622,7 @@ def main(x0, df, f=None, p=None, algorithm='gd', max_iters=100,
     assert algorithm in algorithms
     if verbose > 0:
         print('# gd.main():')
-        print('  Algorithm : {algorithm}')
+        print(f'  Algorithm : {algorithm}')
 
     assert isinstance(save_frequency, int) and save_frequency >= 0
     if save_frequency == 0:
@@ -638,10 +636,10 @@ def main(x0, df, f=None, p=None, algorithm='gd', max_iters=100,
                         verbose=verbose,label=label,**kwargs)
 
     if verbose > 0:
-        print('  Total iterations : {specs["iterations"]}')
-        print('  Final step size : {specs["final_step"]:0.2e}')
-        print('  Final gradient norm : {specs["final_gradient"]:0.2e}')
-        sys.stdout.flush()
+        print(f'  Total iterations : {specs["iterations"]}')
+        print(f'  Final step size : {specs["final_step"]:0.2e}')
+        print(f'  Final gradient norm : {specs["final_gradient"]:0.2e}')
+        
     return x, specs
 
     
@@ -795,10 +793,10 @@ def coordinate_gradient_descent(x0s,dfs,fs=None,loops=1,rate=0.1,max_iters=1000,
     xs = copy.deepcopy(x0s)
     for i in range(loops):
         if feedback:
-            print('  Loop {i}:')
+            print(f'  Loop {i}:')
         for j in range(coord_num):
             if feedback:
-                print('  Coordinate {j}:')
+                print(f'  Coordinate {j}:')
             def df(xj):
                 xxs = copy.deepcopy(xs)
                 xxs[j] = xj
@@ -836,7 +834,7 @@ def example1():
     f = lambda x: x[0]**4
     df = lambda x: 4*x**3
     x, results = full(x0,df,f=f,learning_rate=0.1,algorithm='agd',verbose=2)
-    print('The minimum of f(x)=x^2 is {x}')
+    print(f'The minimum of f(x)=x^2 is {x}')
     plt.show()
 
 def example2():
@@ -849,7 +847,7 @@ def example2():
     df = lambda x: np.array([0,0,-3*x[2]**2])
     p = lambda x: x/np.linalg.norm(x)
     x, results = full(x0,df,projection=p,f=f,rate=0.01,verbose=2)
-    print('Solution: {x}')
+    print(f'Solution: {x}')
     plt.show()
     
 def example3():
@@ -863,7 +861,7 @@ def example3():
     results = coordinate_gradient_descent(x0s,dfs,fs=fs,rate=0.01,feedback=True)
     xs = results['output']
     (x,y) = (xs[0][0],xs[1][0])
-    print('The minimum of f(x,y)=x^2+(y-1)^2 is ({x},{y}).')
+    print(f'The minimum of f(x,y)=x^2+(y-1)^2 is ({x},{y}).')
 
 def mds_comparison():
     max_iters = 100

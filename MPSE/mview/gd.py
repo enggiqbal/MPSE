@@ -1,7 +1,7 @@
 import copy, random, math, numbers
 import matplotlib.pyplot as plt
 import numpy as np
-import sys
+
 ### GD step functions ###
 
 def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
@@ -44,11 +44,10 @@ def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
     """
     if verbose > 0:
         print('. gd.gd(): ')
-        print('  min_step : {min_step:0.2e}')
+        print(f'  min_step : {min_step:0.2e}')
         print('  max_iters :', max_iters)
-        print('  max_step : {max_step:0.2e}')
-        print('  lr : {lr:0.2e}')
-        sys.stdout.flush()
+        print(f'  max_step : {max_step:0.2e}')
+        print(f'  lr : {lr:0.2e}')
         
     if p is None:
         alg = lambda x, dx: x-lr*dx
@@ -67,7 +66,7 @@ def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
         step_size = np.linalg.norm(x-x0); steps[i] = step_size
         grad_size = np.linalg.norm(grad); grads[i] = grad_size
         if verbose > 1:
-            print('  {i:>4} : step = {steps[i]:0.2e}, grad = ' +
+            print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = ' +
                   f'{grads[i]:0.2e}, cost = {cost[i]:0.2e}')
         i += 1
         
@@ -83,13 +82,12 @@ def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
         }
     if verbose > 0:
         print('  total iterations :',i)
-        print('  final step size : {step_size:0.2e}')
-        print('  final gradient size: {np.linalg.norm(grad):0.2e}')
+        print(f'  final step size : {step_size:0.2e}')
+        print(f'  final gradient size: {np.linalg.norm(grad):0.2e}')
         if specs['minimum_reached'] is True:
             print('  LOCAL MINIMUM REACHED')
         if specs['unstable'] is True:
             print('  UNSTABLE')
-        sys.stdout.flush()
     return x, specs
 
 def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
@@ -137,9 +135,9 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
     """
     if verbose > 0:
         print('. gd.agd(): ')
-        print('  min_step : {min_step:0.2e}')
+        print(f'  min_step : {min_step:0.2e}')
         print('  max_iters :', max_iters)
-        print('  max_step : {max_step:0.2e}')
+        print(f'  max_step : {max_step:0.2e}')
         
     if p is None:
         alg = lambda x, dx, lr: x-lr*dx
@@ -167,7 +165,7 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
         step_size = np.linalg.norm(x-x0); steps[i] = step_size
         grad_size = np.linalg.norm(grad); grads[i] = grad_size
         if verbose > 1:
-            print('  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e},'+
+            print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e},'+
                   f' cost = {cost[i]:0.2e}')
         i += 1
         
@@ -183,13 +181,12 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
         }
     if verbose > 0:
         print('  total iterations :',i)
-        print('  final step size : {step_size:0.2e}')
-        print('  final gradient size: {np.linalg.norm(grad):0.2e}')
+        print(f'  final step size : {step_size:0.2e}')
+        print(f'  final gradient size: {np.linalg.norm(grad):0.2e}')
         if specs['minimum_reached'] is True:
             print('  LOCAL MINIMUM REACHED')
         if specs['unstable'] is True:
             print('  UNSTABLE')
-        sys.stdout.flush()
     return x, specs
 
 def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
@@ -232,10 +229,10 @@ def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
     """
     if verbose > 0:
         print('+ gd.cgd():')
-        print('  min_step : {min_step:0.2e}')
+        print(f'  min_step : {min_step:0.2e}')
         print('  max_iters :',max_iters)
-        print('  max_step : {max_step:0.2e}')
-        print('  lr : ',lr)
+        print(f'  max_step : {max_step:0.2e}')
+        print(f'  lr : ',lr)
         
     assert isinstance(X0,list); K = len(X0)
     if isinstance(lr,numbers.Number):
@@ -263,9 +260,8 @@ def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
             step_size += np.linalg.norm(X[k]-X0[k])
             grad_size += np.linalg.norm(GRAD[k])
         steps[i] = step_size; grads[i] = grad_size
-        print('  {i>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
+        print(f'  {i>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
               f'cost = {cost[i]:0.2e}')
-        sys.stdout.flush()
         i += 1
 
     specs = {
@@ -280,13 +276,13 @@ def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
         }
     if verbose > 0:
         print('  total iterations :',i)
-        print('  final step size : {step_size:0.2e}')
-        print('  final gradient size: {grad_size:0.2e}')
+        print(f'  final step size : {step_size:0.2e}')
+        print(f'  final gradient size: {grad_size:0.2e}')
         if specs['minimum_reached'] is True:
             print('  LOCAL MINIMUM REACHED')
         if specs['unstable'] is True:
             print('  UNSTABLE')
-        sys.stdout.flush()
+            
     return X, specs
 
 def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
@@ -335,10 +331,9 @@ def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
     """
     if verbose > 0:
         print('+ gd.cagd():')
-        print('  min_step : {min_step:0.2e}')
+        print(f'  min_step : {min_step:0.2e}')
         print('  max_iters :',max_iters)
-        print('  max_step : {max_step:0.2e}')
-        sys.stdout.flush()
+        print(f'  max_step : {max_step:0.2e}')
         
     assert isinstance(X0,list); K = len(X0)
     alg = []
@@ -360,8 +355,6 @@ def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
     X = X0.copy(); X0 = X_prev; dX0 = dX_prev; i = 0;
     step_size = (min_step+max_step)/2; stop=0
     while min_step < step_size < max_step and i < max_iters and stop<K:
-        sys.stdout.flush()        
-
         cost[i], dX = F(X)
         step_size = 0; grad_size = 0; stop = 0
         for k in range(K):
@@ -376,7 +369,7 @@ def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
             step_size += np.linalg.norm(X[k]-X0[k])
             grad_size += np.linalg.norm(dX[k])
         steps[i] = step_size; grads[i] = grad_size
-        print('  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
+        print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
               f'cost = {cost[i]:0.2e}')
         i += 1
 
@@ -392,13 +385,13 @@ def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
         }
     if verbose > 0:
         print('  total iterations :',i)
-        print('  final step size : {step_size:0.2e}')
-        print('  final gradient size: {grad_size:0.2e}')
+        print(f'  final step size : {step_size:0.2e}')
+        print(f'  final gradient size: {grad_size:0.2e}')
         if specs['minimum_reached'] is True:
             print('  LOCAL MINIMUM REACHED')
         if specs['unstable'] is True:
             print('  UNSTABLE')
-        sys.stdout.flush()
+            
     return X, specs
 
 def mgd(x0,F,lr=0.1,attempts=10,reduce_factor=10,verbose=0,**kwargs):

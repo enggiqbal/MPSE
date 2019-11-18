@@ -15,12 +15,12 @@ def agd_mds_standard(N=100,dim=2,trials=3,runs=5):
     the MDS problems with multiple initial parameters.
     """
     print('*** test.agd_mds_standard() ***')
-    print('  N : {N}')
-    print('  dim : {dim}')
+    print(f'  N : {N}')
+    print(f'  dim : {dim}')
     print()
 
     for i in range(trials):
-        print('  Trial # {i}')
+        print(f'  Trial # {i}')
         print('  Normalized cost :')
         Y = misc.disk(N,dim)
         D = distances.compute(Y)
@@ -30,7 +30,7 @@ def agd_mds_standard(N=100,dim=2,trials=3,runs=5):
             vis.initialize_Y()
             vis.optimize(algorithm='agd')
             stress.append(vis.ncost)
-            print('  {vis.ncost:0.2e}')
+            print(f'  {vis.ncost:0.2e}')
         print()
         
 def agd_multiview_mds_standard(N=100,trials=3,runs=5):
@@ -40,11 +40,11 @@ def agd_multiview_mds_standard(N=100,trials=3,runs=5):
     multiple initial parameters.
     """
     print('*** test.agd_multiview_mds_standard() ***')
-    print('  N : {N}')
+    print(f'  N : {N}')
     print()
 
     for i in range(trials):
-        print('  Trial # {i}')
+        print(f'  Trial # {i}')
         print('  Normalized cost :')
         X = misc.disk(N,dim=3)
         persp = perspective.Persp()
@@ -58,7 +58,7 @@ def agd_multiview_mds_standard(N=100,trials=3,runs=5):
             mv.initialize_X()
             mv.optimize_X(algorithm='agd')
             stress.append(mv.ncost)
-            print('  {mv.ncost:0.2e}')
+            print(f'  {mv.ncost:0.2e}')
         print()
 
 def varying_view_number(N=100,runs=1):
@@ -68,7 +68,7 @@ def varying_view_number(N=100,runs=1):
     view_number = range(1,11)
     
     print('*** test.varying_view_number() ***')
-    print('  N : {N}')
+    print(f'  N : {N}')
     print()
 
     X = misc.disk(N,dim=3)
@@ -84,7 +84,7 @@ def varying_view_number(N=100,runs=1):
         mv.initialize_X(number=runs)
         mv.optimize_X(algorithm='agd')
         cost.append(mv.ncost)
-        print('  {i:>2} : {mv.ncost:0.2e}')
+        print(f'  {i:>2} : {mv.ncost:0.2e}')
     print()
     
 def compare_multiview_standard(N=100,runs=1):
