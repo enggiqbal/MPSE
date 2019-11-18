@@ -67,7 +67,7 @@ def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
         grad_size = np.linalg.norm(grad); grads[i] = grad_size
         if verbose > 1:
             print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = ' +
-                  f'{grads[i]:0.2e}, cost = {cost[i]:0.2e}')
+                  f'{grads[i]:0.2e}, cost = {cost[i]:0.2e}' , flush=True)
         i += 1
         
     specs = {
@@ -166,7 +166,7 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
         grad_size = np.linalg.norm(grad); grads[i] = grad_size
         if verbose > 1:
             print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e},'+
-                  f' cost = {cost[i]:0.2e}')
+                  f' cost = {cost[i]:0.2e}', flush=True)
         i += 1
         
     specs = {
@@ -261,7 +261,7 @@ def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
             grad_size += np.linalg.norm(GRAD[k])
         steps[i] = step_size; grads[i] = grad_size
         print(f'  {i>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
-              f'cost = {cost[i]:0.2e}')
+              f'cost = {cost[i]:0.2e}', flush=True)
         i += 1
 
     specs = {
@@ -370,7 +370,7 @@ def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
             grad_size += np.linalg.norm(dX[k])
         steps[i] = step_size; grads[i] = grad_size
         print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
-              f'cost = {cost[i]:0.2e}')
+              f'cost = {cost[i]:0.2e}', flush=True)
         i += 1
 
     specs = {
@@ -459,7 +459,7 @@ def mgd(x0,F,lr=0.1,attempts=10,reduce_factor=10,verbose=0,**kwargs):
             break
         
     if verbose > 0:
-        print('  number of attempts :',attempt)
+        print('  number of attempts :',attempt, flush=True)
 
     return x, specs
 
