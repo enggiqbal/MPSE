@@ -43,7 +43,7 @@ D=[data.get_matrix(f) for f in args.d]
 
 if (args.verbose):
     print("Total Samples: ", len(D[0]))
-    
+
 args.sample_size=min(len(D[0]), args.sample_size)
 sub = range(args.sample_size)
 D=[(a[sub])[:,sub] for a in D ]
@@ -123,10 +123,10 @@ plt.plot(x,costs )
 costfile=os.path.join( args.output_dir, "cost.png")
 plt.savefig(costfile)
 print("cost history saved as ",costfile )
-print("<img src=/static/"+ args.experiment_name +  "cost.png" +">" )
+print("<img src=/static/"+args.experiment_name +  "/cost.png" +">" )
 sys.stdout.flush()
 
-print ("<br> <a href ='static/"+ args.experiment_name +"/index.html'>interactive visualization</a><br>", flush=True)
+print ("<br><h1> <a href ='static/"+ args.experiment_name +"/index.html'>interactive visualization</a></h1><br>", flush=True)
  
 
 if (args.verbose):
