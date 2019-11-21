@@ -95,6 +95,12 @@ if not os.path.exists(args.output_dir):
 
 os.system("cp -rf MPSE/resources/vistemplate/ " + args.output_dir)
 
+f=open(args.output_dir+"/vis_param.js","r")
+vis_param=f.read().replace("var numberofprojection=3;","var numberofprojection="+ str(args.projections ) +";")
+f.close()
+f=open(args.output_dir+"/vis_param.js","w+")
+f.write(vis_param)
+f.close()
 
 js_file_path=os.path.join(args.output_dir, "coordinates.js")
 data.js_data_writer(pos,js_file_path,costs, projections)

@@ -9,6 +9,7 @@
   "author": "",
   "license": "ISC",
   "dependencies": {
+    "connect-multiparty": "^2.2.0",
     "ejs": "^2.7.2"
   }
 }

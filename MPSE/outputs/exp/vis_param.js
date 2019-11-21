@@ -1,5 +1,5 @@
-var projection_des=["Income","Gender","Education"]
- 
+var numberofprojection=1;
+var projection_des=["Income","Gender","Education"];
 
  
 var required_color_proection=3

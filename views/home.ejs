@@ -1,12 +1,12 @@
 <%include header%>
  
- <form method="post" action="run">
+ <form method="post" action="run" enctype="multipart/form-data">
 <div class="container">
     <div class="row">
         <div class="col-sm-12">
             <h1> Data</h1>
             <hr>
-            <input type="radio" name="data" value="preloaded" > <h3> Preloaded Data</h3>
+            <input type="radio" name="data" value="preloaded" checked > <h3> Preloaded Data</h3>
             <input type="radio" name="preloadeddata" value="123" > 1-2-3 Examples
             <input type="radio" name="preloadeddata" value="credit" checked > Credit Data
             <input type="radio" name="preloadeddata" value= "circlesquire" > Circle-Squire Data
@@ -19,7 +19,7 @@
             <br>
             <input type="radio" name="data" value="tabular" ><h3> Upload Tabular Data</h3>
 
-            File <input type="file" name="file3"><br>
+            File <input type="file" name="file4"><br>
 
             <hr>
 
