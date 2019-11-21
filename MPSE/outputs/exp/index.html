@@ -7,21 +7,6 @@
 	<meta charset="utf-8">
 
 	<style>
-		#legend {
-			position: fixed;
-			background-color: #fff;
-			color: #000;
-			top: 0;
-			right: 0;
-
-
-			text-align: left;
-		}
-
-		#legend h2 {
-			text-align: center;
-		}
-
 		body {
 			background-color: #000000;
 			margin: 0px;
@@ -66,19 +51,8 @@
 <body>
 
 
-	<div id="tooltip"></div>
-	<div id="legend"></div>
-	<div style="color:yellow">
-		select projection to color <br> <select id="projection_color_dropdown">
-			<script>
-				for (var i = 1; i < numberofprojection; i++) {
-					document.write('<option value="' + (i + 1) + '">Projection' + (i + 1) + '</option>')
-
-				}
-			</script>
-		</select>
-	</div>
-
+ 
+  
 	<script>
 		for (var i = 0; i < numberofprojection; i++) {
 

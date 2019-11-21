@@ -33,6 +33,7 @@ parser.add_argument( '-vt','--visualization_template',  default='pointbased', ch
 
 
 args = parser.parse_args()
+print("<h1>Please keep the window running</h1>")
 if (args.verbose):
     print("================= list of parameters ================= ")
     print(args)
@@ -86,7 +87,7 @@ else:
 
 #print(projections)
 #write to file
-args.output_dir='MPSE/outputs/'+ args.experiment_name
+args.output_dir='MPSE/outputs/'+ args.experiment_name + "/"
 
 if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
