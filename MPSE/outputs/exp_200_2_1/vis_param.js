@@ -1,4 +1,4 @@
-var numberofprojection=3;
+var numberofprojection=1;
 var projection_des=["Income","Gender","Education"];
 
  

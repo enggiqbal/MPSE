@@ -28,7 +28,7 @@ parser.add_argument( '-sp','--save_progress',type=int,  default=0, help='save pr
 parser.add_argument( '-v','--verbose',type=int,  default=1, help='verbose',required=False)
 parser.add_argument( '-alg','--algorithm',  default='MULTIVIEW', choices=['classic','gd','gdm','agd','MULTIVIEW0','MULTIVIEW'], help="algorithms: 'classic' for autograd implementation,\n  'gd' for gradient descent,\n 'gdm' for GD with momentum, \n 'agd' for adaptive GD",required=False)
 parser.add_argument( '-ps','--projection_set',  default='standard', choices=[ 'same', 'standard', 'cylinder', 'orthogonal', 'normal', 'uniform'], help="projection set",required=False)
-parser.add_argument( '-vt','--visualization_template',  default='pointbased', choices=[ 'pointbased', 'tabular'], help="visualization template",required=False)
+parser.add_argument( '-vt','--visualization_template',  default='pointbased', choices=[ 'pointbased', 'attributebased'], help="visualization template",required=False)
 
 
 
@@ -43,13 +43,11 @@ D=[data.get_matrix(f) for f in args.d]
 
 if (args.verbose):
     print("Total Samples: ", len(D[0]))
+    
+args.sample_size=min(len(D[0]), args.sample_size)
+sub = range(args.sample_size)
+D=[(a[sub])[:,sub] for a in D ]
 
-if args.sample_size != math.inf:
-    assert args.sample_size <=len(D[0]) , "Sample size is greater than input size:"+ str(len(D[0]) )
-    sub = range(args.sample_size)
-    D=[(a[sub])[:,sub] for a in D ]
-else:
-    args.sample_size=len(D[0])
 
 #if args.projections_type=='fixed' and args.algorithm=='classic':
 pfile="MPSE/resources/fixed_projection_1.txt"
@@ -92,8 +90,10 @@ args.output_dir='MPSE/outputs/'+ args.experiment_name
 
 if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
-
-os.system("cp -rf MPSE/resources/vistemplate/ " + args.output_dir)
+if args.visualization_template=="pointbased":
+    os.system("cp -rf MPSE/resources/vistemplatepointbased/ " + args.output_dir)
+else:
+    os.system("cp -rf MPSE/resources/vistemplateattributebased/ " + args.output_dir)
 
 f=open(args.output_dir+"/vis_param.js","r")
 vis_param=f.read().replace("var numberofprojection=3;","var numberofprojection="+ str(args.projections ) +";")
