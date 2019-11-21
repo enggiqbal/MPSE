@@ -43,11 +43,32 @@ exec('python3 test.py', (err, stdout, stderr) => {
 
 app.post('/run', function(req, res){  
     res.header('Content-Type','text/html;charset=utf-8');
-    //
-    //python3 mpse.py -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv -n 10 -max_iters 20
+ 
+ 
     console.log(req.body)
     sample_size=req.body.sample_size
-    mpse_process = spawn('python3.6', ['mpse.py', '-d', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv', '-n', sample_size])// -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv -n 10 -max_iters 20']);
+    preloadeddata=req.body.preloadeddata
+
+    var datapath=""
+    if (preloadeddata=='credit')
+    datapath=['-d','MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv']
+    
+    if (preloadeddata=='123')
+    datapath=['-d','MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv']
+    
+    if (preloadeddata=='circlesquire')
+    datapath=['-d','MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv']
+    
+    if (req.body.projection_set!="variable")
+    projections_type="fixed"
+
+
+    var parameters=['mpse.py',   '-n', sample_size, '-e',req.body.EXPERIMENT_NAME, '-ps', req.body.projection_set, '-t', projections_type , '-max_iters', req.body.max_iters];
+    parameters=parameters.concat(datapath)
+    console.log("python3.6 " +  parameters.join(" " ))
+    //parameters = ['-c','print(8)']
+    mpse_process = spawn('python3.6', parameters)// -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv -n 10 -max_iters 20']);
+     
     mpse_process.stdout.on('data', function(data) {
         console.log('stdout: ' + data);
         res.write(data + "<br>" , 'utf-8');

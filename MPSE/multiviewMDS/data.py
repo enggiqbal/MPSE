@@ -11,18 +11,24 @@ def get_matrix(csv):
 #print(M)
 
 
-def js_data_writer(A,file_path,costs, P1, P2, P3):
+def js_data_writer(A,file_path,costs,P):
+    
     localtime = time.asctime( time.localtime(time.time()) )
     pos_tmp=A
     jsdata ="var points="+ str(  pos_tmp.tolist()) + ";"
     f=open(file_path,"w")
     f.write("var t='"+ localtime +"';\n")
     f.write("var steps={0};\n ".format(len(costs)))
-    costhistory="var costhistory="+ str( costs) + ";\n"
+    costhistory="var costhistory="+ np.array2string(costs, precision=2, separator=',') + ";\n"
     f.write(costhistory)
     #proj=proj+"[["+str(P1)+"],["+str(P2)+"],["+str(P3)+"]],"
     #proj="["+str(list(P1.T[0]))+","+str(list(P2.T[0]))+","+str(list(P3.T[0]))+"]"
-    proj="["+np.array2string(P1, precision=6, separator=',', suppress_small=True)+","+np.array2string(P2, precision=6, separator=',', suppress_small=True)+","+np.array2string(P3, precision=6, separator=',', suppress_small=True)+"]"
+    proj="["
+    for x in P:
+        proj=proj + np.array2string(x, precision=6, separator=',', suppress_small=True) + ","
+    proj=proj+"]"
+
+    #proj="["+np.array2string(P1, precision=6, separator=',', suppress_small=True)+","+np.array2string(P2, precision=6, separator=',', suppress_small=True)+","+np.array2string(P3, precision=6, separator=',', suppress_small=True)+"]"
     #pdb.set_trace()
     f.write("var proj="+proj + ";\n")
     f.write(jsdata)

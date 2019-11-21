@@ -8,6 +8,7 @@ import numpy as np
 import os, sys
 import MPSE.mview as mview
 import matplotlib.pyplot as plt
+import shutil
 
 parser = argparse.ArgumentParser(description='MPSE')
 parser.add_argument('-d', '--d', type=argparse.FileType('r'), nargs='+', help='List of input files with distace matices', required=True)
@@ -26,9 +27,8 @@ parser.add_argument( '-X0','--X0', default=None, help='Initial initialization, a
 parser.add_argument( '-sp','--save_progress',type=int,  default=0, help='save progress',required=False)
 parser.add_argument( '-v','--verbose',type=int,  default=1, help='verbose',required=False)
 parser.add_argument( '-alg','--algorithm',  default='MULTIVIEW', choices=['classic','gd','gdm','agd','MULTIVIEW0','MULTIVIEW'], help="algorithms: 'classic' for autograd implementation,\n  'gd' for gradient descent,\n 'gdm' for GD with momentum, \n 'agd' for adaptive GD",required=False)
-
-
 parser.add_argument( '-ps','--projection_set',  default='standard', choices=[ 'same', 'standard', 'cylinder', 'orthogonal', 'normal', 'uniform'], help="projection set",required=False)
+parser.add_argument( '-vt','--visualization_template',  default='pointbased', choices=[ 'pointbased', 'tabular'], help="visualization template",required=False)
 
 
 
@@ -72,17 +72,17 @@ else:
  
 eps=1e-9
 stopping_eps=0.1
-
+'''
 if args.algorithm=='classic':
     mview=multiview_core.multiview(D, P, 3, eps, args.projection_set,args.projections)
     pos,costs, projections=mview.multiview_mds(A,args.max_iters, args.lr, stopping_eps,args.output_dir,args.experiment_name, args.save_progress, args.verbose)
     pos=pos.reshape(int(len(A)/3),3)
-elif args.algorithm=='MULTIVIEW0':
+'''
+if args.projections_type=='fixed':
     D = D[0:args.projections]
-
     pos,_,costs=mview.MULTIVIEW0(D,Q=args.projection_set,X0=None, lr=args.lr,max_iters=args.max_iters,verbose=args.verbose)
     projections=P
-elif args.algorithm=='MULTIVIEW':
+else:
     D = D[0:args.projections]
     pos,projections,_,costs=mview.MULTIVIEW(D,X0=None,max_iters=args.max_iters,verbose=args.verbose)
 
@@ -92,14 +92,22 @@ args.output_dir='MPSE/outputs/'+ args.experiment_name
 
 if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
- 
-#js_file_path=os.path.join(args.output_dir,  args.experiment_name +"_coordinates_tmp.js")
-#data.js_data_writer(pos,js_file_path,costs, projections[0],projections[1],projections[2])
+
+os.system("cp -rf MPSE/resources/vistemplate/ " + args.output_dir)
+
+
+js_file_path=os.path.join(args.output_dir, "coordinates.js")
+data.js_data_writer(pos,js_file_path,costs, projections)
+
 posfile=os.path.join(args.output_dir, args.experiment_name +"_pos.csv")
 np.savetxt(posfile, pos, delimiter=",")
 costfile=os.path.join(args.output_dir, args.experiment_name +"_costs.csv")
 np.savetxt(costfile, costs, delimiter=",")
  
+
+
+
+
 
 
 x=np.arange(len(costs))
@@ -112,8 +120,8 @@ print("cost history saved as ",costfile )
 print("<img src=/static/"+ args.experiment_name +  "cost.png" +">" )
 sys.stdout.flush()
 
-
-
+print ("<br> <a href ='static/"+ args.experiment_name +"/index.html'>interactive visualization</a><br>", flush=True)
+ 
 
 if (args.verbose):
     print("Cost history was saved in: ", costfile)
