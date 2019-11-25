@@ -267,16 +267,7 @@
 		var raycaster = new THREE.Raycaster();
 		// var mouse = new THREE.Vector2();
 		var intersects = [];
-
-        /*function onMouseMove(event) {
-          mouse.x = (event.clientX / window.innerWidth) * 2 - 1;
-          mouse.y = -(event.clientY / window.innerHeight) * 2 + 1;
-        }
-
-        function onMouseDown(event) {
-          raycaster.setFromCamera(mouse, camera);
-
-        }*/
+ 
 
 		render();
 
@@ -287,31 +278,6 @@
 
 	</script>
 
-
-
-	<script>
-
-		document.getElementById("legend").innerHTML += "<h2>LEGEND:</h2>";
-		document.getElementById("legend").innerHTML += "<h3> Eyes show distribution of:</h3>";
-		document.getElementById("legend").innerHTML += "<p> <span class=\"eye\">Eye 1:</span> " + projection_des[0] + "</p>";
-		document.getElementById("legend").innerHTML += "<p> <span class=\"eye\">Eye 2:</span> " + projection_des[1] + "</p>";
-		//document.getElementById("legend").innerHTML += "<p> <span class=\"eye\">Eye 3:</span> " + projection_des[2] +"</p>";
-		document.getElementById("legend").innerHTML += "<h3>Projection2 colors:</h3>"
-		document.getElementById("legend").innerHTML += "Male"
-		document.getElementById("legend").innerHTML += "<select>";
-		/*	var legend = document.getElementById("legend").innerHTML;
-			for (var i = 0; i < color_select.length;i+=1)
-			{
-				var opt = document.createElement('option');
-			opt.value = color_select[i];
-			opt.innerHTML = color_select[i];
-			document.getElementById("legend").innerHTML+=opt;
-		    
-			}*/
-		document.getElementById("legend").innerHTML += "</select>";
-	</script>
-
-	<script src="tooltip_f.js"></script>
 </body>
 
 </html>

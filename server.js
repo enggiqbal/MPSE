@@ -12,7 +12,16 @@ app.use(bodyParser.urlencoded({
 var multipart = require('connect-multiparty');
 var multipartMiddleware = multipart();
 
- 
+
+
+const sqlite3 = require('sqlite3').verbose();
+
+// open the database
+let db = new sqlite3.Database('mpserecords.sqlite');
+
+
+
+
 app.use('/static', express.static('MPSE/outputs/'))
 app.get('/', function (req, res) {
     res.render('home');
@@ -64,13 +73,13 @@ app.post('/run', multipartMiddleware, function (req, res) {
         if (preloadeddata == '123')
             datapath = ['-d', 'MPSE/datasets/dataset_3D/123_dataset_new/250/data_mat_1_250.csv', 'MPSE/datasets/dataset_3D/123_dataset_new/250/data_mat_2_250.csv', 'MPSE/datasets/dataset_3D/123_dataset_new/250/data_mat_3_250.csv']
 
-        if (preloadeddata == 'circlesquire'){
-            req.body.projections=2;
+        if (preloadeddata == 'circlesquire') {
+            req.body.projections = 2;
             //datapath = ['-d', 'MPSE/datasets/dataset_3D/sq_cir_tr_dataset/350/data_mat_cir_350.csv', 'MPSE/datasets/dataset_3D/sq_cir_tr_dataset/350/data_mat_sq_350.csv', 'MPSE/datasets/dataset_3D/sq_cir_tr_dataset/350/data_mat_tr_350.csv']
             datapath = ['-d', 'MPSE/datasets/dataset_3D/circle_square_new/dist_circle.csv', 'MPSE/datasets/dataset_3D/circle_square_new/dist_square.csv']
 
         }
-        }
+    }
 
     if (req.body.data == "uploaded")
         projections_type = "fixed";
@@ -83,20 +92,47 @@ app.post('/run', multipartMiddleware, function (req, res) {
     var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', req.body.projection_set, '-t', projections_type, '-p', req.body.projections, '-max_iters', req.body.max_iters];
     parameters = parameters.concat(datapath)
     console.log("python3.6 " + parameters.join(" "))
-    mpse_process = spawn('python3.6', parameters) 
+    mpse_process = spawn('python3.6', parameters)
     mpse_process.stdout.on('data', function (data) {
         console.log('stdout: ' + data);
         res.write(data + "<br>", 'utf-8');
     });
     mpse_process.stderr.on('data', function (data) {
         console.log('stderr: ' + data);
+        db.run("insert into history values('"+req.body.EXPERIMENT_NAME+"')");
+        db.close();
         res.write(data, 'utf-8');
+
     });
     mpse_process.on('exit', function (code) {
         console.log('child process exited with code ' + code);
         res.end(code);
     });
 });
+
+
+
+
+app.get('/history', function (req, res) {
+
+    let sql = `SELECT  expname FROM history`;
+
+    db.all(sql, [], (err, rows) => {
+        if (err) {
+            throw err;
+        }
+        rows.forEach((row) => {
+            console.log(row.name);
+        });
+    });
+
+
+
+    res.send("list")
+});
+// close the database connection
+//db.close();
+
 
 
 app.listen(port);
