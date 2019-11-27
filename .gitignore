@@ -2,4 +2,4 @@ node_modules
 *.pyc
 MPSE/outputs/exp/*
 __pycache__
-
+mpserecords.sqlite
