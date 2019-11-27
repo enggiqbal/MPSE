@@ -92,9 +92,9 @@ args.output_dir='MPSE/outputs/'+ args.experiment_name + "/"
 if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
 if args.visualization_template=="pointbased":
-    os.system("cp -rf MPSE/resources/vistemplatepointbased/ " + args.output_dir)
+    os.system("cp -rf MPSE/resources/vistemplatepointbased/* " + args.output_dir)
 else:
-    os.system("cp -rf MPSE/resources/vistemplateattributebased/ " + args.output_dir)
+    os.system("cp -rf MPSE/resources/vistemplateattributebased/* " + args.output_dir)
 
 f=open(args.output_dir+"/vis_param.js","r")
 vis_param=f.read().replace("var numberofprojection=3;","var numberofprojection="+ str(args.projections ) +";")
