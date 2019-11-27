@@ -181,7 +181,7 @@ function generateColor(colorStart,colorEnd,colorCount){
         var renderer = new THREE.WebGLRenderer({
           antialias: true
         });
-        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.setSize(window.innerWidth, window.innerHeight-100);
         document.body.appendChild(renderer.domElement);
 				//scene.background = new THREE.Color( 0xffffff );
 
