@@ -23,6 +23,8 @@ let db = new sqlite3.Database('mpserecords.sqlite');
 
 
 app.use('/static', express.static('MPSE/outputs/'))
+
+app.use('/data', express.static('MPSE/datasets/'))
 app.use('/MPSE', express.static('MPSE/MPSE/'))
 app.get('/', function (req, res) {
     res.render('home');
