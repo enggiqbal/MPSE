@@ -11,6 +11,7 @@
   "dependencies": {
     "connect-multiparty": "^2.2.0",
     "ejs": "^2.7.2",
+    "express": "^4.17.1",
     "sqlite3": "^4.1.0"
   }
 }
