@@ -25,7 +25,7 @@ parser.add_argument( '-max_iters','--max_iters', type=int,default=10000, help='M
 parser.add_argument( '-n','--sample_size',type=int, default=math.inf , help='Number of samples',required=False)
 parser.add_argument( '-X0','--X0', default=None, help='Initial initialization, a csv file with 3D co-ordinates',required=False)
 parser.add_argument( '-sp','--save_progress',type=int,  default=0, help='save progress',required=False)
-parser.add_argument( '-v','--verbose',type=int,  default=1, help='verbose',required=False)
+parser.add_argument( '-v','--verbose',type=int,  default=2, help='verbose',required=False)
 parser.add_argument( '-alg','--algorithm',  default='MULTIVIEW', choices=['classic','gd','gdm','agd','MULTIVIEW0','MULTIVIEW'], help="algorithms: 'classic' for autograd implementation,\n  'gd' for gradient descent,\n 'gdm' for GD with momentum, \n 'agd' for adaptive GD",required=False)
 parser.add_argument( '-ps','--projection_set',  default='standard', choices=[ 'same', 'standard', 'cylinder', 'orthogonal', 'normal', 'uniform'], help="projection set",required=False)
 parser.add_argument( '-vt','--visualization_template',  default='pointbased', choices=[ 'pointbased', 'attributebased'], help="visualization template",required=False)
