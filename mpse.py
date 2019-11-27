@@ -127,7 +127,7 @@ print("cost history saved as ",costfile )
 print("<img src=/static/"+args.experiment_name +  "/cost.png" +">" )
 sys.stdout.flush()
 
-print ("<br><h1> <a href ='static/"+ args.experiment_name +"/index.html'>interactive visualization</a></h1><br>", flush=True)
+print ("<br><h1> <a target='_blank'  href ='static/"+ args.experiment_name +"/index.html'>interactive visualization</a></h1><br>", flush=True)
  
 
 if (args.verbose):

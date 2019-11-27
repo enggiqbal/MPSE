@@ -1,5 +1,5 @@
 node_modules
 *.pyc
-MPSE/outputs/exp/
+MPSE/outputs/exp/*
 __pycache__
 
