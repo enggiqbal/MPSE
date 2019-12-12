@@ -379,10 +379,10 @@ def example_Qdescent(trajectory=False):
                        cost_history=True,feedback=True)
     Qfs = results['output']
     stressf = stress(X,Qfs,Ds)
-    print('  initial stress: {stress0}')
-    print('  final stress: {stressf}')
-    print('  initial grassmanian distances: {grassmanian_distance(Q0s,Qs)}')
-    print('  final grassmanian distances: {grassmanian_distance(Qfs,Qs)}')
+    print(f'  initial stress: {stress0}')
+    print(f'  final stress: {stressf}')
+    print(f'  initial grassmanian distances: {grassmanian_distance(Q0s,Qs)}')
+    print(f'  final grassmanian distances: {grassmanian_distance(Qfs,Qs)}')
 
 def example_XQdescent():
     print('\n##### TEST #####')
@@ -406,5 +406,5 @@ def example_XQdescent():
     stressf = stress(Xf,Qfs,Ds)
 
     print('Qdescent_example0():')
-    print('  initial stress: {stress0}')
-    print('  final stress: {stressf}')
+    print(f'  initial stress: {stress0}')
+    print(f'  final stress: {stressf}')

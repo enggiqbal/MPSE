@@ -8,27 +8,47 @@ import image
 
 import sys
 sys.path.insert(1,'../mview')
-import projections
+import perspective
 
 class Hull(object):
 
-    def __init__(self,imgs,proj,boundary='box',size=1.0):
+    def __init__(self,imgs,persp,boundary='box',size=1.0):
         
         assert isinstance(imgs,list)
         self.K = len(imgs)
         self.imgs = imgs
-        self.proj = proj
-        self.dimX = proj.dimX
+        self.persp = persp
+        self.dim = persp.dimX
 
         assert boundary in ['box']
         assert isinstance(size,numbers.Number) and size>0
         self.boundary = boundary; self.size = size
         if self.boundary is 'box':
-            self.random = random_box(self.dimX,self.size)
+            self.random = random_box(self.dim,self.size)
 
         self.N = 0
-        self.X = np.empty((0,self.dimX))
+        self.X = np.empty((0,self.dim))
         self.Y = np.empty((self.K,0,2)) ###dimY
+
+    def update_density(self):
+        """\
+        Compute density of each projection
+        """
+        import scipy.stats; from scipy.stats import gaussian_kde
+        print('Density stats:')
+        print('number:',self.N)
+        kernel = []
+        density = np.empty((self.K,self.N))
+        for k in range(self.K):
+            kernel.append(gaussian_kde(self.Y[k].T,bw_method=self.N**(-1/6)*.7))
+            density[k] = kernel[k](self.Y[k].T)
+            print(f'perspective {k} -')
+            print('minimum :',np.min(density[k]))
+            print('maximum :',np.max(density[k]))
+            print('mean :',np.average(density[k]))
+            print('stdev :',np.std(density[k]))
+        self.kernel = kernel
+        self.density = density
 
     def add_points(self,N,forgive=[]):
 
@@ -36,12 +56,12 @@ class Hull(object):
         self.N += N
         self.X
 
-        X = np.empty((N,self.dimX))
+        X = np.empty((N,self.dim))
         Y = np.empty((self.K,N,2))
         n = 0; it = 0; max_its = 1e6
         while n < N and it < max_its:
             x = self.random()
-            y_list = self.proj.project(x) ###
+            y_list = self.persp.compute_Y(x) ###
             miss_num=0; k=0
             while miss_num <= len(forgive) and k<self.K:
                 img = self.imgs[k]
@@ -59,8 +79,37 @@ class Hull(object):
             it += 1
         self.X = np.concatenate((self.X,X),axis=0)
         self.Y = np.concatenate((self.Y,Y),axis=1)
+        self.update_density()
 
-    def return_figure(self):
+    def compute_probs(self,bar=0.01):
+        """
+        Compute probability
+        """
+        num = math.floor(self.N*bar)
+        probs = np.empty((self.K,self.N))
+        for k in range(self.K):
+            idx = np.argpartition(self.density[k],num)
+            #print(idx[num],self.density[k][idx)
+            density_bar = self.density[k][idx[num]]
+            probs[k] = density_bar/self.density[k]
+        return probs
+        
+    def remove_points(self,method='average',**kwargs):
+        """\
+        Remove points to uniformalize projections
+        """
+        probs = self.compute_probs(**kwargs)
+        average = np.average(probs,axis=0)
+        indices = []
+        for n in range(self.N):
+            if np.random.rand() < average[n]:
+                indices.append(n)
+        self.X = self.X[indices]
+        self.Y = self.Y[:,indices]
+        self.N = len(self.X)
+        self.update_density()
+
+    def figure(self):
         import matplotlib.pyplot as plt
         from mpl_toolkits import mplot3d
 
@@ -76,6 +125,39 @@ class Hull(object):
             axs[k].set_aspect(1.0)
             axs[k].set_title(f'Projection {k}')
         plt.suptitle('Projections of X')
+        plt.show()
+
+    def figure2(self):
+        import matplotlib.pyplot as plt
+        from mpl_toolkits import mplot3d
+        from scipy import stats
+
+        fig1 = plt.figure()
+        plt.title('X')
+        ax = plt.axes(projection='3d')
+        ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
+
+        fig2, axs = plt.subplots(1,3,sharex=True)
+        
+        plt.tight_layout()
+        for k in range(self.K):
+            
+            xmin = self.Y[k,:,0].min()
+            xmax = self.Y[k,:,0].max()
+            ymin = self.Y[k,:,1].min()
+            ymax = self.Y[k,:,1].max()
+            X, Y = np.mgrid[xmin:xmax:100j,ymin:ymax:100j]
+            positions = np.vstack([X.ravel(),Y.ravel()])
+            Z = np.reshape(self.kernel[k](positions).T,X.shape)
+            
+            axs[k].imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
+                          extent=[xmin, xmax, ymin, ymax])
+            axs[k].scatter(self.Y[k,:,0],self.Y[k,:,1])
+            #fig2.colorbar(np.rot90(Z)[3])
+            axs[k].set_aspect(1.0)
+            axs[k].set_title(f'Projection {k}')
+        plt.suptitle('Projections of X')
+        plt.show()
 
     def save(self,filename):
         with open('hull/'+filename+'.pickle','wb') as handle:
@@ -175,14 +257,40 @@ def uniform(num,imgs,projs,box_length=1,sigma=1.0):
 
 ### Tests ### CHECK: X should be filled everytime, or cut 
 
-def example3(num=1000):
-    imgs = text.images(['1','2','3'],font='arial',justify='vertical')
-    projs = projections.cylinder();
-    X = uniform(num,imgs,projs,box_length=0.7,sigma=15)
-    projections.plot(X,projs)
-    for k in range(len(imgs)):
-        Y = projs[k](X)
-        img = image.Img(Y,atype='sample',template=imgs[k],sigma=15.0)
+def example(num=100):
+    strings = ['1']
+    #strings = ['2','1','3']
+    arrays = text.array(strings)
+    imgs = image.images(arrays,labels=strings,justify='vertical')
+
+    persp = perspective.Persp()
+    persp.fix_Q(special='cylinder',number=len(strings))
+
+    hull = Hull(imgs,persp)
+    hull.add_points(num)
+    hull.figure2()
+
+#    for k in range(len(imgs)):
+ #       Y = projs[k](X)
+ #       img = image.Img(Y,atype='sample',template=imgs[k],sigma=15.0)
+
+def example2():
+    num=10000
+    strings= ['1']
+    #strings = ['2','1','3']
+    arrays = text.array(strings)
+    imgs = image.images(arrays,labels=strings,justify='vertical')
+    
+    persp = perspective.Persp()
+    persp.fix_Q(special='cylinder',number=len(strings))
+
+    hull = Hull(imgs,persp)
+    hull.add_points(num)
+    for i in range(10):
+        hull.figure2()
+        hull.remove_points()
+
+    hull.figure2()
         
 def example_123(num=100,forgive=[.05,.01],save_data=False):
     strings = ['1','2','3']
@@ -210,4 +318,5 @@ def example_xyz(save_data=False):
 
 if __name__=='__main__':
 
-    example_123(num=300,forgive=[.01],save_data=False)
+    #example(1000)
+    example2()

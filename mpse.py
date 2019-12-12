@@ -85,7 +85,7 @@ else:
     D = D[0:args.projections]
     pos,projections,_,costs=mview.MULTIVIEW(D,X0=None,max_iters=args.max_iters,verbose=args.verbose)
 
-#print(projections)
+print(projections)
 #write to file
 args.output_dir='MPSE/outputs/'+ args.experiment_name + "/"
 

@@ -8,18 +8,26 @@ fonts = {
     'chunkfive' : 'fonts/chunkfive.otf'
     }
 
-def pil(string,font='chunkfive',points=240,crop=True,save=False,
-                show=False):
+def pil(string,font='chunkfive',points=240,crop=True,plot=False):
     """\
     Return PIL.Image of given string
 
-    --- arguments ---
-    string = string to be imaged
-    font = font name
-    points = font size in points
-    crop = remove extra vertical space if True
-    save = save as .png file if True
-    feedback = show image if True
+    Parameters:
+
+    string : string
+    Text string to be imaged.
+
+    font : string
+    Font name. Options are arial & chunkfive.
+
+    points : int
+    Font size in points.
+
+    crop : boolean
+    Remove extra vertical space if True.
+
+    plot : boolean
+    Show plot of image if True.
     """
     assert font in fonts
     Font = PIL.ImageFont.truetype(fonts[font],points)
@@ -34,43 +42,35 @@ def pil(string,font='chunkfive',points=240,crop=True,save=False,
         img = img.crop((bbox[0],0,bbox[2],2*points))
     else:
         img = img.crop(bbox)
-
-    if save is True:
-        img.save("text_images/"+font+str(points)+"_"+string+".png")
     
-    if show is True:
+    if plot is True:
         img.show()
 
     return img
 
-def images(strings,font='chunkfive',points=240,crop=True,justify=None):
+def array(string,**kwargs):
+    """\
+    Returns array(s) corresponding to string(s), as given by text.pil()
+    """
 
-    if isinstance(strings,list):
+    if isinstance(string,list):
         return_list = True
+        strings = string
     else:
-        assert isinstance(strings,str)
-        strings = [strings]
+        strings = [string]
         return_list = False
     
-    images = []; 
-    for i in range(len(strings)):
-        img = pil(strings[i],font,points,crop)
-        array = np.array(img.getdata(),float).\
-                reshape(img.size[1],img.size[0])
-
-        if justify is None:
-            dpi = 1.0
-        elif justify is 'vertical':
-            dpi = len(array)
-        elif justify is 'horizonatal':
-            dpi = array.shape[1]
-        elif justify is 'square':
-            dpi = array.shape
-                
-        img = image.Img(array,atype='image',dpi=dpi,label=strings[i])
-        images.append(img)
+    arrays = []; 
+    for string in strings:
+        img = pil(string,**kwargs)
+        arrays.append(np.array(img.getdata(),float).\
+                      reshape(img.size[1],img.size[0]))
 
     if return_list is False:
-        images = images[0]
+        arrays = arrays[0]
         
-    return images
+    return arrays
+
+if __name__=='__main__':
+    #pil('xyx',plot=True)
+    array(['1','2','3'],plot=True)

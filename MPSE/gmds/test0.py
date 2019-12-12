@@ -84,7 +84,7 @@ def MDSp_initial(n=10, rate=2**-4, runs=10):
 
     plt.figure()
     for i in range(runs):
-        print('run {i+1} out of {runs}')
+        print(f'run {i+1} out of {runs}')
         P0 = np.random.rand(3,3)
         P_trajectory = mds.MDSp_Pdescent(X,D,P0,trajectory=True,rate=rate)
 

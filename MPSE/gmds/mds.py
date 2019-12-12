@@ -161,7 +161,7 @@ def example_initial(n=10,p=3,rate=0.05,runs=10):
 
     plt.figure()
     for i in range(runs):
-        print('run {i+1} out of {runs}')
+        print(f'run {i+1} out of {runs}')
         X0 = np.random.rand(n,p)
         results = gradient_descent(D,X0,rate=rate,cost_history=True)
         fx = results['cost_history'] 
