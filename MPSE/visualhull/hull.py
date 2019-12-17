@@ -126,22 +126,20 @@ class Hull(object):
             axs[k].set_title(f'Projection {k}')
         plt.suptitle('Projections of X')
         plt.show()
-
+        
     def figure2(self):
         import matplotlib.pyplot as plt
         from mpl_toolkits import mplot3d
         from scipy import stats
 
-        fig1 = plt.figure()
-        plt.title('X')
-        ax = plt.axes(projection='3d')
-        ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
+        fig = plt.figure(figsize=(4*(self.K+1),4))
+        fig.suptitle(f'Hull sample w/ projections (N = {self.N})')
 
-        fig2, axs = plt.subplots(1,3,sharex=True)
+        ax = fig.add_subplot(1,self.K+1,1,projection='3d')
+        ax.set_title('X')
+        ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
         
-        plt.tight_layout()
-        for k in range(self.K):
-            
+        for k in range(self.K):  
             xmin = self.Y[k,:,0].min()
             xmax = self.Y[k,:,0].max()
             ymin = self.Y[k,:,1].min()
@@ -149,14 +147,14 @@ class Hull(object):
             X, Y = np.mgrid[xmin:xmax:100j,ymin:ymax:100j]
             positions = np.vstack([X.ravel(),Y.ravel()])
             Z = np.reshape(self.kernel[k](positions).T,X.shape)
-            
-            axs[k].imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
+
+            ax = fig.add_subplot(1,self.K+1,k+2)
+            ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
                           extent=[xmin, xmax, ymin, ymax])
-            axs[k].scatter(self.Y[k,:,0],self.Y[k,:,1])
+            ax.scatter(self.Y[k,:,0],self.Y[k,:,1])
             #fig2.colorbar(np.rot90(Z)[3])
-            axs[k].set_aspect(1.0)
-            axs[k].set_title(f'Projection {k}')
-        plt.suptitle('Projections of X')
+            ax.set_aspect(1.0)
+            ax.set_title(f'Projection {k+1}')
         plt.show()
 
     def save(self,filename):
@@ -276,8 +274,8 @@ def example(num=100):
 
 def example2():
     num=10000
-    strings= ['1']
-    #strings = ['2','1','3']
+    #strings= ['1']
+    strings = ['1','2','3']
     arrays = text.array(strings)
     imgs = image.images(arrays,labels=strings,justify='vertical')
     
