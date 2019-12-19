@@ -255,10 +255,10 @@ def uniform(num,imgs,projs,box_length=1,sigma=1.0):
 
 ### Tests ### CHECK: X should be filled everytime, or cut 
 
-def example(num=100):
-    strings = ['1']
-    #strings = ['2','1','3']
-    arrays = text.array(strings)
+def example(num=1000,font='lilita_one'):
+    #strings = ['1']
+    strings = ['1','2','3']
+    arrays = text.array(strings,font=font)
     imgs = image.images(arrays,labels=strings,justify='vertical')
 
     persp = perspective.Persp()
@@ -272,11 +272,10 @@ def example(num=100):
  #       Y = projs[k](X)
  #       img = image.Img(Y,atype='sample',template=imgs[k],sigma=15.0)
 
-def example2():
-    num=10000
+def example2(num=1000,font='lilita_one'):
     #strings= ['1']
     strings = ['1','2','3']
-    arrays = text.array(strings)
+    arrays = text.array(strings,font=font)
     imgs = image.images(arrays,labels=strings,justify='vertical')
     
     persp = perspective.Persp()
@@ -316,5 +315,6 @@ def example_xyz(save_data=False):
 
 if __name__=='__main__':
 
-    #example(1000)
-    example2()
+    font = 'spicy_rice'
+    example(font=font)
+    example2(font=font)
