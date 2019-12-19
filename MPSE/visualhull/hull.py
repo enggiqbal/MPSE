@@ -40,7 +40,7 @@ class Hull(object):
         kernel = []
         density = np.empty((self.K,self.N))
         for k in range(self.K):
-            kernel.append(gaussian_kde(self.Y[k].T,bw_method=self.N**(-1/6)*.7))
+            kernel.append(gaussian_kde(self.Y[k].T,bw_method=self.N**(-1/6)))
             density[k] = kernel[k](self.Y[k].T)
             print(f'perspective {k} -')
             print('minimum :',np.min(density[k]))
@@ -88,7 +88,8 @@ class Hull(object):
         num = math.floor(self.N*bar)
         probs = np.empty((self.K,self.N))
         for k in range(self.K):
-            idx = np.argpartition(self.density[k],num)
+Thunder#28
+idx = np.argpartition(self.density[k],num)
             #print(idx[num],self.density[k][idx)
             density_bar = self.density[k][idx[num]]
             probs[k] = density_bar/self.density[k]
@@ -99,7 +100,8 @@ class Hull(object):
         Remove points to uniformalize projections
         """
         probs = self.compute_probs(**kwargs)
-        average = np.average(probs,axis=0)
+        #average = np.average(probs,axis=0)
+        average = np.sqrt(np.average(probs*probs,axis=0))
         indices = []
         for n in range(self.N):
             if np.random.rand() < average[n]:
@@ -108,26 +110,8 @@ class Hull(object):
         self.Y = self.Y[:,indices]
         self.N = len(self.X)
         self.update_density()
-
-    def figure(self):
-        import matplotlib.pyplot as plt
-        from mpl_toolkits import mplot3d
-
-        fig1 = plt.figure()
-        plt.title('X')
-        ax = plt.axes(projection='3d')
-        ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
-
-        fig2, axs = plt.subplots(1,3,sharex=True)
-        plt.tight_layout()
-        for k in range(self.K):
-            axs[k].scatter(self.Y[k,:,0],self.Y[k,:,1])
-            axs[k].set_aspect(1.0)
-            axs[k].set_title(f'Projection {k}')
-        plt.suptitle('Projections of X')
-        plt.show()
         
-    def figure2(self):
+    def figure(self):
         import matplotlib.pyplot as plt
         from mpl_toolkits import mplot3d
         from scipy import stats
@@ -140,17 +124,17 @@ class Hull(object):
         ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
         
         for k in range(self.K):  
-            xmin = self.Y[k,:,0].min()
-            xmax = self.Y[k,:,0].max()
-            ymin = self.Y[k,:,1].min()
-            ymax = self.Y[k,:,1].max()
-            X, Y = np.mgrid[xmin:xmax:100j,ymin:ymax:100j]
-            positions = np.vstack([X.ravel(),Y.ravel()])
-            Z = np.reshape(self.kernel[k](positions).T,X.shape)
+            #xmin = self.Y[k,:,0].min()
+            #xmax = self.Y[k,:,0].max()
+            #ymin = self.Y[k,:,1].min()
+            #ymax = self.Y[k,:,1].max()
+            #X, Y = np.mgrid[xmin:xmax:100j,ymin:ymax:100j]
+            #positions = np.vstack([X.ravel(),Y.ravel()])
+            #Z = np.reshape(self.kernel[k](positions).T,X.shape)
 
             ax = fig.add_subplot(1,self.K+1,k+2)
-            ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
-                          extent=[xmin, xmax, ymin, ymax])
+            #ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
+                          #extent=[xmin, xmax, ymin, ymax])
             ax.scatter(self.Y[k,:,0],self.Y[k,:,1])
             #fig2.colorbar(np.rot90(Z)[3])
             ax.set_aspect(1.0)
@@ -266,11 +250,7 @@ def example(num=1000,font='lilita_one'):
 
     hull = Hull(imgs,persp)
     hull.add_points(num)
-    hull.figure2()
-
-#    for k in range(len(imgs)):
- #       Y = projs[k](X)
- #       img = image.Img(Y,atype='sample',template=imgs[k],sigma=15.0)
+    hull.figure()
 
 def example2(num=1000,font='lilita_one'):
     #strings= ['1']
@@ -284,7 +264,7 @@ def example2(num=1000,font='lilita_one'):
     hull = Hull(imgs,persp)
     hull.add_points(num)
     for i in range(10):
-        hull.figure2()
+        hull.figure()
         hull.remove_points()
 
     hull.figure2()
@@ -316,5 +296,5 @@ def example_xyz(save_data=False):
 if __name__=='__main__':
 
     font = 'spicy_rice'
-    example(font=font)
-    example2(font=font)
+    #example(font=font)
+    example2(10000,font=font)
