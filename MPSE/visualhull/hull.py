@@ -1,6 +1,6 @@
 import pickle
 import numpy as np
-import math, numbers
+import math, numbers, random
 import matplotlib.pyplot as plt
 import text
 
@@ -12,7 +12,7 @@ import perspective
 
 class Hull(object):
 
-    def __init__(self,imgs,persp,boundary='box',size=1.0):
+    def __init__(self,imgs,persp,boundary='box',size=1.0, label=None):
         
         assert isinstance(imgs,list)
         self.K = len(imgs)
@@ -81,37 +81,56 @@ class Hull(object):
         self.Y = np.concatenate((self.Y,Y),axis=1)
         self.update_density()
 
-    def compute_probs(self,bar=0.01):
-        """
-        Compute probability
-        """
-        num = math.floor(self.N*bar)
-        probs = np.empty((self.K,self.N))
-        for k in range(self.K):
-Thunder#28
-idx = np.argpartition(self.density[k],num)
-            #print(idx[num],self.density[k][idx)
-            density_bar = self.density[k][idx[num]]
-            probs[k] = density_bar/self.density[k]
-        return probs
-        
-    def remove_points(self,method='average',**kwargs):
+    def remove_points(self,method='average',bound=None,**kwargs):
         """\
         Remove points to uniformalize projections
         """
-        probs = self.compute_probs(**kwargs)
+        bar = 0.1
+        num = math.floor(self.N*bar)
+        probs = np.empty((self.K,self.N))
+        for k in range(self.K):
+            idx = np.argpartition(self.density[k],num)
+            #print(idx[num],self.density[k][idx)
+            density_bar = self.density[k][idx[num]]
+            probs[k] = density_bar/self.density[k]
+        #probs = self.compute_probs(**kwargs)
+        
         #average = np.average(probs,axis=0)
         average = np.sqrt(np.average(probs*probs,axis=0))
-        indices = []
+        indices = []; remove = []
         for n in range(self.N):
             if np.random.rand() < average[n]:
                 indices.append(n)
+            else:
+                remove.append(n)
+                
+
+        if bound is not None:
+            if len(indices) < bound:
+                print(self.N)
+                print(len(indices))
+                add = random.sample(remove,bound-len(indices))
+                print(len(remove))
+                print(len(add))
+                indices = indices+add
+                indices.sort()
+                print(len(indices))
+                    
         self.X = self.X[indices]
         self.Y = self.Y[:,indices]
         self.N = len(self.X)
         self.update_density()
+
+    def uniformize(self,target=None,**kwargs):
+        """\
+        Remove points in sample until target number is reached.
+        """
+        if target is None:
+            target = int(self.N/2)
+        while self.N > target:
+            self.remove_points(bound=target)
         
-    def figure(self):
+    def figure(self,plot=True):
         import matplotlib.pyplot as plt
         from mpl_toolkits import mplot3d
         from scipy import stats
@@ -139,12 +158,14 @@ idx = np.argpartition(self.density[k],num)
             #fig2.colorbar(np.rot90(Z)[3])
             ax.set_aspect(1.0)
             ax.set_title(f'Projection {k+1}')
-        plt.show()
+        if plot is True:
+            plt.show()
+        return fig
 
     def save(self,filename):
         with open('hull/'+filename+'.pickle','wb') as handle:
             pickle.dump(self, handle)
-        
+
 ### Boundary functions ###
 
 def random_box(dimX,size):
@@ -239,9 +260,7 @@ def uniform(num,imgs,projs,box_length=1,sigma=1.0):
 
 ### Tests ### CHECK: X should be filled everytime, or cut 
 
-def example(num=1000,font='lilita_one'):
-    #strings = ['1']
-    strings = ['1','2','3']
+def example(strings=['1','2','3'],number=1000,font='lilita_one'):
     arrays = text.array(strings,font=font)
     imgs = image.images(arrays,labels=strings,justify='vertical')
 
@@ -249,10 +268,10 @@ def example(num=1000,font='lilita_one'):
     persp.fix_Q(special='cylinder',number=len(strings))
 
     hull = Hull(imgs,persp)
-    hull.add_points(num)
+    hull.add_points(number)
     hull.figure()
 
-def example2(num=1000,font='lilita_one'):
+def example2(strings = ['1','2','3'],number=1000,font='lilita_one'):
     #strings= ['1']
     strings = ['1','2','3']
     arrays = text.array(strings,font=font)
@@ -262,12 +281,9 @@ def example2(num=1000,font='lilita_one'):
     persp.fix_Q(special='cylinder',number=len(strings))
 
     hull = Hull(imgs,persp)
-    hull.add_points(num)
-    for i in range(10):
-        hull.figure()
-        hull.remove_points()
-
-    hull.figure2()
+    hull.add_points(number)
+    hull.uniformize(target=int(number/20))
+    hull.figure()
         
 def example_123(num=100,forgive=[.05,.01],save_data=False):
     strings = ['1','2','3']
@@ -295,6 +311,7 @@ def example_xyz(save_data=False):
 
 if __name__=='__main__':
 
+    strings = ['1','2','3']
     font = 'spicy_rice'
     #example(font=font)
-    example2(10000,font=font)
+    example2(number=10000,strings=strings,font=font)
