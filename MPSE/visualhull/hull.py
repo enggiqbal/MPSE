@@ -1,6 +1,6 @@
 import pickle
 import numpy as np
-import math, numbers
+import math, numbers, random
 import matplotlib.pyplot as plt
 import text
 
@@ -12,7 +12,7 @@ import perspective
 
 class Hull(object):
 
-    def __init__(self,imgs,persp,boundary='box',size=1.0):
+    def __init__(self,imgs,persp,boundary='box',size=1.0, label=None):
         
         assert isinstance(imgs,list)
         self.K = len(imgs)
@@ -40,7 +40,7 @@ class Hull(object):
         kernel = []
         density = np.empty((self.K,self.N))
         for k in range(self.K):
-            kernel.append(gaussian_kde(self.Y[k].T,bw_method=self.N**(-1/6)*.7))
+            kernel.append(gaussian_kde(self.Y[k].T,bw_method=self.N**(-1/6)))
             density[k] = kernel[k](self.Y[k].T)
             print(f'perspective {k} -')
             print('minimum :',np.min(density[k]))
@@ -81,10 +81,11 @@ class Hull(object):
         self.Y = np.concatenate((self.Y,Y),axis=1)
         self.update_density()
 
-    def compute_probs(self,bar=0.01):
+    def remove_points(self,method='average',bound=None,**kwargs):
+        """\
+        Remove points to uniformalize projections
         """
-        Compute probability
-        """
+        bar = 0.1
         num = math.floor(self.N*bar)
         probs = np.empty((self.K,self.N))
         for k in range(self.K):
@@ -92,77 +93,79 @@ class Hull(object):
             #print(idx[num],self.density[k][idx)
             density_bar = self.density[k][idx[num]]
             probs[k] = density_bar/self.density[k]
-        return probs
+        #probs = self.compute_probs(**kwargs)
         
-    def remove_points(self,method='average',**kwargs):
-        """\
-        Remove points to uniformalize projections
-        """
-        probs = self.compute_probs(**kwargs)
-        average = np.average(probs,axis=0)
-        indices = []
+        #average = np.average(probs,axis=0)
+        average = np.sqrt(np.average(probs*probs,axis=0))
+        indices = []; remove = []
         for n in range(self.N):
             if np.random.rand() < average[n]:
                 indices.append(n)
+            else:
+                remove.append(n)
+                
+
+        if bound is not None:
+            if len(indices) < bound:
+                print(self.N)
+                print(len(indices))
+                add = random.sample(remove,bound-len(indices))
+                print(len(remove))
+                print(len(add))
+                indices = indices+add
+                indices.sort()
+                print(len(indices))
+                    
         self.X = self.X[indices]
         self.Y = self.Y[:,indices]
         self.N = len(self.X)
         self.update_density()
 
-    def figure(self):
-        import matplotlib.pyplot as plt
-        from mpl_toolkits import mplot3d
-
-        fig1 = plt.figure()
-        plt.title('X')
-        ax = plt.axes(projection='3d')
-        ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
-
-        fig2, axs = plt.subplots(1,3,sharex=True)
-        plt.tight_layout()
-        for k in range(self.K):
-            axs[k].scatter(self.Y[k,:,0],self.Y[k,:,1])
-            axs[k].set_aspect(1.0)
-            axs[k].set_title(f'Projection {k}')
-        plt.suptitle('Projections of X')
-        plt.show()
-
-    def figure2(self):
+    def uniformize(self,target=None,**kwargs):
+        """\
+        Remove points in sample until target number is reached.
+        """
+        if target is None:
+            target = int(self.N/2)
+        while self.N > target:
+            self.remove_points(bound=target)
+        
+    def figure(self,plot=True):
         import matplotlib.pyplot as plt
         from mpl_toolkits import mplot3d
         from scipy import stats
 
-        fig1 = plt.figure()
-        plt.title('X')
-        ax = plt.axes(projection='3d')
-        ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
+        fig = plt.figure(figsize=(4*(self.K+1),4))
+        fig.suptitle(f'Hull sample w/ projections (N = {self.N})')
 
-        fig2, axs = plt.subplots(1,3,sharex=True)
+        ax = fig.add_subplot(1,self.K+1,1,projection='3d')
+        ax.set_title('X')
+        ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
         
-        plt.tight_layout()
-        for k in range(self.K):
-            
-            xmin = self.Y[k,:,0].min()
-            xmax = self.Y[k,:,0].max()
-            ymin = self.Y[k,:,1].min()
-            ymax = self.Y[k,:,1].max()
-            X, Y = np.mgrid[xmin:xmax:100j,ymin:ymax:100j]
-            positions = np.vstack([X.ravel(),Y.ravel()])
-            Z = np.reshape(self.kernel[k](positions).T,X.shape)
-            
-            axs[k].imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
-                          extent=[xmin, xmax, ymin, ymax])
-            axs[k].scatter(self.Y[k,:,0],self.Y[k,:,1])
+        for k in range(self.K):  
+            #xmin = self.Y[k,:,0].min()
+            #xmax = self.Y[k,:,0].max()
+            #ymin = self.Y[k,:,1].min()
+            #ymax = self.Y[k,:,1].max()
+            #X, Y = np.mgrid[xmin:xmax:100j,ymin:ymax:100j]
+            #positions = np.vstack([X.ravel(),Y.ravel()])
+            #Z = np.reshape(self.kernel[k](positions).T,X.shape)
+
+            ax = fig.add_subplot(1,self.K+1,k+2)
+            #ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
+                          #extent=[xmin, xmax, ymin, ymax])
+            ax.scatter(self.Y[k,:,0],self.Y[k,:,1])
             #fig2.colorbar(np.rot90(Z)[3])
-            axs[k].set_aspect(1.0)
-            axs[k].set_title(f'Projection {k}')
-        plt.suptitle('Projections of X')
-        plt.show()
+            ax.set_aspect(1.0)
+            ax.set_title(f'Projection {k+1}')
+        if plot is True:
+            plt.show()
+        return fig
 
     def save(self,filename):
         with open('hull/'+filename+'.pickle','wb') as handle:
             pickle.dump(self, handle)
-        
+
 ### Boundary functions ###
 
 def random_box(dimX,size):
@@ -257,40 +260,30 @@ def uniform(num,imgs,projs,box_length=1,sigma=1.0):
 
 ### Tests ### CHECK: X should be filled everytime, or cut 
 
-def example(num=100):
-    strings = ['1']
-    #strings = ['2','1','3']
-    arrays = text.array(strings)
+def example(strings=['1','2','3'],number=1000,font='lilita_one'):
+    arrays = text.array(strings,font=font)
     imgs = image.images(arrays,labels=strings,justify='vertical')
 
     persp = perspective.Persp()
     persp.fix_Q(special='cylinder',number=len(strings))
 
     hull = Hull(imgs,persp)
-    hull.add_points(num)
-    hull.figure2()
+    hull.add_points(number)
+    hull.figure()
 
-#    for k in range(len(imgs)):
- #       Y = projs[k](X)
- #       img = image.Img(Y,atype='sample',template=imgs[k],sigma=15.0)
-
-def example2():
-    num=10000
-    strings= ['1']
-    #strings = ['2','1','3']
-    arrays = text.array(strings)
+def example2(strings = ['1','2','3'],number=1000,font='lilita_one'):
+    #strings= ['1']
+    strings = ['1','2','3']
+    arrays = text.array(strings,font=font)
     imgs = image.images(arrays,labels=strings,justify='vertical')
     
     persp = perspective.Persp()
     persp.fix_Q(special='cylinder',number=len(strings))
 
     hull = Hull(imgs,persp)
-    hull.add_points(num)
-    for i in range(10):
-        hull.figure2()
-        hull.remove_points()
-
-    hull.figure2()
+    hull.add_points(number)
+    hull.uniformize(target=int(number/20))
+    hull.figure()
         
 def example_123(num=100,forgive=[.05,.01],save_data=False):
     strings = ['1','2','3']
@@ -318,5 +311,7 @@ def example_xyz(save_data=False):
 
 if __name__=='__main__':
 
-    #example(1000)
-    example2()
+    strings = ['1','2','3']
+    font = 'spicy_rice'
+    #example(font=font)
+    example2(number=10000,strings=strings,font=font)

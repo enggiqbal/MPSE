@@ -5,7 +5,19 @@ import image
 
 fonts = {
     'arial' : 'fonts/arial.ttf',
-    'chunkfive' : 'fonts/chunkfive.otf'
+    'chunkfive' : 'fonts/chunkfive.otf',
+    'lilita_one' : 'fonts/LilitaOne-Regular.ttf',
+    'anton' : 'fonts/Anton-Regular.ttf',
+    'luckiest_guy' : 'fonts/LuckiestGuy-Regular.ttf',
+    'prata' : 'fonts/Prata-Regular.ttf',
+    'aldrich' : 'fonts/Aldrich-Regular.ttf',
+    'shrikhand' : 'fonts/Shrikhand-Regular.ttf',
+    'leckerli_one' : 'fonts/LeckerliOne-Regular.ttf',
+    'ceviche_one' : 'fonts/CevicheOne-Regular.ttf',
+    'fontdiner_swanky' : 'fonts/FontdinerSwanky-Regular.ttf',
+    'goblin_one' : 'fonts/GoblinOne-Regular.ttf',
+    'gravitas_one' : 'fonts/GravitasOne-Regular.ttf',
+    'spicy_rice' : 'fonts/SpicyRice-Regular.ttf'
     }
 
 def pil(string,font='chunkfive',points=240,crop=True,plot=False):
