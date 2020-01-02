@@ -37,8 +37,20 @@ def find_families(attributes_list=['marriage','business','loan']):
             fams.append(family)
     return fams
 
+def neighbors_number(attributes_list=['marriage','business','loan']):
+    """\
+    Print number of neighbors for each family
+    """
+    fams = find_families(attributes_list); N = len(fams)
+    count = np.zeros((N,K))
+    for i in df.index:
+        fam1 = df['actor1surname'][i]; fam2 = df['actor2surname'][i]
+        if fam1 in fams
+
 def similarity(attributes_list=['marriage','business','loan'],
                symmetric=True):
+    """\
+    """
     K = len(attributes_list)
     fams = find_families(attributes_list); N = len(fams)
     S = np.zeros((K,N,N))
