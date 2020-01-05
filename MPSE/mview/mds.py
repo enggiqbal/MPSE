@@ -72,6 +72,10 @@ class MDS(object):
             print(f'  number of points : {self.N}')
             print(f'  rms of D : {self.D_rms:0.2e}')
             print(f'  embedding dimension : {self.dim}')
+
+        if labels is None:
+            labels = list(range(self.N))
+        self.labels = labels
             
     def initialize(self, X0=None, title='',**kwargs):
         """\
@@ -170,8 +174,8 @@ class MDS(object):
 
     def figure(self,title='mds computation & embedding',labels=None,
                plot=True):
-        if labels is None:
-            labels = self.labels
+        #if labels is None:
+        #    labels = self.labels
         if self.dim >= 2:
             fig,axs = plt.subplots(1,2)
             plt.suptitle(title+f' - stress = {self.cost:0.2e}'+
@@ -184,8 +188,28 @@ class MDS(object):
                 plt.draw()
                 plt.pause(0.1)
         return fig
-    
 
+    def graph(self,edge_bound=1.01,plot=True):
+        import networkx as nx
+        G = nx.Graph()
+        positions = {}
+        for n in range(self.N):
+            label = self.labels[n]
+            G.add_node(label)
+            positions[label] = self.X[n]
+        for i in range(self.N):
+            for j in range(i+1,self.N):
+                if self.D[i,j] <= edge_bound:
+                    print('hi')
+                    G.add_edge(self.labels[i],self.labels[j])
+        fig = plt.figure()
+        nx.draw_networkx(G, pos=positions)
+        nx.draw_networkx_edges(G, pos=positions)
+        plt.title(f'{self.cost:0.2e}[{self.ncost:0.2e}]')
+        if plot is True:
+            plt.show(block=False)
+        return fig
+    
 def stress(D,X):
     """\
     Returns MDS stress.

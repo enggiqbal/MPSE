@@ -39,7 +39,8 @@ class Multiview(object):
             assert isinstance(D[k],np.ndarray)
             assert D[k].shape == (self.N,self.N)
         self.D = D
-        self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)))
+        self.individual_D_rms = np.sqrt(np.sum(D**2,axis=(1,2))/(self.N*(self.N-1)))
+        self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)*self.K))
 
         if isinstance(persp,int):
             dim = persp; assert dim  > 0
@@ -75,6 +76,15 @@ class Multiview(object):
             self.visualization.append(visualization_class(self.D[k],
                                                           self.persp.dimY,
                                                           **kwargs))
+        
+        def cost_function(X,Q,Y=None):
+            if Y is None:
+                Y = self.persp.compute_Y(X,Q=Q)
+            cost = 0
+            for k in range(self.K):
+                cost += self.visualization[k].cost_function(Y[k])
+            return cost
+        self.cost_function = cost_function
 
         def cost_function_k(X,q,k,y=None):
             if y is None:
@@ -82,14 +92,18 @@ class Multiview(object):
             cost_k = self.visualization[k].cost_function(y)
             return cost_k
         self.cost_function_k = cost_function_k
-        
-        def cost_function(X,Q,Y=None):
+
+        def cost_function_all(X,Q,Y=None):
             if Y is None:
                 Y = self.persp.compute_Y(X,Q=Q)
-            cost = 0
+            cost = 0; individual_cost = np.zeros(self.K)
             for k in range(self.K):
-                cost += self.visualization[k].cost_function(Y[k])       
-            return cost
+                cost_k = self.visualization[k].cost_function(Y[k])
+                cost += cost_k
+                individual_cost[k] = cost_k
+            return cost, individual_cost
+        self.cost_function_all = cost_function_all
+        
         self.cost_function = cost_function
         
         if self.persp.family == 'linear':
@@ -263,8 +277,10 @@ class Multiview(object):
     def update(self,H=None):
         if hasattr(self,'X') and hasattr(self,'Q'):
             self.Y = self.persp.compute_Y(self.X,Q=self.Q)
-            self.cost = self.cost_function(self.X,self.Q,Y=self.Y)
-            self.ncost = np.sqrt(self.cost/(self.N*(self.N-1)/2))/self.D_rms
+
+            self.cost, self.individual_cost = self.cost_function_all(self.X,self.Q,Y=self.Y)
+            self.ncost = np.sqrt(self.cost/(self.N*(self.N-1)/2)*self.K)/self.D_rms
+            self.individual_ncost = np.sqrt(self.individual_cost/(self.N*(self.N-1)/2))/self.individual_D_rms
         if H is not None:
             if bool(self.H) is True:
                 H['cost'] = np.concatenate((self.H['cost'],H['cost']))
@@ -392,6 +408,28 @@ class Multiview(object):
             if plot is True:
                 plt.draw()
                 plt.pause(0.1)
+        return fig
+
+    def graphY(self,k=0,edge_bound=1.0,plot=True):
+        import networkx as nx
+        G = nx.Graph()
+        positions = {}
+        for n in range(self.N):
+            label = self.labels[n]
+            G.add_node(label)
+            positions[label] = self.Y[k][n]
+        for i in range(self.N):
+            for j in range(i+1,self.N):
+                if self.D[k,i,j] <= edge_bound:
+                    print('hi')
+                    G.add_edge(self.labels[i],self.labels[j])
+        fig = plt.figure()
+        nx.draw_networkx(G, pos=positions)
+        nx.draw_networkx_edges(G, pos=positions)
+        plt.title(f'{self.individual_cost[k]:0.2e}'+
+                  f'[{self.individual_ncost[k]:0.2e}]')
+        if plot is True:
+            plt.show(block=False)
         return fig
     
 ##### TESTS #####

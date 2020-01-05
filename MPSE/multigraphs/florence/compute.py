@@ -1,27 +1,62 @@
 import sys
 import matplotlib.pyplot as plt
 import numpy as np
+import setup
 sys.path.insert(1,'../../mview')
 import distances, perspective, multiview, mds
 
-def compute_mds():
-    S = np.load('similarity_matrices.npy')
-    D = distances.dmatrices(S,input_type='similarities',connect_factor=2.0)
+attributes2 = ['marriage','loan']
+families2 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Busini', 'Castellani', 'Cavalcanti', 'Ciai', 'Corbinelli', 'Da Uzzano', 'Degli Agli', 'Del Forese', 'Della Casa', 'Fioravanti', 'Gianfigliazzi', 'Ginori', 'Giugni', 'Guadagni', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Pandolfini', 'Pazzi', 'Pecori', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Salviati', 'Scambrilla', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
 
-    for i in range(3):
-        vis = mds.MDS(D[i])
+attributes3 = ['marriage','business','loan']
+#families3 = ['Adimari', 'Ardinghelli', 'Baldovinetti', 'Bardi', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Manelli', 'Manovelli', 'Rondinelli', 'Rossi', 'Serragli', 'Spini']
+families3 = setup.find_families(attributes3)
+print(families3)
+
+def compute_mds(num=2):
+    if num==2:
+        attributes = attributes2
+        families = families2
+    elif num==3:
+        attributes = attributes3
+        families = families3
+        
+    S = setup.connections(attributes_list=attributes,families_list=families)
+    D = distances.dmatrices(S,input_type='similarities',
+                            connect_components=True,connect_factor=1.5)
+    K = len(S); N = len(S[0])
+    
+    fig, axs = plt.subplots(1,K,sharey=True,sharex=True)
+    for i in range(K):
+        vis = mds.MDS(D[i],labels=families)
         vis.initialize()
-        vis.optimize(rate=0.005,max_iters=50)
+        vis.optimize(algorithm='agd',verbose=2)
+        vis.graph()
+        
+        axs[i].title.set_text(attributes[i])
+        if i ==0 :
+            for n in range(N):
+                axs[i].scatter(vis.X[n,0],vis.X[n,1],label=families[n])
+        else:
+            for n in range(N):
+                axs[i].scatter(vis.X[n,0],vis.X[n,1])
+        fig.legend(loc=7)
+        fig.tight_layout()
+        fig.subplots_adjust(right=0.85)   
+        plt.show(block=False)
         fig = vis.figure(); plt.show(block=False)
         
     proj = perspective.Persp()
-    proj.fix_Q(number=3, special='standard')
+    proj.fix_Q(number=K, special='standard')
 
-    mv = multiview.Multiview(D,persp=proj)
+    mv = multiview.Multiview(D,persp=proj,labels=families)
     mv.setup_visualization()
     mv.initialize_X()
     mv.optimize_X(rate=0.002,max_iters=200)
-    mv.figureX(); mv.figureY(); plt.show()
+    mv.figureX(); mv.figureY();
+    mv.figure();
+    mv.graphY(k=0); mv.graphY(k=1)
+    plt.show()
 
 if __name__=='__main__':
-    compute_mds()
+    compute_mds(num=2)
