@@ -49,7 +49,7 @@ def multiview_credit(number_of_points=100,number_of_projs=2,**kwargs):
 
 if __name__=='__main__':
     #MDS:
-    mds_disk()
-    mds_credit(number_of_points=100)
-    #multiview0_credit(number_of_points=100,number_of_projs=2)
-    #multiview_credit(number_of_points=100,number_of_projs=2)
+    #mds_disk()
+    #mds_credit(number_of_points=100)
+    multiview0_credit(number_of_points=100,number_of_projs=2)
+    multiview_credit(number_of_points=100,number_of_projs=2)

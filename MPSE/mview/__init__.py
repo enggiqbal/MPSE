@@ -166,7 +166,7 @@ def MULTIVIEW0(D,dimX=3,dimY=2,Q='same',X0=None,batch_number=None,batch_size=10,
 
     vis.optimize_X(batch_number=batch_number,batch_size=batch_size,lr=lr,
                    verbose=verbose,max_iters=max_iters0)
-    vis.optimize_X(max_iters=max_iters,verbose=verbose)
+    #vis.optimize_X(max_iters=max_iters,verbose=verbose)
 
     if plot is True:
         vis.figureX(title=title)
@@ -252,7 +252,7 @@ def MULTIVIEW(D,dimX=3,dimY=2,X0=None,batch_number=None,batch_size=10,lr=0.01,
 
     vis.optimize_all(batch_number=batch_number,batch_size=batch_size,lr=lr,
                      verbose=verbose,max_iters=max_iters0)
-    vis.optimize_all(max_iters=max_iters,verbose=verbose)
+    #vis.optimize_all(max_iters=max_iters,verbose=verbose)
 
     if plot is True:
         vis.figureX(title=title)
