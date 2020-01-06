@@ -190,7 +190,7 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
     return x, specs
 
 def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
-        verbose=0,**kwargs):
+        verbose=1,**kwargs):
     """\
     Coordinate gradient descent algorithm.
 
@@ -260,8 +260,9 @@ def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
             step_size += np.linalg.norm(X[k]-X0[k])
             grad_size += np.linalg.norm(GRAD[k])
         steps[i] = step_size; grads[i] = grad_size
-        print(f'  {i>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
-              f'cost = {cost[i]:0.2e}', flush=True)
+        if verbose > 1:
+            print(f'  {i>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
+                  f'cost = {cost[i]:0.2e}', flush=True)
         i += 1
 
     specs = {
@@ -269,8 +270,8 @@ def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
         'steps' : steps[0:i],
         'grads' : grads[0:i],
         'iterations' : i,
-        'x_prev' : X0,
-        'dx_prev' : GRAD,
+        'X_prev' : X0,
+        'dX_prev' : GRAD,
         'minimum_reached' : step_size <= min_step,
         'unstable' : step_size > max_step
         }
@@ -286,7 +287,7 @@ def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
     return X, specs
 
 def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
-         dX_prev=0,verbose=0,**kwargs):
+         dX_prev=0,verbose=1,**kwargs):
     """\
     Coordinate gradient descent algorithm.
 
@@ -369,8 +370,9 @@ def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
             step_size += np.linalg.norm(X[k]-X0[k])
             grad_size += np.linalg.norm(dX[k])
         steps[i] = step_size; grads[i] = grad_size
-        print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
-              f'cost = {cost[i]:0.2e}', flush=True)
+        if verbose > 1:
+            print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e},'
+                  +f' cost = {cost[i]:0.2e}', flush=True)
         i += 1
 
     specs = {

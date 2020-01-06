@@ -9,7 +9,7 @@ def mds_disk(N=100,dim=2):
     
     Y = mview.misc.disk(N,dim); labels = mview.misc.labels(Y)   
     D = mview.distances.compute(Y)
-    mview.MDS(D,dim,verbose=2,title='random data on disk',plot=True,
+    mview.MDS(D,dim,verbose=1,title='random data on disk',plot=True,
               labels=labels)
 
 def mds_credit(number_of_points=990,dim=3,**kwargs):
@@ -17,7 +17,7 @@ def mds_credit(number_of_points=990,dim=3,**kwargs):
     path = 'datasets/dataset_tabluar/data/'
     D = np.genfromtxt(path+'discredit3_1000_1.csv', delimiter=',')
     sub = range(number_of_points); D = (D[sub])[:,sub] #subsample
-    points, cost, costhistory = mview.MDS(D,dim,verbose=2,plot=True,**kwargs)
+    points, cost, costhistory = mview.MDS(D,dim,verbose=1,plot=True,**kwargs)
     
 ### MULTIVIEW0 examples ###
     
@@ -49,7 +49,7 @@ def multiview_credit(number_of_points=100,number_of_projs=2,**kwargs):
 
 if __name__=='__main__':
     #MDS:
-    #mds_disk()
+    mds_disk()
     mds_credit(number_of_points=100)
-    multiview0_credit(number_of_points=100,number_of_projs=2)
-    multiview_credit(number_of_points=100,number_of_projs=2)
+    #multiview0_credit(number_of_points=100,number_of_projs=2)
+    #multiview_credit(number_of_points=100,number_of_projs=2)

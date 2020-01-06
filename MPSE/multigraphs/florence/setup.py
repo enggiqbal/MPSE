@@ -21,7 +21,12 @@ for i in df.index:
     counts.loc[name1] += df.loc[i][attributes]
     counts.loc[name2] += df.loc[i][attributes]
 
-def find_families(attributes_list=['marriage','business','loan']):
+attributes2 = ['marriage','loan']
+attributes3 = ['marriage','loan','business']
+
+families2 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Busini', 'Castellani', 'Cavalcanti', 'Ciai', 'Corbinelli', 'Da Uzzano', 'Degli Agli', 'Del Forese', 'Della Casa', 'Fioravanti', 'Gianfigliazzi', 'Ginori', 'Giugni', 'Guadagni', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Pandolfini', 'Pazzi', 'Pecori', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Salviati', 'Scambrilla', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
+
+def find_families(attributes_list=['marriage','business','loan'],verbose=0):
     """\
     Returns families that appear at least once in each of the attributes listed.
     
@@ -36,11 +41,16 @@ def find_families(attributes_list=['marriage','business','loan']):
         min_number = np.min(counts.loc[family][attributes_list])
         if min_number > 0:
             fams.append(family)
-    print(fams)
+
+    if verbose > 0:
+        print('- florence.setup.find_families():')
+        print('  attributes =',attributes_list)
+        print('  families =',fams)
+        
     return fams
 
 def connections(attributes_list=['marriage','business','loan'],
-                families_list=None):
+                families_list=None,verbose=0):
     """\
     Returns tensor with number of connectiosn between families for each 
     attribute. If families_list is None, it first finds the list of families
@@ -51,7 +61,7 @@ def connections(attributes_list=['marriage','business','loan'],
     K = len(attributes_list)
         
     if families_list is None:
-        families_list = find_families(attributes_list); N = len(families_list)
+        families_list = find_families(attributes_list,verbose=verbose)
     else:
         for family in families_list:
             assert family in families
@@ -64,8 +74,13 @@ def connections(attributes_list=['marriage','business','loan'],
             j = families_list.index(fam1); k = families_list.index(fam2)
             S[:,j,k] += df.loc[i][attributes_list]
             S[:,k,j] += df.loc[i][attributes_list]
-    return S
 
+    if verbose > 0:
+        SS = np.sum(S,axis=2)
+        for i in range(N):
+            print(families_list[i],SS[:,i])
+    return S
+        
 def connected_components(attributes_list=['marriage','business','loan'],
                 families_list=None):
     """\
@@ -109,27 +124,12 @@ def connected_components(attributes_list=['marriage','business','loan'],
     print(overall_largest_component)
     print([families_list[i] for i in overall_largest_component])
 
-def similarity(attributes_list=['marriage','business','loan'],
-               symmetric=True):
-    """\
-    """
-    K = len(attributes_list)
-    fams = find_families(attributes_list); N = len(fams)
-    S = np.zeros((K,N,N))
-    for i in df.index:
-        fam1 = df['actor1surname'][i]; fam2 = df['actor2surname'][i]
-        if fam1 in fams and fam2 in fams:
-            j = fams.index(fam1); k = fams.index(fam2)
-            S[:,j,k] += df.loc[i][attributes_list]
-            if symmetric is True:
-                S[:,k,j] += df.loc[i][attributes_list]
-    return S
-
 if __name__ == '__main__':
-    attributes_list = ['marriage','loan']
-    find_families(attributes_list)
-    connected_components(attributes_list,families_list=['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Busini', 'Castellani', 'Cavalcanti', 'Ciai', 'Corbinelli', 'Da Uzzano', 'Degli Agli', 'Del Forese', 'Della Casa', 'Fioravanti', 'Gianfigliazzi', 'Ginori', 'Giugni', 'Guadagni', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Pandolfini', 'Pazzi', 'Pecori', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Salviati', 'Scambrilla', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
-)
+    attributes_list = attributes2
+    families_list = families2
+    #find_families(attributes_list,verbose=1)
+    connections(attributes_list,families_list,verbose=1)
+    #connected_components(attributes_list,families_list=families2)
     
     #connected_components(families_list=['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni'])
     

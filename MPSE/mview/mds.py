@@ -123,18 +123,19 @@ class MDS(object):
         self.X = self.X0; self.H = {}
         self.update()
 
-    def optimize(self, batch_size=None, batch_number=None, lr=0.01,**kwargs):
+    def optimize(self, agd=True, batch_size=None, batch_number=None, lr=0.01,
+                 **kwargs):
+        """\
+        Optimize stress function using gradient-based methods. If batch size or
+        number are given, optimization begins with stochastic gradient descent.
+        If agd is set to True, optimization ends with adaptive gradient descent.
+        """
         if self.verbose > 0:
             print('- MDS.optimize():')
 
-        F = lambda X: self.F(X,batch_number=batch_number,
-                             batch_size=batch_size)
-
-        if batch_number is None and batch_size is None:
-            if self.verbose > 0:
-                print('  method : exact gradient & adaptive gradient descent')
-            self.X, H = gd.agd(self.X,F,**kwargs,**self.H)
-        else:
+        if batch_number is not None or batch_size is not None:
+            F = lambda X: self.F(X,batch_number=batch_number,
+                                 batch_size=batch_size)
             if self.verbose > 0:
                 print('  method : stochastic gradient descent')
                 if batch_number is None:
@@ -142,22 +143,40 @@ class MDS(object):
                 else:
                     print(f'  batch number : {batch_number}')
             self.X, H = gd.mgd(self.X,F,lr=lr,**kwargs)
-        self.update(H=H)
+            self.update(H=H)
+        if agd is True:
+            F = lambda X: self.F(X)
+            if self.verbose > 0:
+                print('  method : exact gradient & adaptive gradient descent')
+            self.X, H = gd.agd(self.X,F,**kwargs,**self.H)
+            self.update(H=H)
 
         if self.verbose > 0:
             print(f'  final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
-    def figureX(self,title='mds embedding',labels=None,plot=True):
+    def figureX(self,title='mds embedding',labels=None,colors=None,edges=None,
+                plot=True, ax=None):
         if labels is None:
             labels = self.labels
         if self.dim >= 2:
-            fig = plt.figure()
-            plt.scatter(self.X[:,0],self.X[:,1],c=labels)
-            plt.title(title+f' - stress = {self.cost:0.2e}[{self.ncost:0.2e}]')
+            if ax is None:
+                fig, ax = plt.subplots()
+            else:
+                plot = False
+            if edges is not None:
+                if isinstance(edges,numbers.Number):
+                    edges = edges-self.D
+                for i in range(self.N):
+                    for j in range(i+1,self.N):
+                        if edges[i,j] > 0:
+                            ax.plot([self.X[i,0],self.X[j,0]],
+                                      [self.X[i,1],self.X[j,1]],'-')#,l='b')
+            print(colors)
+            ax.scatter(self.X[:,0],self.X[:,1],c=colors)
+            ax.title.set_text(title+f' - stress = {self.cost:0.2e}[{self.ncost:0.2e}]')
             if plot is True:
                 plt.draw()
                 plt.pause(0.1)
-        return fig
 
     def figureH(self,title='Computation history for X',plot=True):
         assert hasattr(self,'H')
@@ -189,7 +208,7 @@ class MDS(object):
                 plt.pause(0.1)
         return fig
 
-    def graph(self,edge_bound=1.01,plot=True):
+    def graph(self,edge_bound=1.01,plot=True,ax=None):
         import networkx as nx
         G = nx.Graph()
         positions = {}
@@ -200,15 +219,19 @@ class MDS(object):
         for i in range(self.N):
             for j in range(i+1,self.N):
                 if self.D[i,j] <= edge_bound:
-                    print('hi')
                     G.add_edge(self.labels[i],self.labels[j])
-        fig = plt.figure()
-        nx.draw_networkx(G, pos=positions)
-        nx.draw_networkx_edges(G, pos=positions)
-        plt.title(f'{self.cost:0.2e}[{self.ncost:0.2e}]')
-        if plot is True:
-            plt.show(block=False)
-        return fig
+        if ax is None:
+            fig = plt.figure()
+            nx.draw_networkx(G, pos=positions)
+            nx.draw_networkx_edges(G, pos=positions)
+            plt.title(f'{self.cost:0.2e}[{self.ncost:0.2e}]')
+            if plot is True:
+                plt.show(block=False)
+            return fig
+        else:
+            nx.draw_networkx(G, pos=positions, ax=ax)
+            nx.draw_networkx_edges(G, pos=positions, ax=ax)
+            ###
     
 def stress(D,X):
     """\
@@ -359,7 +382,7 @@ def stress_batch(D,Y_batch,indices):
                                    
 ### TESTS ###
 
-def example_disk(N=30,dim=2):
+def example_disk(N=100,dim=2,**kwargs):
     print('\n***mds.example_disk()***')
     
     Y = misc.disk(N,dim); labels = misc.labels(Y)
@@ -376,8 +399,9 @@ def example_disk(N=30,dim=2):
     mds = MDS(D,dim=dim,verbose=1,title=title,labels=labels)
     mds.initialize()
     mds.figureX(title='initial embedding')
-    mds.optimize(algorithm='agd',verbose=2)
-    mds.figure(title='final embedding')
+    mds.optimize(**kwargs)
+    mds.figureX(title='final embedding',labels=labels,edges=.2)
+    mds.figure(title='final embedding',labels=labels)
     plt.show()
 
 def example_approx(N=30,dim=2,batch_number=5):
@@ -402,7 +426,7 @@ def example_approx(N=30,dim=2,batch_number=5):
     mds.figureH()
     plt.show()
 
-def disk_compare(N=100,dim=2):
+def disk_compare(N=100,dim=2): ###
     print('\n***mds.disk_compare()***')
     
     X = misc.disk(N,2); labels = misc.labels(X)
@@ -447,7 +471,7 @@ def example_disk_noisy(N=100,dim=2):
     for noise in noise_levels:
         D_noisy = distances.add_noise(D,noise)
         mds = MDS(D_noisy,dim,verbose=1,title=f'noise : {noise:0.2f}')
-        mds.initialize_Y()
+        mds.initialize()
         mds.optimize(algorithm='agd',max_iters=300,verbose=1)
         stress.append(mds.ncost)
     fig = plt.figure()
@@ -477,7 +501,9 @@ def example_disk_dimensions(N=100):
     
 if __name__=='__main__':
 
-    example_disk(N=100)
+    example_disk()
+    #example_disk(agd=False,batch_number=10,max_iters=200)
+    #example_disk(batch_number=10)
     #example_approx(N=100)
     #disk_compare(N=100)
     #example_disk_noisy(50)

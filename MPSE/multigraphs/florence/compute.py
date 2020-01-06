@@ -3,7 +3,7 @@ import matplotlib.pyplot as plt
 import numpy as np
 import setup
 sys.path.insert(1,'../../mview')
-import distances, perspective, multiview, mds
+import distances, perspective, multiview, mds, compare
 
 attributes2 = ['marriage','loan']
 families2 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Busini', 'Castellani', 'Cavalcanti', 'Ciai', 'Corbinelli', 'Da Uzzano', 'Degli Agli', 'Del Forese', 'Della Casa', 'Fioravanti', 'Gianfigliazzi', 'Ginori', 'Giugni', 'Guadagni', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Pandolfini', 'Pazzi', 'Pecori', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Salviati', 'Scambrilla', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
@@ -11,8 +11,42 @@ families2 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori',
 attributes3 = ['marriage','business','loan']
 #families3 = ['Adimari', 'Ardinghelli', 'Baldovinetti', 'Bardi', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Manelli', 'Manovelli', 'Rondinelli', 'Rossi', 'Serragli', 'Spini']
 families3 = setup.find_families(attributes3)
-print(families3)
 
+def example2():
+    attributes = attributes2
+    families = families2
+    
+    S = setup.connections(attributes_list=attributes,families_list=families)
+    D = distances.dmatrices(S,input_type='similarities',
+                            connect_components=True,connect_factor=1.5)
+    K = len(S); N = len(S[0])
+
+    p = perspective.Persp()
+    p.fix_Q(number=K, special='standard')
+    
+    a,b,c=compare.all(D,p,title='florence marriage + business',
+                      names=attributes, edges=S, verbose=1)
+
+    # distance to family with maximum number of  marriage & loan links
+    colors = [D[0,-2],D[1,1]]
+    compare.plot(a,b,c,title='florence marriage + business',
+                 names=attributes, edges=S, colors=colors, verbose=1)
+
+def example3():
+    attributes = attributes3
+    families = families3
+    
+    S = setup.connections(attributes_list=attributes,families_list=families)
+    D = distances.dmatrices(S,input_type='similarities',
+                            connect_components=True,connect_factor=1.5)
+    K = len(S); N = len(S[0])
+
+    p = perspective.Persp()
+    p.fix_Q(number=K, special='standard')
+    
+    compare.main(D,p,title='florence marriage + business',
+                 names=attributes, edges=S, verbose=1)
+    
 def compute_mds(num=2):
     if num==2:
         attributes = attributes2
@@ -30,7 +64,7 @@ def compute_mds(num=2):
     for i in range(K):
         vis = mds.MDS(D[i],labels=families)
         vis.initialize()
-        vis.optimize(algorithm='agd',verbose=2)
+        vis.optimize(algorithm='agd')
         vis.graph()
         
         axs[i].title.set_text(attributes[i])
@@ -59,4 +93,5 @@ def compute_mds(num=2):
     plt.show()
 
 if __name__=='__main__':
-    compute_mds(num=2)
+    example2()
+    #example3()

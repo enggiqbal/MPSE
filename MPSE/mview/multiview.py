@@ -28,8 +28,8 @@ class Multiview(object):
         """
         if verbose > 0:
             print('+ multiview.Multiview('+title+'):')
-        self.verbose = verbose; self.title = title; self.labels = labels
-            
+        self.verbose = verbose; self.title = title
+        
         if isinstance(D,list):
             D = np.array(D)
         self.D = D
@@ -54,6 +54,10 @@ class Multiview(object):
         self.persp = persp
 
         self.H = {}
+
+        if labels is None:
+            labels = list(range(self.N))
+        self.labels = labels
         
         if verbose > 0:
             print(f'  Number of views : {self.K}')
@@ -251,7 +255,6 @@ class Multiview(object):
         """
         if self.verbose > 0:
             print('- Multiview.initialize_X():')
-            print('  method :',method)
 
         if X0 is not None:
             if self.verbose > 0:
@@ -291,26 +294,28 @@ class Multiview(object):
     def forget(self):
         self.X = self.X0; self.H = {}; self.update()
 
-    def optimize_X(self, batch_size=None, batch_number=None, lr=0.01,**kwargs):
+    def optimize_X(self, agd=True, batch_size=None, batch_number=None, lr=0.01,
+                   **kwargs):
         if self.verbose > 0:
             print('- Multiview.optimize_X():')
 
-        F = lambda X: self.FX(X,self.Q,batch_number=batch_number,
-                              batch_size=batch_size)
-        
-        if batch_number is None and batch_size is None:
-            if self.verbose > 0:
-                print('  method : exact gradient & adaptive gradient descent')
-            self.X, H = gd.agd(self.X,F,**kwargs)
-        else:
+        if batch_number is not None or batch_size is not None:
             if self.verbose > 0:
                 print('  method : stochastic gradient descent')
                 if batch_number is None:
                     print(f'  batch size : {batch_size}')
                 else:
                     print(f'  batch number : {batch_number}')
+            F = lambda X: self.FX(X,self.Q,batch_number=batch_number,
+                                  batch_size=batch_size)
             self.X, H = gd.mgd(self.X,F,lr=lr,**kwargs)
-        self.update(H=H)
+            self.update(H=H)
+        if agd is True:
+            F = lambda X: self.FX(X,self.Q)
+            if self.verbose > 0:
+                print('  method : exact gradient & adaptive gradient descent')
+            self.X, H = gd.agd(self.X,F,**kwargs,**self.H)
+            self.update(H=H)
 
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
@@ -330,27 +335,34 @@ class Multiview(object):
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
-    def optimize_all(self,batch_size=None,batch_number=None,lr=0.01,**kwargs):
+    def optimize_all(self,agd=True,batch_size=None,batch_number=None,lr=0.01,
+                     **kwargs):
         if self.verbose:
             print('- Multiview.optimize_all(): ')
 
-        XQ = [self.X]+self.Q;
-        F = lambda XQ: self.F(XQ[0],XQ[1::],batch_number=batch_number,
-                              batch_size=batch_size)
         p = [None]+[self.persp.c]*self.K
-        if batch_number is None and batch_size is None:
-            XQ, H = gd.cagd(XQ,F,**kwargs)
-        else:
+        if batch_number is not None or batch_size is not None:
+            XQ = [self.X]+self.Q;
+            F = lambda XQ: self.F(XQ[0],XQ[1::],batch_number=batch_number,
+                                  batch_size=batch_size)
             XQ, H = gd.mgd(XQ,F,lr=lr,**kwargs)
-        self.X = XQ[0]; self.Q = XQ[1::]; self.update(H=H)
+            self.X = XQ[0]; self.Q = XQ[1::]; self.update(H=H)
+        if agd is True:
+            XQ = [self.X]+self.Q;
+            F = lambda XQ: self.F(XQ[0],XQ[1::])
+            XQ, H = gd.cagd(XQ,F,**kwargs,**self.H)
+            self.X = XQ[0]; self.Q = XQ[1::]; self.update(H=H)
 
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
-    def figureX(self,title='Final embedding',plot=True):
+    def figureX(self,title='Final embedding',perspectives=True,
+                labels=None,edges=None,plot=True):
+        if labels is None:
+            labels = self.labels
         if self.persp.dimX == 2:
             fig = plt.figure(1)
-            plt.plot(self.X[:,0],self.X[:,1],'o')
+            plt.plot(self.X[:,0],self.X[:,1],'o',c=labels)
             plt.title(title+f', normalized cost : {self.ncost:0.2e}')
             if plot is True:
                 plt.draw()
@@ -358,26 +370,55 @@ class Multiview(object):
             return fig
         else:
             plt.figure()
-            axs = plt.axes(projection='3d')
-            axs.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2],cmap='Greens');
+            axes = plt.axes(projection='3d')
+            if perspectives is True:
+                for k in range(self.K):
+                    Q = self.Q[k]
+                    q = 10*np.cross(Q[0],Q[1])
+                    axes.plot([0,q[0]],[0,q[1]],[0,q[2]],'-')
+            if edges is not None:
+                if isinstance(edges,numbers.Number):
+                    edges = edges-self.D
+                for k in range(self.K):
+                    for i in range(self.N):
+                        for j in range(i+1,self.N):
+                            if edges[i,j] > 0:
+                                axes.plot([self.X[i,0],self.X[j,0]],
+                                             [self.X[i,1],self.X[j,1]],
+                                             [self.X[i,2],self.X[j,2]],'-')#,l='b')
+            axes.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2],c=labels)
             #axs.set_aspect(1.0)
             plt.title(title+f', normalized cost = {self.ncost:0.2e}')
             if plot is True:
                 plt.draw()
                 plt.pause(0.1)
-            return axs
 
-    def figureY(self,title='Final perspective of embedding',plot=True):
-        if self.persp.dimY == 2:
-            fig,axs = plt.subplots(1,self.K)
-            plt.suptitle(title+f', normalized cost : {self.ncost:0.2e}')
+    def figureY(self,title='Final perspective of embedding',labels=None,
+                edges=None, plot=True,axes=None):
+        if labels is None:
+            labels = self.labels
+        if axes is None:
+            fig, axes = plt.subplots(1,self.K)
+        else:
+            plot = False
+        if edges is not None:
+            if isinstance(edges,numbers.Number):
+                edges = edges-self.D
             for k in range(self.K):
-                axs[k].plot(self.Y[k][:,0],self.Y[k][:,1],'o')
-                axs[k].set_aspect(1.0)
+                for i in range(self.N):
+                    for j in range(i+1,self.N):
+                        if edges[k,i,j] > 0:
+                            axes[k].plot([self.Y[k][i,0],self.Y[k][j,0]],
+                                         [self.Y[k][i,1],self.Y[k][j,1]],'-')#,l='b')
+        if self.persp.dimY == 2:
+            if plot is True:
+                plt.suptitle(title+f', normalized cost : {self.ncost:0.2e}')
+            for k in range(self.K):
+                axes[k].scatter(self.Y[k][:,0],self.Y[k][:,1],c=labels)
+                axes[k].set_aspect(1.0)
             if plot is True:
                 plt.draw()
                 plt.pause(0.1)
-        return fig
     
     def figureH(self,title='Computation history for X',plot=True):
         assert hasattr(self,'H')
@@ -395,6 +436,8 @@ class Multiview(object):
 
     def figure(self,title='multiview computation & embedding',labels=None,
                plot=True):
+        if labels is None:
+            labels = self.labels
         if self.persp.dimY >= 2:
             fig,axs = plt.subplots(1,self.K+1)
             plt.suptitle(title+f', normalized cost : {self.ncost:0.2e}')
@@ -403,48 +446,54 @@ class Multiview(object):
             axs[0].semilogy(its,self.H['steps'], label='steps')
             axs[0].legend()
             for k in range(self.K):
-                axs[k+1].plot(self.Y[k][:,0],self.Y[k][:,1],'o')
+                axs[k+1].scatter(self.Y[k][:,0],self.Y[k][:,1],c=labels)
                 axs[k+1].set_aspect(1.0)
             if plot is True:
                 plt.draw()
                 plt.pause(0.1)
         return fig
 
-    def graphY(self,k=0,edge_bound=1.0,plot=True):
+    def graphY(self,edge_bound=1.0,plot=True,axes=None):
         import networkx as nx
-        G = nx.Graph()
-        positions = {}
-        for n in range(self.N):
-            label = self.labels[n]
-            G.add_node(label)
-            positions[label] = self.Y[k][n]
-        for i in range(self.N):
-            for j in range(i+1,self.N):
-                if self.D[k,i,j] <= edge_bound:
-                    print('hi')
-                    G.add_edge(self.labels[i],self.labels[j])
-        fig = plt.figure()
-        nx.draw_networkx(G, pos=positions)
-        nx.draw_networkx_edges(G, pos=positions)
-        plt.title(f'{self.individual_cost[k]:0.2e}'+
-                  f'[{self.individual_ncost[k]:0.2e}]')
-        if plot is True:
-            plt.show(block=False)
-        return fig
+
+        if axes is None:
+            fig, axes = plt.subplots(1,self.K)
+        for k in range(self.K):
+            G = nx.Graph()
+            positions = {}
+            for n in range(self.N):
+                label = self.labels[n]
+                G.add_node(label)
+                positions[label] = self.Y[k][n]
+            for i in range(self.N):
+                for j in range(i+1,self.N):
+                    if self.D[k,i,j] <= edge_bound:
+                        G.add_edge(self.labels[i],self.labels[j])
+            nx.draw_networkx(G, pos=positions,ax=axes[k])
+            nx.draw_networkx_edges(G, pos=positions,ax=axes[k])
+            #plt.title(f'{self.individual_cost[k]:0.2e}'+
+            #              f'[{self.individual_ncost[k]:0.2e}]')
+
+        #if axes is not None:
+         #   if plot is True:
+          #      plt.show(block=False)
+           # return fig
+            
     
 ##### TESTS #####
 
 def example_disk(N=100):
-    X = misc.disk(N,dim=3)
+    X = misc.disk(N,dim=3); labels=misc.labels(X)
     persp = perspective.Persp()
     persp.fix_Q(number=3,special='standard')
     Y = persp.compute_Y(X)
     D = distances.compute(Y)
-    mv = Multiview(D,persp=persp,verbose=1)
+    mv = Multiview(D,persp=persp,verbose=1,labels=labels)
     mv.setup_visualization(visualization='mds')
     mv.initialize_X(verbose=1)
-    mv.optimize_X(batch_size=10,max_iters=50,verbose=2)
-    mv.optimize_X(verbose=2)
+    mv.optimize_X(batch_size=10,max_iters=50,verbose=1)
+    mv.figureX()
+    mv.figureY()
     mv.figureH()
     plt.show()
 
@@ -464,17 +513,16 @@ def example_disk_Q(N=100):
     plt.show()
 
 def example_disk_all(N=100):
-    X = misc.disk(N,dim=3)
+    X = misc.disk(N,dim=3); labels=misc.labels(X)
     persp = perspective.Persp()
     Q_true = persp.generate_Q(number=3,special='standard')
     Y_true = persp.compute_Y(X,Q=Q_true)
     D = distances.compute(Y_true)
-    mv = Multiview(D,persp=persp,verbose=2)
+    mv = Multiview(D,persp=persp,verbose=1,labels=labels)
     mv.setup_visualization(visualization='mds')
     mv.initialize_Q()
-    mv.initialize_X(verbose=1)
-    mv.optimize_all(batch_size=10,verbose=2)
-    mv.optimize_all(max_iters=200,verbose=2)
+    mv.initialize_X()
+    mv.optimize_all(agd=True,batch_size=10)
     mv.figureX(plot=True)
     mv.figureY(plot=True)
     mv.figureH()
