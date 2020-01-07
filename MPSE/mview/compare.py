@@ -28,7 +28,7 @@ def all(D, persp, method='mds', separate=True, fixed=True, varying=True, verbose
         vvis.setup_visualization()
         vvis.initialize_X()
         vvis.initialize_Q()
-        vvis.optimize_all()
+        vvis.optimize_all(batch_number=10,max_iters=300)
 
     return svis, fvis, vvis
 
@@ -49,19 +49,20 @@ def plot(svis,fvis,vvis, separate=True, fixed=True, varying=True, verbose=0,
     if separate is True:
         for k in range(K):
             svis[k].figureX(ax=axes[0,k],edges=edges[k],colors=colors[k])
-            axes[0,k].title.set_text(names[k]+f'\n {svis[k].ncost:0.2e}')  
+            #axes[0,k].title.set_text(names[k]+f'\n {svis[k].ncost:0.2e}')
+            axes[0,k].title.set_text(f'\n {svis[k].ncost:0.2e}')
     if fixed is True:
         fvis.figureY(axes=axes[1],edges=edges,colors=colors)
         for k in range(K):
             axes[1,k].title.set_text(f'{fvis.individual_ncost[k]:0.2e}')
         #fvis.figure(plot=False,colors=colors)
-        fvis.figureX(edges=edges[0],colors=colors[0])
+        fvis.figureX(edges=edges[0],colors=colors[0],title='marriage+loan+business / fixed',save='mlf')
     if varying is True:
         vvis.figureY(axes=axes[2],edges=edges,colors=colors)
         for k in range(K):
             axes[2,k].title.set_text(f'{vvis.individual_ncost[k]:0.2e}')
         #vvis.figure(colors=colors)
-        vvis.figureX(edges=edges[0],colors=colors[0])
+        vvis.figureX(edges=edges[0],colors=colors[0],title='marriage+loan+business / varying',save='mlv')
     
     axes[0,0].set_ylabel('individual')
     axes[1,0].set_ylabel('fixed perspectives')

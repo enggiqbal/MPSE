@@ -11,6 +11,7 @@ families2 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori',
 attributes3 = ['marriage','business','loan']
 #families3 = ['Adimari', 'Ardinghelli', 'Baldovinetti', 'Bardi', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Manelli', 'Manovelli', 'Rondinelli', 'Rossi', 'Serragli', 'Spini']
 families3 = setup.find_families(attributes3)
+attributes3 = ['marriage','loan','business']
 
 def example2():
     attributes = attributes2
@@ -29,7 +30,7 @@ def example2():
 
     # distance to family with maximum number of  marriage & loan links
     colors = [D[0,-2],D[1,1]]
-    compare.plot(a,b,c,title='florence marriage + business',
+    compare.plot(a,b,c,title='florence marriage + loan / correct colors',
                  names=attributes, edges=S, colors=colors, verbose=1)
 
     # distance to family with maximum number of  marriage only
@@ -38,12 +39,12 @@ def example2():
      #            names=attributes, edges=S, colors=colors, verbose=1)
 
     # distance to family with maximum number of  marriage only
-    S0 = setup.connections(attributes_list=['business'],families_list=families)
-    D = distances.dmatrices(S0,input_type='similarities',
-                            connect_components=True,connect_factor=1.5)
-    colors = [D[0,3],D[0,3]]
-    compare.plot(a,b,c,title='florence marriage + business',
-                 names=attributes, edges=S, colors=colors, verbose=1)
+    #S0 = setup.connections(attributes_list=['business'],families_list=families)
+    #D = distances.dmatrices(S0,input_type='similarities',
+                   #         connect_components=True,connect_factor=1.5)
+    #colors = [D[0,3],D[0,3]]
+    #compare.plot(a,b,c,title='florence marriage + loan / business colors',
+                # names=attributes, edges=S, colors=colors, verbose=1)
 
 def example3():
     attributes = attributes3
@@ -61,8 +62,42 @@ def example3():
                       names=attributes, edges=S, verbose=1)
 
     # distance to family with maximum number of  marriage & loan links
-    colors = [D[0,-2],D[1,1],D[2,4]]
+    #colors = [D[0,-2],D[1,1],D[2,4]]
+    colors = [D[0,-2],D[1,4],D[2,1]]
     compare.plot(a,b,c,title='florence marriage + business',
+                 names=attributes, edges=S, colors=colors, verbose=1)
+
+def example23():
+    attributes = attributes2
+    families = families2
+    
+    S = setup.connections(attributes_list=attributes,families_list=families)
+    D = distances.dmatrices(S,input_type='similarities',
+                            connect_components=True,connect_factor=1.5)
+    K = len(S); N = len(S[0])
+
+    p = perspective.Persp()
+    p.fix_Q(number=K, special='standard')
+    
+    a,b,c=compare.all(D,p,title='florence marriage + business',
+                      names=attributes, edges=S, verbose=1)
+
+    # distance to family with maximum number of  marriage & loan links
+    colors = [D[0,-2],D[1,1]]
+    compare.plot(a,b,c,title='florence marriage + loan / correct colors',
+                 names=attributes, edges=S, colors=colors, verbose=1)
+
+    # distance to family with maximum number of  marriage only
+    #colors = [D[0,-2],D[0,-2]]
+    #compare.plot(a,b,c,title='florence marriage + business',
+     #            names=attributes, edges=S, colors=colors, verbose=1)
+
+    # distance to family with maximum number of  marriage only
+    S0 = setup.connections(attributes_list=['business'],families_list=families)
+    D = distances.dmatrices(S0,input_type='similarities',
+                            connect_components=True,connect_factor=1.5)
+    colors = [D[0,3],D[0,3]]
+    compare.plot(a,b,c,title='florence marriage + loan / business colors',
                  names=attributes, edges=S, colors=colors, verbose=1)
     
 def compute_mds(num=2):
@@ -83,7 +118,7 @@ def compute_mds(num=2):
         vis = mds.MDS(D[i],labels=families)
         vis.initialize()
         vis.optimize(algorithm='agd')
-        vis.graph()
+        vis.graph(title=attributes[i])
         
         axs[i].title.set_text(attributes[i])
         if i ==0 :
@@ -98,18 +133,19 @@ def compute_mds(num=2):
         plt.show(block=False)
         fig = vis.figure(); plt.show(block=False)
         
-    proj = perspective.Persp()
-    proj.fix_Q(number=K, special='standard')
+    #proj = perspective.Persp()
+    #proj.fix_Q(number=K, special='standard')
 
-    mv = multiview.Multiview(D,persp=proj,labels=families)
-    mv.setup_visualization()
-    mv.initialize_X()
-    mv.optimize_X(rate=0.002,max_iters=200)
-    mv.figureX(); mv.figureY();
-    mv.figure();
-    mv.graphY(k=0); mv.graphY(k=1)
+    #mv = multiview.Multiview(D,persp=proj,labels=families)
+    #mv.setup_visualization()
+    #mv.initialize_X()
+    #mv.optimize_X(rate=0.002,max_iters=200)
+    #mv.figureX(); mv.figureY();
+    #mv.figure();
+    #mv.graphY(k=0); mv.graphY(k=1)
     plt.show()
 
 if __name__=='__main__':
     #example2()
     example3()
+    #compute_mds()

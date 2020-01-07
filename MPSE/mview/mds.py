@@ -208,7 +208,7 @@ class MDS(object):
                 plt.pause(0.1)
         return fig
 
-    def graph(self,edge_bound=1.01,plot=True,ax=None):
+    def graph(self,edge_bound=1.01,plot=True,ax=None,title=None):
         import networkx as nx
         G = nx.Graph()
         positions = {}
@@ -224,7 +224,8 @@ class MDS(object):
             fig = plt.figure()
             nx.draw_networkx(G, pos=positions)
             nx.draw_networkx_edges(G, pos=positions)
-            plt.title(f'{self.cost:0.2e}[{self.ncost:0.2e}]')
+            plt.title(title)
+            plt.axis('off')
             if plot is True:
                 plt.show(block=False)
             return fig
