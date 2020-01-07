@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-import misc, distances, gd, perspective, mds, tsne, gd
+import misc, distances, gd, perspective, mds, tsne, gd, plots
 
 class Multiview(object):
     """\
@@ -357,6 +357,24 @@ class Multiview(object):
             print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
     def figureX(self,title='Final embedding',perspectives=True,
+                labels=None,edges=None,colors=None,plot=True,save=False):
+
+        if perspectives is True:
+            perspectives = []
+            for k in range(self.K):
+                Q = self.Q[k]
+                q = np.cross(Q[0],Q[1])
+                perspectives.append(q)
+        else:
+            perspectives = None
+            
+        if edges is not None:
+            if isinstance(edges,numbers.Number):
+                edges = edges-self.D
+        plots.plot3D(self.X,perspectives=perspectives,edges=edges,
+                     colors=colors,title=title,save=save)
+                
+    def figureX2(self,title='Final embedding',perspectives=True,
                 labels=None,edges=None,colors=None,plot=True):
         if labels is None:
             labels = self.labels
@@ -405,6 +423,8 @@ class Multiview(object):
                 edges=None, plot=True,colors=None,axes=None):
         if labels is None:
             labels = self.labels
+        if colors is None:
+            colors = [None]*self.K
         if axes is None:
             fig, axes = plt.subplots(1,self.K)
         else:
@@ -501,7 +521,7 @@ def example_disk(N=100):
     mv.setup_visualization(visualization='mds')
     mv.initialize_X(verbose=1)
     mv.optimize_X(batch_size=10,max_iters=50,verbose=1)
-    mv.figureX()
+    mv.figureX(save='hola')
     mv.figureY()
     mv.figureH()
     plt.show()
@@ -583,9 +603,9 @@ def noise_all(N=100):
     plt.show()
     
 if __name__=='__main__':
-    #example_disk(100)
+    example_disk(30)
     #example_disk_Q(30)
-    example_disk_all(N=30)
+    #example_disk_all(N=30)
     #noisy()
     #noisy_combine()
     #test_mds0()
