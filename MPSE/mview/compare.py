@@ -51,17 +51,17 @@ def plot(svis,fvis,vvis, separate=True, fixed=True, varying=True, verbose=0,
             svis[k].figureX(ax=axes[0,k],edges=edges[k],colors=colors[k])
             axes[0,k].title.set_text(names[k]+f'\n {svis[k].ncost:0.2e}')  
     if fixed is True:
-        fvis.figureY(axes=axes[1],edges=edges)
+        fvis.figureY(axes=axes[1],edges=edges,colors=colors)
         for k in range(K):
             axes[1,k].title.set_text(f'{fvis.individual_ncost[k]:0.2e}')
-        fvis.figure(plot=False)
-        fvis.figureX(edges=edges[0])
+        #fvis.figure(plot=False,colors=colors)
+        fvis.figureX(edges=edges[0],colors=colors[0])
     if varying is True:
-        vvis.figureY(axes=axes[2],edges=edges)
+        vvis.figureY(axes=axes[2],edges=edges,colors=colors)
         for k in range(K):
             axes[2,k].title.set_text(f'{vvis.individual_ncost[k]:0.2e}')
-        vvis.figure()
-        vvis.figureX(edges=edges[0])
+        #vvis.figure(colors=colors)
+        vvis.figureX(edges=edges[0],colors=colors[0])
     
     axes[0,0].set_ylabel('individual')
     axes[1,0].set_ylabel('fixed perspectives')

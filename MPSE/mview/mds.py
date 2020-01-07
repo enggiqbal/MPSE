@@ -170,9 +170,9 @@ class MDS(object):
                     for j in range(i+1,self.N):
                         if edges[i,j] > 0:
                             ax.plot([self.X[i,0],self.X[j,0]],
-                                      [self.X[i,1],self.X[j,1]],'-')#,l='b')
-            print(colors)
-            ax.scatter(self.X[:,0],self.X[:,1],c=colors)
+                                      [self.X[i,1],self.X[j,1]],'-',
+                                    linewidth=0.25,color='blue')#,l='b')
+            ax.scatter(self.X[:,0],self.X[:,1],s=25,c=colors)
             ax.title.set_text(title+f' - stress = {self.cost:0.2e}[{self.ncost:0.2e}]')
             if plot is True:
                 plt.draw()
@@ -498,13 +498,40 @@ def example_disk_dimensions(N=100):
     plt.ylabel('stress')
     plt.title('Normalized MDS stress for various dimensions')
     plt.show()
+
+### EMBEDDABILITY TESTS ###
+
+def embeddability_dims(ax=None):
+    print('\n**mds.embeddability_dims()')
+    N=10
+    ncost = []
+    dims = list(range(3,20))
+    #XX = misc.disk(N,20)
+    XX = misc.box(N,20)
+    for dim in dims:
+        X = XX[:,0:dim]
+        D = distances.compute(X)
+        mds = MDS(D,dim=2,verbose=1)
+        mds.initialize()
+        mds.optimize()
+        ncost.append(mds.ncost)
+    if ax is None:
+        fig, ax = plt.subplots(1)
+        plot = True
+    else:
+        plot = False
+    ax.plot(dims,ncost)
+    if plot is True:
+        plt.show()
     
 if __name__=='__main__':
 
-    example_disk()
+    #example_disk()
     #example_disk(agd=False,batch_number=10,max_iters=200)
     #example_disk(batch_number=10)
     #example_approx(N=100)
     #disk_compare(N=100)
     #example_disk_noisy(50)
     #example_disk_dimensions(50)
+
+    embeddability_dims()

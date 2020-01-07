@@ -32,6 +32,19 @@ def example2():
     compare.plot(a,b,c,title='florence marriage + business',
                  names=attributes, edges=S, colors=colors, verbose=1)
 
+    # distance to family with maximum number of  marriage only
+    #colors = [D[0,-2],D[0,-2]]
+    #compare.plot(a,b,c,title='florence marriage + business',
+     #            names=attributes, edges=S, colors=colors, verbose=1)
+
+    # distance to family with maximum number of  marriage only
+    S0 = setup.connections(attributes_list=['business'],families_list=families)
+    D = distances.dmatrices(S0,input_type='similarities',
+                            connect_components=True,connect_factor=1.5)
+    colors = [D[0,3],D[0,3]]
+    compare.plot(a,b,c,title='florence marriage + business',
+                 names=attributes, edges=S, colors=colors, verbose=1)
+
 def example3():
     attributes = attributes3
     families = families3
@@ -44,8 +57,13 @@ def example3():
     p = perspective.Persp()
     p.fix_Q(number=K, special='standard')
     
-    compare.main(D,p,title='florence marriage + business',
-                 names=attributes, edges=S, verbose=1)
+    a,b,c=compare.all(D,p,title='florence marriage + business',
+                      names=attributes, edges=S, verbose=1)
+
+    # distance to family with maximum number of  marriage & loan links
+    colors = [D[0,-2],D[1,1],D[2,4]]
+    compare.plot(a,b,c,title='florence marriage + business',
+                 names=attributes, edges=S, colors=colors, verbose=1)
     
 def compute_mds(num=2):
     if num==2:
@@ -93,5 +111,5 @@ def compute_mds(num=2):
     plt.show()
 
 if __name__=='__main__':
-    example2()
-    #example3()
+    #example2()
+    example3()

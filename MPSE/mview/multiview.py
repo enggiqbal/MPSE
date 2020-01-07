@@ -357,12 +357,12 @@ class Multiview(object):
             print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
 
     def figureX(self,title='Final embedding',perspectives=True,
-                labels=None,edges=None,plot=True):
+                labels=None,edges=None,colors=None,plot=True):
         if labels is None:
             labels = self.labels
         if self.persp.dimX == 2:
             fig = plt.figure(1)
-            plt.plot(self.X[:,0],self.X[:,1],'o',c=labels)
+            plt.plot(self.X[:,0],self.X[:,1],'o',c=colors)
             plt.title(title+f', normalized cost : {self.ncost:0.2e}')
             if plot is True:
                 plt.draw()
@@ -372,10 +372,17 @@ class Multiview(object):
             plt.figure()
             axes = plt.axes(projection='3d')
             if perspectives is True:
+                max0=np.max(np.abs(self.X[:,0]))
+                max1=np.max(np.abs(self.X[:,1]))
+                max2=np.max(np.abs(self.X[:,2]))
+                maxes = np.array([max0,max1,max2])
                 for k in range(self.K):
                     Q = self.Q[k]
-                    q = 10*np.cross(Q[0],Q[1])
-                    axes.plot([0,q[0]],[0,q[1]],[0,q[2]],'-')
+                    q = np.cross(Q[0],Q[1])
+                    ind = np.argmax(q/maxes)
+                    m = maxes[ind]
+                    axes.plot([0,m*q[0]],[0,m*q[1]],[0,m*q[2]],'-',linewidth=3,
+                              color='black')
             if edges is not None:
                 if isinstance(edges,numbers.Number):
                     edges = edges-self.D
@@ -385,8 +392,9 @@ class Multiview(object):
                             if edges[i,j] > 0:
                                 axes.plot([self.X[i,0],self.X[j,0]],
                                              [self.X[i,1],self.X[j,1]],
-                                             [self.X[i,2],self.X[j,2]],'-')#,l='b')
-            axes.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2],c=labels)
+                                             [self.X[i,2],self.X[j,2]],'-',
+                                          linewidth=0.25,color='blue')#,l='b')
+            axes.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2],c=colors)
             #axs.set_aspect(1.0)
             plt.title(title+f', normalized cost = {self.ncost:0.2e}')
             if plot is True:
@@ -394,7 +402,7 @@ class Multiview(object):
                 plt.pause(0.1)
 
     def figureY(self,title='Final perspective of embedding',labels=None,
-                edges=None, plot=True,axes=None):
+                edges=None, plot=True,colors=None,axes=None):
         if labels is None:
             labels = self.labels
         if axes is None:
@@ -409,12 +417,13 @@ class Multiview(object):
                     for j in range(i+1,self.N):
                         if edges[k,i,j] > 0:
                             axes[k].plot([self.Y[k][i,0],self.Y[k][j,0]],
-                                         [self.Y[k][i,1],self.Y[k][j,1]],'-')#,l='b')
+                                         [self.Y[k][i,1],self.Y[k][j,1]],
+                                         '--',linewidth=0.25,color='blue')#,l='b')
         if self.persp.dimY == 2:
             if plot is True:
                 plt.suptitle(title+f', normalized cost : {self.ncost:0.2e}')
             for k in range(self.K):
-                axes[k].scatter(self.Y[k][:,0],self.Y[k][:,1],c=labels)
+                axes[k].scatter(self.Y[k][:,0],self.Y[k][:,1],s=25,c=colors[k])
                 axes[k].set_aspect(1.0)
             if plot is True:
                 plt.draw()

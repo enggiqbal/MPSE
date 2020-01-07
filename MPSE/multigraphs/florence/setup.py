@@ -125,10 +125,11 @@ def connected_components(attributes_list=['marriage','business','loan'],
     print([families_list[i] for i in overall_largest_component])
 
 if __name__ == '__main__':
-    attributes_list = attributes2
+    attributes_list = attributes3
     families_list = families2
     #find_families(attributes_list,verbose=1)
-    connections(attributes_list,families_list,verbose=1)
+    #connections(attributes_list,families_list,verbose=1)
+    connections(attributes_list,verbose=1)
     #connected_components(attributes_list,families_list=families2)
     
     #connected_components(families_list=['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni'])
