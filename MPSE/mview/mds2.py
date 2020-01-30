@@ -9,7 +9,8 @@ class MDS(object):
     """\
     Class with methods to solve MDS problems.
     """
-    def __init__(self, D, dim=2, verbose=0, title='', labels=None):
+    def __init__(self, D, dim=2, w=None, edges=None, verbose=0, title='',
+                 labels=None):
         """\
         Initializes MDS object.
 
@@ -20,6 +21,13 @@ class MDS(object):
 
         dim : int > 0
         Embedding dimension.
+
+        w : (N by N) numpy array (optional)
+        Weight matrix.
+        
+        edges : list of tuples
+        List of edges that count towards stress. Each edge must contain two or
+        three elements (first two are indices, third is weight).
 
         verbose : int >= 0
         Print status of methods in MDS object if verbose > 0.
@@ -42,6 +50,15 @@ class MDS(object):
 
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
+
+        if w is not None:
+            assert isinstance(w,np.ndarray)
+            assert w.shape == D.shape
+        self.w = w
+
+        if edges is not None:
+            assert isinstance(edges,list)
+        self.edges = edges
 
         self.cost_function = lambda X: stress(self.D,X)
         self.gradient_function = lambda X: stress_gradient(self.D,X)
@@ -252,6 +269,26 @@ def stress(D,X):
             stress += (D[i,j]-dij)**2
     return stress
 
+def stress_new(X,D,w=None,edges=None):
+    stress = 0
+    if w is None and edges is None:
+        N = len(D)
+        for i in range(N):
+            for j in range(i+1,N):
+                dij = np.linalg.norm(X[i]-X[j])
+                stress += (D[i,j]-dij)**2
+    elif w is not None:
+        N = len(D)
+        for i in range(N):
+            for j in range(i+1,N):
+                dij = np.linalg.norm(X[i]-X[j])
+                stress += w[i,j]*(D[i,j]-dij)**2
+    else:
+        for (i,j) in edges:
+            dij = np.linalg.norm(X[i]-X[j])
+            stress += w[i,j]*(D[i,j]-dij)**2
+    return stress
+            
 def stress_gradient(D,Y):
     """\
     Returns gradient matrix of MDS stress at given node positions
@@ -294,6 +331,77 @@ def F_full(D,X,batches=None):
     grad : numpy array
     MDS gradient at X (or approximation given by batch).
     """
+    N = len(D)
+    stress = 0; dX = np.zeros(X.shape)
+    for i in range(N):
+        for j in range(i+1,N):
+            Xij = X[i]-X[j]
+            dij = np.linalg.norm(Xij)
+            diffij = dij-D[i,j]
+            stress += diffij**2
+            dXij = 2*diffij/dij*Xij
+            dX[i] += dXij
+            dX[j] -= dXij
+    return stress, dX
+
+def F_full_new(X,D,w=None,edges=None):
+    """\
+    Returs MDS stress and gradient for matrix D at embedding X.
+    
+    Parameters:
+
+    D : numpy array
+    Distance/dissimilarity matrix.
+
+    X : numpy array
+    Positions/embedding.
+
+    Returns:
+
+    stress : float
+    MDS stress at X (or approximation given by batch).
+    
+    grad : numpy array
+    MDS gradient at X (or approximation given by batch).
+    """
+    stress = 0; dX = np.zeros(X.shape)
+    if w is None and edges is None:
+        N = len(D)
+        for i in range(N):
+            for j in range(i+1,N):
+                Xij = X[i]-X[j]
+                dij = np.linalg.norm(Xij)
+                diffij = dij-D[i,j]
+                stress += diffij**2
+                dXij = 2*diffij/dij*Xij
+                dX[i] += dXij
+                dX[j] -= dXij
+    elif w is not None and edges is None:
+        N = len(D)
+        for i in range(N):
+            for j in range(i+1,N):
+                Xij = X[i]-X[j]
+                dij = np.linalg.norm(Xij)
+                diffij = dij-D[i,j]
+                stress += w[i,j]*diffij**2
+                dXij = w[i,j]*2*diffij/dij*Xij
+                dX[i] += dXij
+                dX[j] -= dXij
+    elif w is None and edges is not None:
+        for (i,j) in edges:
+            Xij = X[i]-X[j]
+            dij = np.linalg.norm(Xij)
+            diffij = dij-D[i,j]
+            stress += diffij**2
+            dXij = 2*diffij/dij*Xij
+            dX[i] += dXij
+            dX[j] -= dXij
+    else:
+        for (i,j) in edges:
+            dij = np.linalg.norm(X[i]-X[j])
+            stress += w[i,j]*(D[i,j]-dij)**2
+    return stress, dX
+
     N = len(D)
     stress = 0; dX = np.zeros(X.shape)
     for i in range(N):
