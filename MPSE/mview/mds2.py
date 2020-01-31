@@ -9,15 +9,15 @@ class MDS(object):
     """\
     Class with methods to solve MDS problems.
     """
-    def __init__(self, D, dim=2, w=None, edges=None, verbose=0, title='',
+    def __init__(self, D, dim=2, weights=None, edges=None, verbose=0, title='',
                  labels=None):
         """\
         Initializes MDS object.
 
         Parameters:
 
-        D : (N by N) numpy array
-        Distance or dissimilarity matrix.
+        D : (N by N) numpy array or dictionary
+        Dissimilarity matrix or dictionary. If 
 
         dim : int > 0
         Embedding dimension.
