@@ -2,6 +2,104 @@ import numbers
 import numpy as np
 import networkx as nx
 
+def check(D):
+    """\
+    Check that the dissimilarity dictionary D has the correct form.
+
+    Parameters:
+
+    D : dictionary
+    Must contain lists of nodes (N), edges (NN,2), distances (NN), and
+    weights (NN).
+    """
+    assert 'nodes' in D
+    assert 'edges' in D
+    assert 'distances' in D
+    assert 'weights' in D
+
+    assert len(D['edges'])==len(D['distances'])
+    assert len(D['edges'])==len(D['weights'])
+
+def coord2dict(X,norm=2,edges=None,weights=None):
+    """\
+    Returns dictionary with dissimilarity measures from coordinates.
+
+    Parameters :
+
+    X : (N,dimX) array_like
+    Array containing coordinates of N points of dimension dimX.
+
+    norm : number (>=1) or function
+    If isinstance(norm,Number), this is the Minkowski p-norm with p=norm.
+    If callable(norm), then use this as a norm.
+
+    edges : None or float or array_like
+    If edges is None: all edges are included.
+    If isinstance(edges,Number): only edges with distance<edges are included.
+    if isinstance(edges,array_like): this is the list of edges.
+
+    weights : None or 'relative' or function or array_like
+    If weights == None, w_ij = 1
+    If weights == 'relative', w_ij = 1/D_ij^2
+    If callable(weights), w_ij = weights(D_ij)
+    If array_like, w_ij = weights[i,j]
+    """
+    N = len(X)
+    if isinstance(norm,numbers.Number):
+        p = norm
+        assert p >= 1
+        norm = lambda x: np.sum(x**p)**(1.0/p)
+    else:
+        assert callable(norm)
+
+    if edges is None or isinstance(edges,numbers.Number):
+        NN = int(N*(N-1)/2)
+        e = np.empty((NN,2),dtype=int)
+        d = np.empty(NN)
+        if edges is None:
+            it = 0
+            for i in range(N):
+                for j in range(i+1,N):
+                    e[it] = [i,j]
+                    d[it] = norm(X[i]-X[j])
+                    it += 1
+        else:
+            it = 0
+            for i in range(N):
+                for j in range(N):
+                    Dij = norm(X[i]-X[j])
+                    if Dij <= edges:
+                        e[it] = [i,j]
+                        d[it] = norm(X[i]-X[j])
+                        it += 1
+            NN = it
+            e = e[0:NN]
+            d = d[0:NN]
+    else:
+        NN = len(edges)
+        e = np.array(e,dtype=int)
+        d = np.empty(NN)
+        for i in range(NN):
+            d[i] = norm(X[e[i,0]]-X[e[i,1]])
+
+    if weights is None:
+        w = np.ones(NN)
+    elif weights == 'relative':
+        w = d**(-2)
+    elif callable(weights):
+        for i in range(NN):
+            w[i] = weights[d[i]]
+    else:
+        w = weights
+
+    DD = {
+        'nodes' : range(N),
+        'edges' : e,
+        'distances' : d,
+        'weights' : w
+        }
+    return DD
+
 def matrix2dict(D,weights=None):
     """\
     Returns diccionary with dissimilarity relations from dissimilarity matrix.
@@ -42,91 +140,13 @@ def matrix2dict(D,weights=None):
         for i in range(N):
             for j in range(i+1,N):
                 w[it] = weights(D[i,j])
-                += 1
+                it += 1
     else:
         it = 0
         for i in range(N):
             for j in range(i+1,N):
                 w[it] = weights[i,j]
                 it += 1
-
-    DD = {
-        'edges' : e,
-        'dissimilarities' : d,
-        'weights' : w
-        }
-    return DD
-
-def coord2dict(X,norm=2,edges=None,weights=None):
-    """\
-    Returns dictionary with dissimilarity measures from coordinates.
-
-    Parameters :
-
-    X : (N,dimX) array_like
-    Array containing coordinates of N points of dimension dimX.
-
-    norm : number (>=1) or function
-    If isinstance(norm,Number), this is the Minkowski p-norm with p=norm.
-    If callable(norm), then use this as a norm.
-
-    edges : None or float or array_like
-    If edges is None: all edges are included.
-    If isinstance(edges,Number): only edges with distance<edges are included.
-    if isinstance(edges,array_like): this is the list of edges.
-
-    weights : None or 'relative' or function or array_like
-    If weights == None, w_ij = 1
-    If weights == 'relative', w_ij = 1/D_ij^2
-    If callable(weights), w_ij = weights(D_ij)
-    If array_like, w_ij = weights[i,j]
-    """
-    N = len(X)
-    if isinstance(norm,numbers.Number):
-        assert norm >= 1
-        norm = lambda x,y : np.sum((x-y)**p)**(1.0/p)
-    else:
-        assert callable(norm)
-
-    if edges is None or isinstance(edges,numbers.Number):
-        NN = N*(N-1)/2
-        e = np.empty((NN,2),dtype=int)
-        d = np.empty(NN)
-        if edges is None:
-            it = 0
-            for i in range(N):
-                for j in range(N):
-                    e[it] = [i,j]
-                    d[it] = norm(X[i]-X[j])
-                    it += 1
-        else:
-            it = 0
-            for i in range(N):
-                for j in range(N):
-                    Dij = norm(X[i]-X[j])
-                    if Dij <= edges:
-                        e[it] = [i,j]
-                        d[it] = norm(X[i]-X[j])
-                        it += 1
-            NN = it
-            e = e[0:NN]
-            d = d[0:NN]
-    else:
-        NN = len(edges)
-        e = np.array(e,dtype=int)
-        d = np.empty(NN)
-        for i in range(NN):
-            d[i] = norm(X[e[i,0]]-X[e[i,1]])
-
-    if weights = None:
-        w = np.ones(NN)
-    elif weights == 'relative':
-        w = d**(-2)
-    elif callable(weights):
-        for i in range(NN):
-            w[i] = weights[d[i]]
-    else:
-        w = weights
 
     DD = {
         'edges' : e,

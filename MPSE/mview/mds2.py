@@ -3,31 +3,25 @@ import numbers, math, random
 import matplotlib.pyplot as plt
 import numpy as np
 
-import misc, distances, gd
+import misc, distances, dissimilarities, gd
 
 class MDS(object):
     """\
     Class with methods to solve MDS problems.
     """
-    def __init__(self, D, dim=2, weights=None, edges=None, verbose=0, title='',
+    def __init__(self, D, dim=2, verbose=0, title='',
                  labels=None):
         """\
         Initializes MDS object.
 
         Parameters:
 
-        D : (N by N) numpy array or dictionary
-        Dissimilarity matrix or dictionary. If 
+        D : dictionary or numpy array
+        Contains lists of edges, dissimilarities, and weights. Can also be a
+        dissimilarity matrix.
 
         dim : int > 0
         Embedding dimension.
-
-        w : (N by N) numpy array (optional)
-        Weight matrix.
-        
-        edges : list of tuples
-        List of edges that count towards stress. Each edge must contain two or
-        three elements (first two are indices, third is weight).
 
         verbose : int >= 0
         Print status of methods in MDS object if verbose > 0.
@@ -41,33 +35,31 @@ class MDS(object):
         if verbose > 0:
             print('+ mds.MDS('+title+'):')
         self.verbose = verbose; self.title = title; self.labels = labels
-            
-        assert isinstance(D,np.ndarray); shape=D.shape
-        assert len(shape)==2; assert shape[0]==shape[1]
-        distances.clean(D,verbose=verbose)
-        self.D = D; self.N = shape[0]
-        self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)))
 
+        if isinstance(D,dict):
+            dissimilarities.check(D)
+        else:
+            assert isinstance(D,np.ndarray); shape=D.shape
+            assert len(shape)==2; assert shape[0]==shape[1]
+            distances.clean(D,verbose=verbose)
+            D = dissimilarities.matrix2dict(D)    
+        self.D = D; self.N = len(D['nodes']); self.NN = len(D['edges'])
+
+        D = self.D['distances']; w = self.D['weights']
+        self.normalization = w*(D**2)
+        self.D_rms = math.sqrt(self.normalization/len(self.D['edges']))
+        
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
 
-        if w is not None:
-            assert isinstance(w,np.ndarray)
-            assert w.shape == D.shape
-        self.w = w
-
-        if edges is not None:
-            assert isinstance(edges,list)
-        self.edges = edges
-
-        self.cost_function = lambda X: stress(self.D,X)
+        self.cost_function = lambda X: stress(X,self.D)
         self.gradient_function = lambda X: stress_gradient(self.D,X)
         self.partial_function = lambda X,n: stress_partial(self.D,X,n)
         self.batch_function = lambda X_batch,indices: \
                               stress_batch(self.D,X_batch,indices)
         def F(X,batches=None,batch_number=None,batch_size=None):
             if batches is None and batch_number is None and batch_size is None:
-                return F_full(self.D,X)
+                return gradient(X,self.D)
             elif batches is not None:
                 return F_batch(self.D,X,batches)
             else:
@@ -87,7 +79,7 @@ class MDS(object):
         
         if verbose > 0:
             print(f'  number of points : {self.N}')
-            print(f'  rms of D : {self.D_rms:0.2e}')
+            #print(f'  rms of D : {self.D_rms:0.2e}')
             print(f'  embedding dimension : {self.dim}')
 
         if labels is None:
@@ -128,7 +120,7 @@ class MDS(object):
 
     def update(self,H=None):
         self.cost = self.cost_function(self.X)
-        self.ncost = np.sqrt(self.cost/(self.N*(self.N-1)/2))/self.D_rms
+        self.ncost = np.sqrt(self.cost/self.normalization)
         if H is not None:
             if bool(self.H) is True:
                 H['cost'] = np.concatenate((self.H['cost'],H['cost']))
@@ -250,167 +242,100 @@ class MDS(object):
             nx.draw_networkx(G, pos=positions, ax=ax)
             nx.draw_networkx_edges(G, pos=positions, ax=ax)
             ###
-    
-def stress(D,X):
+
+def stress(X,D):
     """\
-    Returns MDS stress.
+    MDS stress function.
 
     Parameters:
-
-    D : target distance matrix (n x n)
-    X : node positions, organized by row (n x p)
-
-    """
-    N = len(D)
-    stress = 0
-    for i in range(N):
-        for j in range(i+1,N):
-            dij = np.linalg.norm(X[i]-X[j])
-            stress += (D[i,j]-dij)**2
-    return stress
-
-def stress_new(X,D,w=None,edges=None):
-    stress = 0
-    if w is None and edges is None:
-        N = len(D)
-        for i in range(N):
-            for j in range(i+1,N):
-                dij = np.linalg.norm(X[i]-X[j])
-                stress += (D[i,j]-dij)**2
-    elif w is not None:
-        N = len(D)
-        for i in range(N):
-            for j in range(i+1,N):
-                dij = np.linalg.norm(X[i]-X[j])
-                stress += w[i,j]*(D[i,j]-dij)**2
-    else:
-        for (i,j) in edges:
-            dij = np.linalg.norm(X[i]-X[j])
-            stress += w[i,j]*(D[i,j]-dij)**2
-    return stress
-            
-def stress_gradient(D,Y):
-    """\
-    Returns gradient matrix of MDS stress at given node positions
-
-    Parameters:
-
-    X : positions, organized by row (n x p)
-    D : target distance matrix (n x n)
-    """
-    N = len(D)
-    A = np.zeros((N,N))
-    for i in range(N):
-        for j in range(i+1,N):
-            dij = np.linalg.norm(Y[i]-Y[j])
-            c = 2*(dij-D[i,j])/dij
-            A[i,i] += c
-            A[j,j] += c
-            A[i,j] += -c
-            A[j,i] += -c
-    R = A @ Y
-    return R
-
-def F_full(D,X,batches=None):
-    """\
-    Returs MDS stress and gradient for matrix D at embedding X.
-    
-    Parameters:
-
-    D : numpy array
-    Distance/dissimilarity matrix.
 
     X : numpy array
-    Positions/embedding.
+    Positions/embedding array.
+
+    D : dictionary
+    Dictionary containing list of dissimilarities (see dissimilarities.py)
 
     Returns:
 
     stress : float
-    MDS stress at X (or approximation given by batch).
-    
-    grad : numpy array
-    MDS gradient at X (or approximation given by batch).
+    MDS stress at X.
     """
-    N = len(D)
-    stress = 0; dX = np.zeros(X.shape)
-    for i in range(N):
-        for j in range(i+1,N):
-            Xij = X[i]-X[j]
-            dij = np.linalg.norm(Xij)
-            diffij = dij-D[i,j]
-            stress += diffij**2
-            dXij = 2*diffij/dij*Xij
-            dX[i] += dXij
-            dX[j] -= dXij
-    return stress, dX
+    e = D['edges']; d = D['distances']; w = D['weights']
+    stress = 0
+    for n in range(len(e)):
+        i,j = e[n]; Dij = d[n]; wij = w[n]
+        dij = np.linalg.norm(X[i]-X[j])
+        stress += wij*(Dij-dij)**2
+    return stress
 
-def F_full_new(X,D,w=None,edges=None):
+def gradient(X,D):
     """\
-    Returs MDS stress and gradient for matrix D at embedding X.
+    Returns MDS stress and gradient.
     
     Parameters:
 
-    D : numpy array
-    Distance/dissimilarity matrix.
-
     X : numpy array
-    Positions/embedding.
+    Positions/embedding array.
+
+    D : dictionary
+    Dictionary containing list of dissimilarities (see dissimilarities.py)
 
     Returns:
 
     stress : float
-    MDS stress at X (or approximation given by batch).
+    MDS stress at X.
     
     grad : numpy array
-    MDS gradient at X (or approximation given by batch).
+    MDS gradient at X.
     """
+    e = D['edges']; d = D['distances']; w = D['weights']
     stress = 0; dX = np.zeros(X.shape)
-    if w is None and edges is None:
-        N = len(D)
-        for i in range(N):
-            for j in range(i+1,N):
-                Xij = X[i]-X[j]
-                dij = np.linalg.norm(Xij)
-                diffij = dij-D[i,j]
-                stress += diffij**2
-                dXij = 2*diffij/dij*Xij
-                dX[i] += dXij
-                dX[j] -= dXij
-    elif w is not None and edges is None:
-        N = len(D)
-        for i in range(N):
-            for j in range(i+1,N):
-                Xij = X[i]-X[j]
-                dij = np.linalg.norm(Xij)
-                diffij = dij-D[i,j]
-                stress += w[i,j]*diffij**2
-                dXij = w[i,j]*2*diffij/dij*Xij
-                dX[i] += dXij
-                dX[j] -= dXij
-    elif w is None and edges is not None:
-        for (i,j) in edges:
-            Xij = X[i]-X[j]
-            dij = np.linalg.norm(Xij)
-            diffij = dij-D[i,j]
-            stress += diffij**2
-            dXij = 2*diffij/dij*Xij
-            dX[i] += dXij
-            dX[j] -= dXij
-    else:
-        for (i,j) in edges:
-            dij = np.linalg.norm(X[i]-X[j])
-            stress += w[i,j]*(D[i,j]-dij)**2
+    for n in range(len(e)):
+        i,j = e[n]; Dij = d[n]; wij = w[n]
+        Xij = X[i]-X[j]
+        dij = np.linalg.norm(Xij)
+        diffij = dij-Dij
+        stress += wij*diffij**2
+        dXij = wij*2*diffij/dij*Xij
+        dX[i] += dXij
+        dX[j] -= dXij
     return stress, dX
 
-    N = len(D)
+def gradient_approx(X,D,prob=0.2):
+    """\
+    Returns approximation to MDS stress and gradient by only using contributions
+    from a subset of the edges. Edges are kept with probability prob.    
+    
+    Parameters:
+
+    X : numpy array
+    Positions/embedding array.
+
+    D : dictionary
+    Dictionary containing list of dissimilarities (see dissimilarities.py)
+
+    prob : float, 0<prob<=1
+    Probability of using an edge in approximation.
+
+    Returns:
+
+    stress : float
+    Approximate MDS stress at X.
+    
+    grad : numpy array
+    Approximate MDS gradient at X.
+    """
+    assert isinstance(prob,numbers.Number); assert 0<prob<=1
+    e = D['edges']; d = D['distances']; w = D['weights']
     stress = 0; dX = np.zeros(X.shape)
-    for i in range(N):
-        for j in range(i+1,N):
+    for n in range(len(e)):
+        if np.random.randn() <= prob:
+            i,j = e[n]; Dij = d[n]; wij = w[n]
             Xij = X[i]-X[j]
             dij = np.linalg.norm(Xij)
-            diffij = dij-D[i,j]
-            stress += diffij**2
-            dXij = 2*diffij/dij*Xij
+            diffij = dij-Dij
+            stress += wij*diffij**2
+            dXij = wij*2*diffij/dij*Xij
             dX[i] += dXij
             dX[j] -= dXij
     return stress, dX
@@ -502,14 +427,14 @@ def example_disk(N=100,dim=2,**kwargs):
     plt.draw()
     plt.pause(0.1)
     
-    D = distances.compute(Y)
+    D = dissimilarities.coord2dict(Y)
     
     title = 'basic disk example'
     mds = MDS(D,dim=dim,verbose=1,title=title,labels=labels)
     mds.initialize()
     mds.figureX(title='initial embedding')
     mds.optimize(**kwargs)
-    mds.figureX(title='final embedding',labels=labels,edges=.2)
+    mds.figureX(title='final embedding',labels=labels)#,edges=.2)
     mds.figure(title='final embedding',labels=labels)
     plt.show()
 
@@ -615,11 +540,11 @@ def embeddability_dims(ax=None):
     N=50
     ncost = []
     dims = list(range(2,50,5))
-    XX = misc.disk(N,20)
-    #XX = misc.box(N,20)
+    #XX = misc.disk(N,20)
+    XX = misc.box(N,20)
     for dim in dims:
         X = XX[:,0:dim]
-        D = distances.compute(X)
+        D = dissimilarities.coord2dict(X,weights='relative')
         mds = MDS(D,dim=2,verbose=1)
         mds.initialize()
         mds.optimize()
@@ -664,5 +589,5 @@ if __name__=='__main__':
     #example_disk_noisy(50)
     #example_disk_dimensions(50)
 
-    #embeddability_dims()
-    embeddability_noise()
+    embeddability_dims()
+    #embeddability_noise()
