@@ -2,15 +2,11 @@ import numbers
 import numpy as np
 import networkx as nx
 
-def check(D):
+### Functions to set up dissimilarity dictionary ###
+
+def check(D, make_distances_positive=False):
     """\
-    Check that the dissimilarity dictionary D has the correct form.
-
-    Parameters:
-
-    D : dictionary
-    Must contain lists of nodes (N), edges (NN,2), distances (NN), and
-    weights (NN).
+    Check that dictionary has all the correct attributes.
     """
     assert 'nodes' in D
     assert 'edges' in D
@@ -20,7 +16,11 @@ def check(D):
     assert len(D['edges'])==len(D['distances'])
     assert len(D['edges'])==len(D['weights'])
 
-def coord2dict(X,norm=2,edges=None,weights=None):
+    if make_distances_positive is True:
+        threshold = 1e-6
+        D['distances'] = np.maximum(D['distances'],threshold)
+
+def from_coordinates(X,norm=2,edges=None,weights=None):
     """\
     Returns dictionary with dissimilarity measures from coordinates.
 
@@ -93,14 +93,14 @@ def coord2dict(X,norm=2,edges=None,weights=None):
         w = weights
 
     DD = {
-        'nodes' : range(N),
+        'nodes' : N,
         'edges' : e,
         'distances' : d,
         'weights' : w
         }
     return DD
 
-def matrix2dict(D,weights=None):
+def from_dmatrix(D,weights=None):
     """\
     Returns diccionary with dissimilarity relations from dissimilarity matrix.
     
@@ -157,6 +157,10 @@ def matrix2dict(D,weights=None):
 
 def sim2dict(S,mapping='reciprocal',connect_paths=None,connect_components=None):
     return
+
+### GENERATORS ###
+
+### OLDER ###
 
 def coord2dist(X,p=2):
     """\

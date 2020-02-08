@@ -548,7 +548,7 @@ def embeddability_noise(ax=None):
         plt.show()
 if __name__=='__main__':
 
-    #example_disk()
+    example_disk()
     #example_disk(agd=False,batch_number=10,max_iters=200)
     #example_disk(batch_number=10)
     #example_approx(N=100)
@@ -557,4 +557,4 @@ if __name__=='__main__':
     #example_disk_dimensions(50)
 
     #embeddability_dims()
-    embeddability_noise()
+    #embeddability_noise()
