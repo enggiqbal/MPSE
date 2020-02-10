@@ -6,19 +6,16 @@ import networkx as nx
 
 def check(D, make_distances_positive=False):
     """\
-    Check that dictionary has all the correct attributes.
+    Takes dissimilarity graph or matrix and returns dissimilarity graph. If D is
+    a dictionary, it checks that all attributes are included.
     """
     assert 'nodes' in D
     assert 'edges' in D
     assert 'distances' in D
     assert 'weights' in D
-
     assert len(D['edges'])==len(D['distances'])
     assert len(D['edges'])==len(D['weights'])
 
-    if make_distances_positive is True:
-        threshold = 1e-6
-        D['distances'] = np.maximum(D['distances'],threshold)
 
 def from_coordinates(X,norm=2,edges=None,weights=None):
     """\
@@ -100,7 +97,7 @@ def from_coordinates(X,norm=2,edges=None,weights=None):
         }
     return DD
 
-def from_dmatrix(D,weights=None):
+def from_matrix(D,weights=None):
     """\
     Returns diccionary with dissimilarity relations from dissimilarity matrix.
     
