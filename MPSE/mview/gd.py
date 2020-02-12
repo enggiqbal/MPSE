@@ -1,4 +1,4 @@
-import copy, random, math, numbers
+import copy, random, math, numbers, time
 import matplotlib.pyplot as plt
 import numpy as np
 
@@ -48,6 +48,8 @@ def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
         print('  max_iters :', max_iters)
         print(f'  max_step : {max_step:0.2e}')
         print(f'  lr : {lr:0.2e}')
+
+    t0 = time.time()
         
     if p is None:
         alg = lambda x, dx: x-lr*dx
@@ -69,7 +71,9 @@ def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
             print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = ' +
                   f'{grads[i]:0.2e}, cost = {cost[i]:0.2e}' , flush=True)
         i += 1
-        
+
+    tf = time.time()
+    
     specs = {
         'cost' : cost[0:i],
         'steps' : steps[0:i],
@@ -78,7 +82,8 @@ def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
         'x_prev' : x0,
         'dx_prev' : grad,
         'minimum_reached' : step_size <= min_step,
-        'unstable' : step_size > max_step
+        'unstable' : step_size > max_step,
+        'time' : tf-t0
         }
     if verbose > 0:
         print('  total iterations :',i)
@@ -88,6 +93,8 @@ def gd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,lr=0.1,
             print('  LOCAL MINIMUM REACHED')
         if specs['unstable'] is True:
             print('  UNSTABLE')
+        print(f'  time : {specs["time"]}')
+
     return x, specs
 
 def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
@@ -138,6 +145,8 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
         print(f'  min_step : {min_step:0.2e}')
         print('  max_iters :', max_iters)
         print(f'  max_step : {max_step:0.2e}')
+
+    t0 = time.time()
         
     if p is None:
         alg = lambda x, dx, lr: x-lr*dx
@@ -168,7 +177,9 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
             print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e},'+
                   f' cost = {cost[i]:0.2e}', flush=True)
         i += 1
-        
+
+    tf = time.time()
+    
     specs = {
         'cost' : cost[0:i],
         'steps' : steps[0:i],
@@ -177,7 +188,8 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
         'x_prev' : x0,
         'dx_prev' : grad,
         'minimum_reached' : step_size <= min_step,
-        'unstable' : step_size > max_step
+        'unstable' : step_size > max_step,
+        'time' : tf-t0
         }
     if verbose > 0:
         print('  total iterations :',i)
@@ -187,6 +199,7 @@ def agd(x0,F,p=None,min_step=1e-6,max_iters=100,max_step=1e4,x_prev=0,dx_prev=0,
             print('  LOCAL MINIMUM REACHED')
         if specs['unstable'] is True:
             print('  UNSTABLE')
+        print(f'  time : {specs["time"]}')
     return x, specs
 
 def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,

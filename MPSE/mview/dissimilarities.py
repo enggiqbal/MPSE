@@ -17,7 +17,7 @@ def check(D, make_distances_positive=False):
     assert len(D['edges'])==len(D['weights'])
 
 
-def from_coordinates(X,norm=2,edges=None,weights=None):
+def from_coordinates(X,norm=2,edges=None,weights=None,colors=None):
     """\
     Returns dictionary with dissimilarity measures from coordinates.
 
@@ -89,11 +89,15 @@ def from_coordinates(X,norm=2,edges=None,weights=None):
     else:
         w = weights
 
+    if colors is not None:
+        if isinstance(colors,int):
+            colors = misc.labels(Y,axis=colors)
     DD = {
-        'nodes' : N,
+        'nodes' : range(N),
         'edges' : e,
         'distances' : d,
-        'weights' : w
+        'weights' : w,
+        'colors' : colors
         }
     return DD
 
@@ -151,6 +155,24 @@ def from_matrix(D,weights=None):
         'weights' : w
         }
     return DD
+
+def remove_edges(D,number=None,proportion=0.2):
+    """\
+    Reduces number of edges in graph by eliminating far away neighbors.
+    """
+    d = D['distances']
+    if number is not None:
+        assert number < len(d)
+    else:
+        number = int(len(d)*proportion)
+    ind = np.argpartition(d,number)
+    
+    D = copy.deepcopy(D)
+    D['edges'] = D['edges'][ind]
+    D['distances'] = D['distances'][ind]
+    D['weights'] = D['weights'][ind]
+
+    return D
 
 def sim2dict(S,mapping='reciprocal',connect_paths=None,connect_components=None):
     return
