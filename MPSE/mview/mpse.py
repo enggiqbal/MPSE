@@ -11,7 +11,7 @@ class MPSE(object):
     Collection of methods for multi-perspective simultaneous embedding.
     """
 
-    def __init__(self, D, persp=2, verbose=0, title='', labels=None):
+    def __init__(self, D, persp=2, verbose=0, title=''):
         """\
         Initializes MPSE method.
 
@@ -34,13 +34,9 @@ class MPSE(object):
 
         self.D = D
         self.K = len(D)
-        self.N = len(D[0])
-        for k in range(self.K):
-            assert isinstance(D[k],np.ndarray)
-            assert D[k].shape == (self.N,self.N)
-        self.D = D
-        self.individual_D_rms = np.sqrt(np.sum(D**2,axis=(1,2))/(self.N*(self.N-1)))
-        self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)*self.K))
+        self.N = len(D[0]['edges'])
+        #self.individual_D_rms = np.sqrt(np.sum(D**2,axis=(1,2))/(self.N*(self.N-1)))
+        #self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)*self.K))
 
         if isinstance(persp,int):
             dim = persp; assert dim  > 0
@@ -54,17 +50,13 @@ class MPSE(object):
         self.persp = persp
 
         self.H = {}
-
-        if labels is None:
-            labels = list(range(self.N))
-        self.labels = labels
         
         if verbose > 0:
             print(f'  Number of views : {self.K}')
             print(f'  Number of points : {self.N}')
             print(f'  Embedding dimension : {self.persp.dimX}')
             print(f'  Projection dimension : {self.persp.dimY}')
-            print(f'  Root-mean-squared of D : {self.D_rms:0.2e}\n')
+            #print(f'  Root-mean-squared of D : {self.D_rms:0.2e}\n')
 
     def setup_visualization(self,visualization='mds',**kwargs):
         assert visualization in ['mds','tsne']

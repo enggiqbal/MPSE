@@ -23,6 +23,9 @@ def dissimilarity_graph(D):
         
     dissimilarities.check(D)
 
+    if 'weights' not in D:
+        D['weights'] = np.ones(len(D['distances']))
+
     D['distances'] = np.maximum(D['distances'],1e-4)
     
     d = D['distances']; w = D['weights']
@@ -215,11 +218,20 @@ class MDS(object):
 
     ### Methods to update MDS embedding ###
 
-    def gd(self, lr=10, max_iters=1000, min_step=1e-6, **kwargs):
+    def gd(self, approximate=None, lr=10, max_iters=1000, min_step=1e-6,
+           **kwargs):
         """\
         Updates MDS embedding using gradient descent.
         """
-        F = lambda X: self.F(X)
+        if self.verbose > 0:
+            print('- MDS.gd():')
+            print('  approximate =',approximate)
+        if approximate is None:
+            F = lambda X: self.F(X)
+        else:
+            assert isinstance(approximate,numbers.Number)
+            assert 0<approximate<=1
+            F = lambda X: self.F(X,approx=approx)
         self.X, H = gd.gd(self.X,F,lr=lr,max_iters=max_iters,min_step=min_step,
                           **kwargs)
         self.update(H=H)
@@ -235,7 +247,7 @@ class MDS(object):
                            **kwargs)
         self.update(H=H)
 
-    def adaptive(self, X0=None, **kwargs):
+    def agd(self, X0=None, **kwargs):
         F = lambda X: self.F(X)
         if self.verbose > 0:
             print('  method : adaptive gradient descent')
@@ -275,22 +287,18 @@ class MDS(object):
 
     ### Plotting methods ###
 
-    def figureX(self,title='mds embedding',labels=None,edges=None,
+    def figureX(self,title='mds embedding',labels=None,edges=False,
                 plot=True, ax=None):
         if self.dim >= 2:
             if ax is None:
                 fig, ax = plt.subplots()
             else:
                 plot = False
-            if edges is not None:
-                if isinstance(edges,numbers.Number):
-                    edges = edges-self.D
-                for i in range(self.N):
-                    for j in range(i+1,self.N):
-                        if edges[i,j] > 0:
-                            ax.plot([self.X[i,0],self.X[j,0]],
-                                      [self.X[i,1],self.X[j,1]],'-',
-                                    linewidth=0.25,color='blue')#,l='b')
+            if edges is True:
+                for i,j in self.D['edges']:
+                    ax.plot([self.X[i,0],self.X[j,0]],
+                            [self.X[i,1],self.X[j,1]],'-',
+                            linewidth=0.15,color='gray')
             ax.scatter(self.X[:,0],self.X[:,1],s=25,c=self.D['colors'])
             ax.title.set_text(title+f' - stress = {self.cost:0.2e}')
             if plot is True:
@@ -300,8 +308,8 @@ class MDS(object):
     def figureH(self,title='Computation history for X',plot=True):
         assert hasattr(self,'H')
         fig = plt.figure()
-        plt.semilogy(self.H['cost'], label='cost')
-        plt.semilogy(self.H['steps'], label='step size')
+        plt.semilogy(self.H['steps'], label='step size', linestyle='--')
+        plt.semilogy(self.H['cost'], label='cost',linewidth=3)
         plt.xlabel('iterations')
         plt.legend()
         plt.title(title)
@@ -317,10 +325,11 @@ class MDS(object):
         if self.dim >= 2:
             fig,axs = plt.subplots(1,2)
             plt.suptitle(title+f' - stress = {self.cost:0.2e}')
-            axs[0].semilogy(self.H['cost'], label='cost')
-            axs[0].semilogy(self.H['steps'], label='step size')
+            axs[0].semilogy(self.H['steps'],linestyle='--',label='step size')
+            axs[0].semilogy(self.H['cost'], label='cost',linewidth=3)
             axs[0].legend()
-            axs[1].scatter(self.X[:,0],self.X[:,1],c=self.D['colors'])
+            self.figureX(edges=True,ax=axs[1])
+            #axs[1].scatter(self.X[:,0],self.X[:,1],c=self.D['colors'])
             if plot is True:
                 plt.draw()
                 plt.pause(1.0)
@@ -369,7 +378,8 @@ def example_disk(N=100,dim=2):
     mds = MDS(D,dim=dim,verbose=1,title=title)
     mds.initialize()
     mds.figureX(title='initial embedding')
-    mds.gd(min_step=1e-3)
+    mds.gd(max_iters=50,approx=N/5,verbose=2)
+    mds.agd(min_step=1e-6,verbose=2)
     mds.figureX(title='final embedding')
     mds.figureH()
     plt.show()
@@ -406,8 +416,8 @@ def example_stochastic(N=100,dim=2):
         mds.forget()
     plt.show()
     
-def example_absolute_vs_relative_weights(N=100,dim=2):
-    print('\n***mds.example_absolute_vs_relative_weights()***\n')
+def example_weights(N=100,dim=2):
+    print('\n***mds.example_weights()***\n')
     print('Here we explore the MDS embedding for a full graph for different'+
           'weights')
     title='MDS embedding for multiple weights'
@@ -459,6 +469,19 @@ def example_fewer_edges(N=100,dim=2):
         mds.stochastic(verbose=1,max_iters=300,approx=.99,lr=.5)
         mds.adaptive(verbose=1,min_step=1e-6,max_iters=300)
         mds.figure(title=f'proportion = {prop:0.1f}')
+    plt.show()
+
+def example_random_graph(N=100,dim=2):
+    print('\n***mds.example_random_graph()***\n')
+    print('Here we explore the MDS embedding for a random binomial graph with'+\
+          'different edge probabilities.')
+    for p in [0.01,0.05,0.1,1.0]:
+        D = dissimilarities.generate_binomial(N,p)
+        mds = MDS(D,dim=dim,verbose=1)
+        mds.initialize()
+        mds.stochastic(max_iters=50,approx=.6,lr=.5)
+        mds.agd(min_step=1e-6)
+        mds.figure(title=f'edge prob = {p:0.2f}')
     plt.show()
 
 def disk_compare(N=100,dim=2): ###
@@ -582,11 +605,13 @@ def embeddability_noise(ax=None):
         plt.show()
 if __name__=='__main__':
 
-    #example_disk(N=1000)
+    #example_disk(N=100)
     #test_gd_lr()
     #example_approx(N=100)
-    example_absolute_vs_relative_weights(N=70,dim=2)
+    #example_weights(N=100,dim=2)
     #example_fewer_edges(N=60,dim=2)
+    example_random_graph(N=100,dim=2)
+    
     #disk_compare(N=100)
     #example_disk_noisy(50)
     #example_disk_dimensions(50)

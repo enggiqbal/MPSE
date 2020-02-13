@@ -12,9 +12,7 @@ def check(D, make_distances_positive=False):
     assert 'nodes' in D
     assert 'edges' in D
     assert 'distances' in D
-    assert 'weights' in D
     assert len(D['edges'])==len(D['distances'])
-    assert len(D['edges'])==len(D['weights'])
 
 def from_coordinates(X,norm=2,edges=None,weights=None,colors=None):
     """\
@@ -206,6 +204,47 @@ def sim2dict(S,mapping='reciprocal',connect_paths=None,connect_components=None):
     return
 
 ### GENERATORS ###
+
+def generate_physical(N,dim=3):
+    """\
+    Generates a dissimilarity graph from the distances of coordinates.
+    """
+    X = misc.disk(N,dim=dim)
+    D = from_coordinates(X)
+    return D
+
+def generate_binomial(N,p=0.1,distances=None):
+    """\
+    Generates a binomial graph (or Erdos-Renyi graph).
+
+    Parameters:
+
+    N : int
+    Number of nodes.
+
+    p : float, 0<p<=1
+    Probability of edge creation
+
+    distances : None or 'random'
+    If None, distances are all one. If random, distances are distributed 
+    uniformly at random between 0 and 1.
+    """
+    assert isinstance(p,float); assert 0<p<=1
+    edges = []
+    for i in range(N):
+        for j in range(i+1,N):
+            if np.random.rand() <= p:
+                edges.append((i,j))
+    if distances is None:
+        distances = np.ones(len(edges))
+    elif distances == 'random':
+        distances = np.random.rand(len(edges))
+    D = {
+        'nodes' : range(N),
+        'edges' : edges,
+        'distances' : distances
+        }
+    return D
 
 ### OLDER ###
 
