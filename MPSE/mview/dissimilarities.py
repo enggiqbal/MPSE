@@ -1,4 +1,4 @@
-import numbers
+import numbers, copy
 import numpy as np
 import networkx as nx
 
@@ -15,7 +15,6 @@ def check(D, make_distances_positive=False):
     assert 'weights' in D
     assert len(D['edges'])==len(D['distances'])
     assert len(D['edges'])==len(D['weights'])
-
 
 def from_coordinates(X,norm=2,edges=None,weights=None,colors=None):
     """\
@@ -35,9 +34,9 @@ def from_coordinates(X,norm=2,edges=None,weights=None,colors=None):
     If isinstance(edges,Number): only edges with distance<edges are included.
     if isinstance(edges,array_like): this is the list of edges.
 
-    weights : None or 'relative' or function or array_like
-    If weights == None, w_ij = 1
-    If weights == 'relative', w_ij = 1/D_ij^2
+    weights : None or number or function or array_like
+    If weights is None, w_ij = 1
+    If weights is a number, w_ij = 1/Dij**int
     If callable(weights), w_ij = weights(D_ij)
     If array_like, w_ij = weights[i,j]
     """
@@ -84,8 +83,9 @@ def from_coordinates(X,norm=2,edges=None,weights=None,colors=None):
     elif weights == 'relative':
         w = d**(-2)
     elif callable(weights):
+        w = np.empty(NN)
         for i in range(NN):
-            w[i] = weights[d[i]]
+            w[i] = weights(d[i])
     else:
         w = weights
 
@@ -156,6 +156,34 @@ def from_matrix(D,weights=None):
         }
     return DD
 
+def set_weights(D,function=None,scaling=0):
+    """\
+    Sets weights of dissimilarity graph as specified by given function or
+    scalling number.
+
+    D : dictionary
+    Dissimilarity graph. Contains list of edges and distances.
+
+    function : None or callable
+    If a callable is given, assigns weight w=function(d) to an edge with 
+    distance d.
+
+    scaling : number
+    If function is None, then assigns weights w=1/d**scaling to an edge with
+    distance d.
+    """
+    distances = D['distances']; NN = len(distances)
+    weights = np.ones(NN)
+    if function is not None:
+        assert callable(function)
+        for nn in range(NN):
+            weights[nn] = function(distances[nn])
+    elif scaling != 0:
+        assert isinstance(scaling,numbers.Number)
+        for nn in range(NN):
+            weights[nn] = distances[nn]**(-scaling)
+    D['weights'] = weights
+
 def remove_edges(D,number=None,proportion=0.2):
     """\
     Reduces number of edges in graph by eliminating far away neighbors.
@@ -165,7 +193,7 @@ def remove_edges(D,number=None,proportion=0.2):
         assert number < len(d)
     else:
         number = int(len(d)*proportion)
-    ind = np.argpartition(d,number)
+    ind = np.argpartition(d,number)[0:number]
     
     D = copy.deepcopy(D)
     D['edges'] = D['edges'][ind]

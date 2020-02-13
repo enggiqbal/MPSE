@@ -27,6 +27,7 @@ def dissimilarity_graph(D):
     
     d = D['distances']; w = D['weights']
     D['normalization'] = np.dot(w,d**2)
+    print('normalization',D['normalization'],'\n\n\n\n')
     D['rms'] = math.sqrt(D['normalization']/len(d))
 
     if 'colors' not in D:
@@ -61,7 +62,7 @@ def stress(X,D):
         dij = np.linalg.norm(X[i]-X[j])
         stress += wij*(Dij-dij)**2
     stress /= D['normalization']
-    return stress
+    return math.sqrt(stress)
 
 def stress_and_gradient(X,D,approx=None):
     """\
@@ -117,7 +118,7 @@ def stress_and_gradient(X,D,approx=None):
                 normalization += wij*Dij**2
         stress /= normalization
         dX /= normalization
-    return stress, dX
+    return math.sqrt(stress), dX
 
 class MDS(object):
     """\
@@ -230,14 +231,14 @@ class MDS(object):
         fixed learning rate.
         """
         F = lambda X: self.F(X,approx=approx)
-        self.X, H = gd.gd(self.X,F,lr=lr,max_iters=max_iters,min_step=min_step,
+        self.X, H = gd.mgd(self.X,F,lr=lr,max_iters=max_iters,min_step=min_step,
                            **kwargs)
         self.update(H=H)
 
     def adaptive(self, X0=None, **kwargs):
         F = lambda X: self.F(X)
         if self.verbose > 0:
-            print('  method : exact gradient & adaptive gradient descent')
+            print('  method : adaptive gradient descent')
         self.X, H = gd.agd(self.X,F,**kwargs,**self.H)
         self.update(H=H)
         
@@ -404,6 +405,61 @@ def example_stochastic(N=100,dim=2):
         mds.figure(title=f'approx = {approx}, time = {mds.H["time"]:0.2f}')
         mds.forget()
     plt.show()
+    
+def example_absolute_vs_relative_weights(N=100,dim=2):
+    print('\n***mds.example_absolute_vs_relative_weights()***\n')
+    print('Here we explore the MDS embedding for a full graph for different'+
+          'weights')
+    title='MDS embedding for multiple weights'
+    X = misc.disk(N,dim); colors = misc.labels(X)
+    X0 = misc.disk(N,dim)
+    
+    D = dissimilarities.from_coordinates(X,colors=colors)
+    mds = MDS(D,dim=dim,verbose=1,title=title)
+    mds.initialize(X0=X0)
+    mds.stochastic(verbose=1,max_iters=50,approx=.6,lr=50)
+    mds.adaptive(verbose=1,min_step=1e-6,max_iters=300)
+    mds.figure(title=f'absolute weights')
+
+    dissimilarities.set_weights(D,scaling=.5)
+    mds = MDS(D,dim=dim,verbose=1,title=title)
+    mds.initialize(X0=X0)
+    mds.stochastic(verbose=1,max_iters=50,approx=.6,lr=50)
+    mds.adaptive(verbose=1,min_step=1e-6,max_iters=300)
+    mds.figure(title=f'1/sqrt(Dij) weights')
+
+    dissimilarities.set_weights(D,scaling=1)
+    mds = MDS(D,dim=dim,verbose=1,title=title)
+    mds.initialize(X0=X0)
+    mds.stochastic(verbose=1,max_iters=50,approx=.6,lr=50)
+    mds.adaptive(verbose=1,min_step=1e-6,max_iters=300)
+    mds.figure(title=f'1/Dij weights')
+
+    dissimilarities.set_weights(D,scaling=2)
+    mds = MDS(D,dim=dim,verbose=1,title=title)
+    mds.initialize(X0=X0)
+    mds.stochastic(verbose=1,max_iters=50,approx=.6,lr=50)
+    mds.adaptive(verbose=1,min_step=1e-6,max_iters=300)
+    mds.figure(title=f'relative weights')
+
+    plt.show()
+    
+def example_fewer_edges(N=100,dim=2):
+    print('\n***mds.example_fewer_edges()***\n')
+    print('Here we explore the MDS embedding for a full graph as far way edges'
+          +'are removed')
+    title='MDS embedding for multiple proportion of edges'
+    X = misc.disk(N,dim); colors = misc.labels(X)
+    D = dissimilarities.from_coordinates(X,colors=colors)
+    X0 = misc.disk(N,dim)*.5
+    for prop in [.99,.8,.6,.4,.2]:
+        DD = dissimilarities.remove_edges(D,proportion=prop)
+        mds = MDS(DD,dim=dim,verbose=1,title=title)
+        mds.initialize(X0=X0)
+        mds.stochastic(verbose=1,max_iters=300,approx=.99,lr=.5)
+        mds.adaptive(verbose=1,min_step=1e-6,max_iters=300)
+        mds.figure(title=f'proportion = {prop:0.1f}')
+    plt.show()
 
 def disk_compare(N=100,dim=2): ###
     print('\n***mds.disk_compare()***')
@@ -526,9 +582,11 @@ def embeddability_noise(ax=None):
         plt.show()
 if __name__=='__main__':
 
-    example_disk(N=1000)
+    #example_disk(N=1000)
     #test_gd_lr()
     #example_approx(N=100)
+    example_absolute_vs_relative_weights(N=70,dim=2)
+    #example_fewer_edges(N=60,dim=2)
     #disk_compare(N=100)
     #example_disk_noisy(50)
     #example_disk_dimensions(50)
