@@ -24,8 +24,6 @@ for i in df.index:
 attributes2 = ['marriage','loan']
 attributes3 = ['marriage','loan','business']
 
-families2 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Busini', 'Castellani', 'Cavalcanti', 'Ciai', 'Corbinelli', 'Da Uzzano', 'Degli Agli', 'Del Forese', 'Della Casa', 'Fioravanti', 'Gianfigliazzi', 'Ginori', 'Giugni', 'Guadagni', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Pandolfini', 'Pazzi', 'Pecori', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Salviati', 'Scambrilla', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
-
 def find_families(attributes_list=['marriage','business','loan'],verbose=0):
     """\
     Returns families that appear at least once in each of the attributes listed.
@@ -52,9 +50,15 @@ def find_families(attributes_list=['marriage','business','loan'],verbose=0):
 def connections(attributes_list=['marriage','business','loan'],
                 families_list=None,verbose=0):
     """\
-    Returns tensor with number of connectiosn between families for each 
+    Returns tensor with number of connections between families for each 
     attribute. If families_list is None, it first finds the list of families
     containing at least one connection in each of the attributes listed.
+
+    Returns:
+
+    S : array (K x N x N)
+    For attribute k and families i and j, S[k,i,j] is the number of connections
+    between families i and j for attribute k.
     """
     for attribute in attributes_list:
         assert attribute in attributes
@@ -126,13 +130,10 @@ def connected_components(attributes_list=['marriage','business','loan'],
 
 if __name__ == '__main__':
     attributes_list = attributes3
-    families_list = families2
-    #find_families(attributes_list,verbose=1)
+    families_list = find_families(attributes_list,verbose=1)
     #connections(attributes_list,families_list,verbose=1)
     connections(attributes_list,verbose=1)
     #connected_components(attributes_list,families_list=families2)
-    
-    #connected_components(families_list=['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni'])
     
     #S = similarity()
     #np.save('similarity_matrices.npy', S)

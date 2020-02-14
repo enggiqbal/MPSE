@@ -8,18 +8,19 @@ import distances, perspective, multiview, mds, compare
 attributes2 = ['marriage','loan']
 families2 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Busini', 'Castellani', 'Cavalcanti', 'Ciai', 'Corbinelli', 'Da Uzzano', 'Degli Agli', 'Del Forese', 'Della Casa', 'Fioravanti', 'Gianfigliazzi', 'Ginori', 'Giugni', 'Guadagni', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Pandolfini', 'Pazzi', 'Pecori', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Salviati', 'Scambrilla', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
 
-attributes3 = ['marriage','business','loan']
-#families3 = ['Adimari', 'Ardinghelli', 'Baldovinetti', 'Bardi', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Manelli', 'Manovelli', 'Rondinelli', 'Rossi', 'Serragli', 'Spini']
-families3 = setup.find_families(attributes3)
 attributes3 = ['marriage','loan','business']
+families3 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bencivenni', 'Bischeri', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Orlandini', 'Panciatichi', 'Pazzi', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
 
 def example2():
     attributes = attributes2
     families = families2
     
     S = setup.connections(attributes_list=attributes,families_list=families)
-    D = distances.dmatrices(S,input_type='similarities',
-                            connect_components=True,connect_factor=1.5)
+    D1 = dissimilarities.from_matrix(S[0],transformation='reciprocal')
+    D2 = dissimilarities.from_matrix(S[1],transformation='reciprocal')
+    D = [D1,D2]
+   #D = distances.dmatrices(S,input_type='similarities',
+    #                        connect_components=True,connect_factor=1.5)
     K = len(S); N = len(S[0])
 
     p = perspective.Persp()

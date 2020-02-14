@@ -4,7 +4,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-import misc, distances, gd, perspective, mds, tsne, gd, multiview
+import misc, distances, gd, perspective, mds, tsne, gd, multiview, mpse
 
 def all(D, persp, method='mds', separate=True, fixed=True, varying=True, verbose=0, title='', names=None, labels=None, edges=None, **kwargs):
     """

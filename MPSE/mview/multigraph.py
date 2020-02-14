@@ -106,14 +106,22 @@ def from_coordinates(X,norm=2,edges=None,weights=None,colors=None):
         }
     return DD
 
-def from_matrix(D,weights=None):
+def from_matrix(D,transformation=None,weights=None):
     """\
     Returns diccionary with dissimilarity relations from dissimilarity matrix.
     
     Parameters:
 
     D : (N,N) array_like
-    Dissimilarity matrx.
+    Matrix containing pairwise distances/dissimilarities/similarites.
+
+    transformation : None or string or callable
+    If None, distances are given by d[(i,j)] = D[i,j].
+    Otherwise, distances are given by d[(i,j)] = f(D[i,j]) (unless f(D[i,j]) is
+    None, in which case the edge is omitted), where f is determined by the
+    given transformation.
+    If string, options are 'binary' and 'reciprocal'.
+    If callable, f = transformation.
 
     weights : None or 'relative' or function or array_like
     If weights == None, w_ij = 1
@@ -122,15 +130,44 @@ def from_matrix(D,weights=None):
     If array_like, w_ij = weights[i,j]
     """
     N = len(D); NN = N*(N-1)/2
-    
     e = np.empty((NN,2),dtype=int)
     d = np.empty(NN)
-    it = 0
-    for i in range(N):
-        for j in range(i+1,N):
-            e[it] = [i,j]
-            d[it] = D[i,j]
-            it += 1
+
+    if transformation is None:
+        it = 0
+        for i in range(N):
+            for j in range(i+1,N):
+                e[it] = [i,j]
+                d[it] = D[i,j]
+                it += 1
+    else:
+        if transformation == 'binary':
+            def f(x):
+                if x == 0:
+                    y = None
+                else:
+                    y = 1
+                return y
+        elif transformation == 'reciprocal':
+            def f(x):
+                if x == 0:
+                    y = None
+                else:
+                    y = 1/x
+                return y
+        else:
+            assert callable(trasformation)
+            f = transformation
+        it = 0
+        for i in range(N):
+            for j in range(i+1,N):
+                Dij = f(D[i,j])
+                if Dij is not None:
+                    e[it] = [i,j]
+                    d[it] = Dij
+                    it += 1
+        e = e[0:it]
+        d = d[0:it]
 
     w = np.empty(NN)
     if weights is None:
@@ -160,6 +197,22 @@ def from_matrix(D,weights=None):
         'weights' : w
         }
     return DD
+
+def from_perspectives(X,persp,**kwargs):
+    """\
+    Generates list of graphs generated from objects X and perspectives persp.
+
+    X : numpy array
+    Positions of objects
+
+    persp : perspective object
+    Describes perspectives on X.
+    """
+    Y = persp.compute_Y(X)
+    D = []
+    for y in Y:
+        D.append(from_coordinates(y,**kwargs))
+    return D
 
 def set_weights(D,function=None,scaling=0):
     """\
@@ -220,7 +273,7 @@ def generate_physical(N,dim=3):
     D = from_coordinates(X)
     return D
 
-def generate_binomial(N,p=0.1,distances=None):
+def binomial(N,p,distances=None,K=1):
     """\
     Generates a binomial graph (or Erdos-Renyi graph).
 
@@ -235,22 +288,31 @@ def generate_binomial(N,p=0.1,distances=None):
     distances : None or 'random'
     If None, distances are all one. If random, distances are distributed 
     uniformly at random between 0 and 1.
+
+    K : int > 0
+    Number of graphs.
     """
     assert isinstance(p,float); assert 0<p<=1
-    edges = []
-    for i in range(N):
-        for j in range(i+1,N):
-            if np.random.rand() <= p:
-                edges.append((i,j))
-    if distances is None:
-        distances = np.ones(len(edges))
-    elif distances == 'random':
-        distances = np.random.rand(len(edges))
-    D = {
-        'nodes' : range(N),
-        'edges' : edges,
-        'distances' : distances
+    D = []
+    for k in range(K):
+        edges = []
+        for i in range(N):
+            for j in range(i+1,N):
+                if np.random.rand() <= p:
+                    edges.append((i,j))
+        edges = np.array(edges)
+        if distances is None:
+            dist = np.ones(len(edges))
+        elif distances == 'random':
+            dist = np.random.rand(len(edges))
+        d = {
+            'nodes' : range(N),
+            'edges' : edges,
+            'distances' : dist
         }
+        D.append(d)
+    if K == 1:
+        D = D[0]
     return D
 
 ### OLDER ###
@@ -391,9 +453,9 @@ def add_noise(D,sigma,noise_type='relative'):
         sys.exit('Incorrect form.')
     return D_noisy
 
-class DG(object):
+class MultiGraph(object):
     """\
-    Class of dissimilarity graphs for a set of objects
+    Class of multigraphs to be used in MPSE.
     """
 
     def __init__(self,N,node_labels=None,dissimilarities=None):

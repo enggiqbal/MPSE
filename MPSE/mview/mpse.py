@@ -4,23 +4,21 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-import misc, distances, dissimilarities, gd, perspective, mds2, tsne, plots
+import misc, distances, multigraph, gd, perspective, mds2, tsne, plots
 
 class MPSE(object):
     """\
     Collection of methods for multi-perspective simultaneous embedding.
     """
 
-    def __init__(self, DG, persp=2, verbose=0, title=''):
+    def __init__(self, D, persp=2, verbose=0, title=''):
         """\
         Initializes MPSE method.
 
         Parameters:
 
-        DG : DG object
-        List of dissimilarity relations. Each element of list can be a
-        distance/dissimilarity matrix or a dissimilarity dictionary as described
-        in dissimilarities.py
+        D : list
+        List containing dissimilarity graphs.
 
         persp : Object instance of projections.Persp class or int > 0.
         Describes set of allowed projection functions and stores list of
@@ -32,9 +30,14 @@ class MPSE(object):
             print('+ mpse.MPSE('+title+'):')
         self.verbose = verbose; self.title = title
 
-        self.N = DG.N
-        self.D = DG.D
-        self.K = DG.K
+        self.D = D
+        self.N = len(D[0]['nodes'])
+        self.K = len(D)
+
+        if 'colors' in D[0]:
+            self.colors = D[0]['colors']
+        else:
+            self.colors = None
         #self.individual_D_rms = np.sqrt(np.sum(D**2,axis=(1,2))/(self.N*(self.N-1)))
         #self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)*self.K))
 
@@ -459,9 +462,8 @@ def example_disk(N=100):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
     persp = perspective.Persp()
     persp.fix_Q(number=3,special='standard')
-    dg = dissimilarities.DG(N)
-    dg.from_perspectives(X,persp)
-    mv = MPSE(dg,persp=persp,verbose=1)
+    D = multigraph.from_perspectives(X,persp)
+    mv = MPSE(D,persp=persp,verbose=1)
     mv.setup_visualization(visualization='mds')
     mv.initialize_X(verbose=1)
     mv.optimize_X(batch_size=10,max_iters=50,verbose=1)
@@ -475,9 +477,8 @@ def example_disk_Q(N=100):
     X = misc.disk(N,dim=3)
     persp = perspective.Persp()
     persp.fix_Q(number=3,special='standard')
-    dg = dissimilarities.DG(N)
-    dg.from_perspectives(X,persp)
-    mv = MPSE(dg,persp=persp,verbose=1)
+    D = multigraph.from_perspectives(X,persp)
+    mv = MPSE(D,persp=persp,verbose=1)
     mv.setup_visualization(visualization='mds')
     mv.initialize_Q(random='orthogonal')
     mv.initialize_X(X0=X)
@@ -489,9 +490,8 @@ def example_disk_all(N=100):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
     persp = perspective.Persp()
     persp.fix_Q(number=3,special='standard')
-    dg = dissimilarities.DG(N)
-    dg.from_perspectives(X,persp)
-    mv = MPSE(dg,persp=persp,verbose=1)
+    D = multigraph.from_perspectives(X,persp)
+    mv = MPSE(D,persp=persp,verbose=1)
     mv.setup_visualization(visualization='mds')
     mv.initialize_Q()
     mv.initialize_X()
@@ -502,11 +502,10 @@ def example_disk_all(N=100):
     plt.show()
 
 def example_binomial(N=100,K=2):
-    dg = dissimilarities.DG(N)
     persp = perspective.Persp()
     for p in [0.05,0.1,0.5,1.0]:
-        dg.generate_binomial(K=K,p=p)
-        mv = MPSE(dg,persp=persp,verbose=1)
+        D = multigraph.binomial(N,p,K=K)
+        mv = MPSE(D,persp=persp,verbose=1)
         mv.setup_visualization(visualization='mds')
         mv.initialize_Q()
         mv.initialize_X()
