@@ -3,7 +3,7 @@ import numbers, math, random
 import matplotlib.pyplot as plt
 import numpy as np
 
-import misc, distances, dissimilarities, gd
+import misc, distances, dissimilarities, gd, plots
 
 def dissimilarity_graph(D):
     """\
@@ -287,78 +287,40 @@ class MDS(object):
 
     ### Plotting methods ###
 
-    def figureX(self,title='mds embedding',labels=None,edges=False,
-                plot=True, ax=None):
-        if self.dim >= 2:
-            if ax is None:
-                fig, ax = plt.subplots()
-            else:
-                plot = False
-            if edges is True:
-                for i,j in self.D['edges']:
-                    ax.plot([self.X[i,0],self.X[j,0]],
-                            [self.X[i,1],self.X[j,1]],'-',
-                            linewidth=0.15,color='gray')
-            ax.scatter(self.X[:,0],self.X[:,1],s=25,c=self.D['colors'])
-            ax.title.set_text(title+f' - stress = {self.cost:0.2e}')
-            if plot is True:
-                plt.draw()
-                plt.pause(1)
-
-    def figureH(self,title='Computation history for X',plot=True):
-        assert hasattr(self,'H')
-        fig = plt.figure()
-        plt.semilogy(self.H['steps'], label='step size', linestyle='--')
-        plt.semilogy(self.H['cost'], label='cost',linewidth=3)
-        plt.xlabel('iterations')
-        plt.legend()
-        plt.title(title)
+    def figureX(self,title='mds embedding',edges=False,plot=True,ax=None):
+        assert self.dim >= 2
+        if ax is None:
+            fig, ax = plt.subplots()
+        else:
+            plot = False
+        if edges is True:
+            edges = self.D['edges']
+        colors = self.D['colors']
+        plots.plot2D(self.X,edges=edges,colors=colors,ax=ax)
         if plot is True:
             plt.draw()
-            plt.pause(0.2)
-        return fig
+            plt.pause(1)
+
+    def figureH(self,title='computations',plot=True,ax=None):
+        assert hasattr(self,'H')
+        if ax is None:
+            fig, ax = plt.subplots()
+        plots.plot_cost(self.H['cost'],self.H['steps'],title=title,ax=ax)
+        if plot is True:
+            plt.draw()
+            plt.pause(1.0)
 
     def figure(self,title='mds computation & embedding',labels=None,
                plot=True):
-        #if labels is None:
-        #    labels = self.labels
-        if self.dim >= 2:
-            fig,axs = plt.subplots(1,2)
-            plt.suptitle(title+f' - stress = {self.cost:0.2e}')
-            axs[0].semilogy(self.H['steps'],linestyle='--',label='step size')
-            axs[0].semilogy(self.H['cost'], label='cost',linewidth=3)
-            axs[0].legend()
-            self.figureX(edges=True,ax=axs[1])
-            #axs[1].scatter(self.X[:,0],self.X[:,1],c=self.D['colors'])
-            if plot is True:
-                plt.draw()
-                plt.pause(1.0)
+        assert self.dim >= 2
+        fig,axs = plt.subplots(1,2)
+        plt.suptitle(title+f' - stress = {self.cost:0.2e}')
+        self.figureH(ax=axs[0])
+        self.figureX(edges=True,ax=axs[1])
+        if plot is True:
+            plt.draw()
+            plt.pause(1.0)
         return fig
-
-    def graph(self,edge_bound=1.01,plot=True,ax=None,title=None):
-        import networkx as nx
-        G = nx.Graph()
-        positions = {}
-        for n in range(self.N):
-            label = self.labels[n]
-            G.add_node(label)
-            positions[label] = self.X[n]
-        for i in range(self.N):
-            for j in range(i+1,self.N):
-                if self.D[i,j] <= edge_bound:
-                    G.add_edge(self.labels[i],self.labels[j])
-        if ax is None:
-            fig = plt.figure()
-            nx.draw_networkx(G, pos=positions)
-            nx.draw_networkx_edges(G, pos=positions)
-            plt.title(title)
-            plt.axis('off')
-            if plot is True:
-                plt.show(block=False)
-            return fig
-        else:
-            nx.draw_networkx(G, pos=positions, ax=ax)
-            nx.draw_networkx_edges(G, pos=positions, ax=ax)
                                    
 ### TESTS ###
 

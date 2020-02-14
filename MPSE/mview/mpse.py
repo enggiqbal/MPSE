@@ -4,20 +4,20 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-import misc, distances, gd, perspective, mds, tsne, gd, plots
+import misc, distances, dissimilarities, gd, perspective, mds2, tsne, plots
 
 class MPSE(object):
     """\
     Collection of methods for multi-perspective simultaneous embedding.
     """
 
-    def __init__(self, D, persp=2, verbose=0, title=''):
+    def __init__(self, DG, persp=2, verbose=0, title=''):
         """\
         Initializes MPSE method.
 
         Parameters:
 
-        D : list
+        DG : DG object
         List of dissimilarity relations. Each element of list can be a
         distance/dissimilarity matrix or a dissimilarity dictionary as described
         in dissimilarities.py
@@ -32,9 +32,9 @@ class MPSE(object):
             print('+ mpse.MPSE('+title+'):')
         self.verbose = verbose; self.title = title
 
-        self.D = D
-        self.K = len(D)
-        self.N = len(D[0]['edges'])
+        self.N = DG.N
+        self.D = DG.D
+        self.K = DG.K
         #self.individual_D_rms = np.sqrt(np.sum(D**2,axis=(1,2))/(self.N*(self.N-1)))
         #self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)*self.K))
 
@@ -63,7 +63,7 @@ class MPSE(object):
         self.visualization_method = visualization
 
         if visualization is 'mds':
-            visualization_class = mds.MDS
+            visualization_class = mds2.MDS
         elif visualization is 'tsne':
             visualization_class = tsne.TSNE
 
@@ -78,8 +78,8 @@ class MPSE(object):
                 Y = self.persp.compute_Y(X,Q=Q)
             cost = 0
             for k in range(self.K):
-                cost += self.visualization[k].cost_function(Y[k])
-            return cost
+                cost += self.visualization[k].cost_function(Y[k])**2
+            return math.sqrt(cost)
         self.cost_function = cost_function
 
         def cost_function_k(X,q,k,y=None):
@@ -94,7 +94,7 @@ class MPSE(object):
                 Y = self.persp.compute_Y(X,Q=Q)
             cost = 0; individual_cost = np.zeros(self.K)
             for k in range(self.K):
-                cost_k = self.visualization[k].cost_function(Y[k])
+                cost_k = self.visualization[k].f(Y[k])
                 cost += cost_k
                 individual_cost[k] = cost_k
             return cost, individual_cost
@@ -124,10 +124,11 @@ class MPSE(object):
                 dX = np.zeros((self.N,self.persp.dimX))
                 dQ = []
                 for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],batches)
-                    cost += costk
+                    costk, dYk = self.visualization[k].F(Y[k])#,batches)
+                    cost += costk**2
                     dX += dYk @ Q[k]
                     dQ.append(dYk.T @ X)
+                cost = math.sqrt(cost)
                 return (cost,[dX]+dQ)
             self.F = F
 
@@ -151,7 +152,7 @@ class MPSE(object):
                 cost = 0
                 dX = np.zeros((self.N,self.persp.dimX))
                 for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],batches)
+                    costk, dYk = self.visualization[k].F(Y[k])#,batches)
                     cost += costk
                     dX += dYk @ Q[k]
                 return (cost,dX)
@@ -230,7 +231,7 @@ class MPSE(object):
         self.Q0 = self.Q.copy()
         self.update()
         
-    def initialize_X(self, X0=None, method='mds',max_iters=50,**kwargs):
+    def initialize_X(self, X0=None, method='random',max_iters=50,**kwargs):
         """\
         Set initial embedding using misc.initial function.
 
@@ -259,7 +260,8 @@ class MPSE(object):
                 print('  method : ',method)
             if method == 'random':
                 self.X = misc.initial_embedding(self.N,dim=self.persp.dimX,
-                                                radius=self.D_rms,**kwargs)
+                                                radius=1)
+                                                #radius=self.D_rms,**kwargs)
             elif method == 'mds':
                 D = np.average(self.D,axis=0)
                 vis = mds.MDS(D,dim=self.persp.dimX)
@@ -274,8 +276,7 @@ class MPSE(object):
             self.Y = self.persp.compute_Y(self.X,Q=self.Q)
 
             self.cost, self.individual_cost = self.cost_function_all(self.X,self.Q,Y=self.Y)
-            self.ncost = np.sqrt(self.cost/(self.N*(self.N-1)/2)*self.K)/self.D_rms
-            self.individual_ncost = np.sqrt(self.individual_cost/(self.N*(self.N-1)/2))/self.individual_D_rms
+            #self.individual_ncost = np.sqrt(self.individual_cost/(self.N*(self.N-1)/2))/self.individual_D_rms
         if H is not None:
             if bool(self.H) is True:
                 H['cost'] = np.concatenate((self.H['cost'],H['cost']))
@@ -310,7 +311,7 @@ class MPSE(object):
             self.update(H=H)
 
         if self.verbose > 0:
-            print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
+            print(f'  Final stress : {self.cost:0.2e}')
 
     def optimize_Q(self,batch_size=None,batch_number=None,lr=0.01,**kwargs):
         if self.verbose > 0:
@@ -325,7 +326,7 @@ class MPSE(object):
         self.update(H=H)
 
         if self.verbose > 0:
-            print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
+            print(f'  Final stress : {self.cost:0.2e}')
 
     def optimize_all(self,agd=True,batch_size=None,batch_number=None,lr=0.01,
                      **kwargs):
@@ -346,7 +347,7 @@ class MPSE(object):
             self.X = XQ[0]; self.Q = XQ[1::]; self.update(H=H)
 
         if self.verbose > 0:
-            print(f'  Final stress : {self.cost:0.2e}[{self.ncost:0.2e}]')
+            print(f'  Final stress : {self.cost:0.2e}')
 
     def figureX(self,title='Final embedding',perspectives=True,
                 labels=None,edges=None,colors=None,plot=True,save=False):
@@ -411,95 +412,46 @@ class MPSE(object):
                 plt.draw()
                 plt.pause(0.1)
 
-    def figureY(self,title='Final perspective of embedding',labels=None,
-                edges=None, plot=True,colors=None,axes=None):
-        if labels is None:
-            labels = self.labels
-        if colors is None:
-            colors = [None]*self.K
-        if axes is None:
-            fig, axes = plt.subplots(1,self.K)
+    def figureY(self,title='perspectives',edges=False,colors=True,plot=True,
+                ax=None):
+        if ax is None:
+            fig, ax = plt.subplots(1,self.K)
         else:
             plot = False
-        if edges is not None:
-            if isinstance(edges,numbers.Number):
-                edges = edges-self.D
-            for k in range(self.K):
-                for i in range(self.N):
-                    for j in range(i+1,self.N):
-                        if edges[k,i,j] > 0:
-                            axes[k].plot([self.Y[k][i,0],self.Y[k][j,0]],
-                                         [self.Y[k][i,1],self.Y[k][j,1]],
-                                         '--',linewidth=0.25,color='blue')#,l='b')
-        if self.persp.dimY == 2:
-            if plot is True:
-                plt.suptitle(title+f', normalized cost : {self.ncost:0.2e}')
-            for k in range(self.K):
-                axes[k].scatter(self.Y[k][:,0],self.Y[k][:,1],s=25,c=colors[k])
-                axes[k].set_aspect(1.0)
-            if plot is True:
-                plt.draw()
-                plt.pause(0.1)
+        for k in range(self.K):
+            if edges is True:
+                edges_k = self.D[k]['edges']
+            else:
+                edges_k = None
+            if colors is True:
+                colors_k = self.D[k]['colors']
+            else:
+                colors_k = None
+            plots.plot2D(self.Y[k],edges=edges_k,colors=colors_k,ax=ax[k])
+        plt.suptitle(title)
+        if plot is True:
+            plt.draw()
+            plt.pause(1.0)
     
-    def figureH(self,title='Computation history for X',plot=True):
+    def figureH(self,title='computations',plot=True,ax=None):
         assert hasattr(self,'H')
-        fig = plt.figure()
-        its = range(self.H['iterations'])
-        plt.semilogy(its,self.H['cost'], label='cost')
-        plt.semilogy(its,self.H['steps'], label='steps')
-        plt.xlabel('iterations')
-        plt.legend()
-        plt.title(title)
+        if ax is None:
+            fig, ax = plt.subplots()
+        plots.plot_cost(self.H['cost'],self.H['steps'],title=title,ax=ax)
         if plot is True:
             plt.draw()
             plt.pause(0.2)
-        return fig
 
-    def figure(self,title='multiview computation & embedding',labels=None,
-               plot=True):
-        if labels is None:
-            labels = self.labels
-        if self.persp.dimY >= 2:
-            fig,axs = plt.subplots(1,self.K+1)
-            plt.suptitle(title+f', normalized cost : {self.ncost:0.2e}')
-            its = range(self.H['iterations'])
-            axs[0].semilogy(its,self.H['cost'], label='cost')
-            axs[0].semilogy(its,self.H['steps'], label='steps')
-            axs[0].legend()
-            for k in range(self.K):
-                axs[k+1].scatter(self.Y[k][:,0],self.Y[k][:,1],c=labels)
-                axs[k+1].set_aspect(1.0)
-            if plot is True:
-                plt.draw()
-                plt.pause(0.1)
-        return fig
-
-    def graphY(self,edge_bound=1.0,plot=True,axes=None):
-        import networkx as nx
-
-        if axes is None:
-            fig, axes = plt.subplots(1,self.K)
-        for k in range(self.K):
-            G = nx.Graph()
-            positions = {}
-            for n in range(self.N):
-                label = self.labels[n]
-                G.add_node(label)
-                positions[label] = self.Y[k][n]
-            for i in range(self.N):
-                for j in range(i+1,self.N):
-                    if self.D[k,i,j] <= edge_bound:
-                        G.add_edge(self.labels[i],self.labels[j])
-            nx.draw_networkx(G, pos=positions,ax=axes[k])
-            nx.draw_networkx_edges(G, pos=positions,ax=axes[k])
-            #plt.title(f'{self.individual_cost[k]:0.2e}'+
-            #              f'[{self.individual_ncost[k]:0.2e}]')
-
-        #if axes is not None:
-         #   if plot is True:
-          #      plt.show(block=False)
-           # return fig
-            
+    def figureHY(self,title='multiview computation & embedding',colors=True,
+               edges=False,plot=True):
+        assert self.persp.dimY >= 2
+        fig,axs = plt.subplots(1,self.K+1)
+        plt.suptitle(title+f', cost : {self.cost:0.2e}')
+        self.figureH(ax=axs[0])
+        self.figureY(ax=axs[1::],colors=colors,edges=edges)
+        if plot is True:
+            plt.draw()
+            plt.pause(1)
     
 ##### TESTS #####
 
@@ -507,46 +459,60 @@ def example_disk(N=100):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
     persp = perspective.Persp()
     persp.fix_Q(number=3,special='standard')
-    Y = persp.compute_Y(X)
-    D = distances.compute(Y)
-    mv = Multiview(D,persp=persp,verbose=1,labels=labels)
+    dg = dissimilarities.DG(N)
+    dg.from_perspectives(X,persp)
+    mv = MPSE(dg,persp=persp,verbose=1)
     mv.setup_visualization(visualization='mds')
     mv.initialize_X(verbose=1)
     mv.optimize_X(batch_size=10,max_iters=50,verbose=1)
     mv.figureX(save='hola')
     mv.figureY()
     mv.figureH()
+    mv.figureHY()
     plt.show()
 
 def example_disk_Q(N=100):
     X = misc.disk(N,dim=3)
     persp = perspective.Persp()
-    Q_true = persp.generate_Q(number=3,special='standard')
-    Y_true = persp.compute_Y(X,Q=Q_true)
-    D = distances.compute(Y_true)
-    mv = Multiview(D,persp=persp,verbose=1)
+    persp.fix_Q(number=3,special='standard')
+    dg = dissimilarities.DG(N)
+    dg.from_perspectives(X,persp)
+    mv = MPSE(dg,persp=persp,verbose=1)
     mv.setup_visualization(visualization='mds')
     mv.initialize_Q(random='orthogonal')
     mv.initialize_X(X0=X)
-    mv.optimize_Q(verbose=2,batch_size=10)
     mv.optimize_Q(verbose=2)
-    mv.figureH()
+    mv.figureHY()
     plt.show()
 
 def example_disk_all(N=100):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
     persp = perspective.Persp()
-    Q_true = persp.generate_Q(number=3,special='standard')
-    Y_true = persp.compute_Y(X,Q=Q_true)
-    D = distances.compute(Y_true)
-    mv = Multiview(D,persp=persp,verbose=1,labels=labels)
+    persp.fix_Q(number=3,special='standard')
+    dg = dissimilarities.DG(N)
+    dg.from_perspectives(X,persp)
+    mv = MPSE(dg,persp=persp,verbose=1)
     mv.setup_visualization(visualization='mds')
     mv.initialize_Q()
     mv.initialize_X()
-    mv.optimize_all(agd=True,batch_size=10)
+    mv.optimize_all(agd=True)
     mv.figureX(plot=True)
     mv.figureY(plot=True)
     mv.figureH()
+    plt.show()
+
+def example_binomial(N=100,K=2):
+    dg = dissimilarities.DG(N)
+    persp = perspective.Persp()
+    for p in [0.05,0.1,0.5,1.0]:
+        dg.generate_binomial(K=K,p=p)
+        mv = MPSE(dg,persp=persp,verbose=1)
+        mv.setup_visualization(visualization='mds')
+        mv.initialize_Q()
+        mv.initialize_X()
+        mv.optimize_all(agd=True,max_iters=400,min_step=1e-8)
+        mv.figureX(plot=True)
+        mv.figureHY(edges=True)
     plt.show()
     
 def noisy(N=100):
@@ -595,9 +561,10 @@ def noise_all(N=100):
     plt.show()
     
 if __name__=='__main__':
-    example_disk(30)
+    #example_disk(30)
     #example_disk_Q(30)
     #example_disk_all(N=30)
+    example_binomial(N=30,K=3)
     #noisy()
     #noisy_combine()
     #test_mds0()

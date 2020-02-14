@@ -3,6 +3,39 @@ from mpl_toolkits.mplot3d import Axes3D
 import pickle; import csv
 import numpy as np
 
+def plot_cost(cost,steps=None,title='computations',plot=True,ax=None):
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        plot = False
+    if steps is not None:
+        ax.semilogy(steps, label='step size', linestyle='--')
+    ax.semilogy(cost, label='cost',linewidth=3)
+    ax.set_xlabel('iterations')
+    ax.legend()
+    ax.set_title(title)
+    if plot is True:
+        plt.draw()
+        plt.pause(1.0)
+        
+def plot2D(Y,save=False,colors=None,edges=None,title=None,ax=None,plot=True):
+    if ax is None:
+        fig, ax = plt.subplots()
+    else:
+        plot = False
+
+    if edges is not None:
+        for i,j in edges:
+            ax.plot([Y[i,0],Y[j,0]],
+                    [Y[i,1],Y[j,1]],'-',
+                    linewidth=0.15,color='gray')
+    ax.scatter(Y[:,0],Y[:,1],s=25,c=colors)
+    ax.title.set_text(title)
+        
+    if plot is True:
+        plt.draw()
+        plt.pause(1)
+
 def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
            title=None,axis=False,ax=None):
         
@@ -15,23 +48,7 @@ def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
 
     if perspectives is not None:
         q = perspectives
-        #max0=np.max(X[:,0])
-        #max1=np.max(X[:,1])
-        #max2=np.max(X[:,2])
-        #maxes = np.array([max0,max1,max2])
-        #min0=np.min(X[:,0])
-        #min1=np.min(X[:,1])        
-        #min2=np.min(X[:,2])
-        #mines = np.array([min0,min1,min2])
         for k in range(len(q)):
-            #ind1 = np.argmax(np.max(q[k]/maxes))
-            #ind2 = np.argmax(np.max(q[k]/mines))
-            #if q[k][ind1] >= q[k][ind2]:
-             #   ind = ind1
-             #   m = abs(maxes[ind])
-            #else:
-             #   ind = ind2
-              #  m = abs(mines[ind])
             ind = np.argmax(np.sum(q[k]*X,axis=1))
             m = np.linalg.norm(X[ind])/np.linalg.norm(q[k])
             ax.plot([0,m*q[k][0]],[0,m*q[k][1]],[0,m*q[k][2]],'-',linewidth=3,
@@ -47,7 +64,7 @@ def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
                             linewidth=0.25,color='blue')
                         
     ax.scatter3D(X[:,0],X[:,1],X[:,2],c=colors)
-    ax.set_aspect(1.0)
+    #ax.set_aspect(1.0)
     if axis is False:
         ax.set_axis_off()
     if title is not None:

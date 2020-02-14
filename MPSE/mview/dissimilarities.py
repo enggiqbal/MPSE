@@ -2,14 +2,21 @@ import numbers, copy
 import numpy as np
 import networkx as nx
 
-### Functions to set up dissimilarity dictionary ###
+### Functions to set up a dissimilarity graph ###
+
+# A dissimilarity graph is a dictionary containing the following attributes:
+# 'edges' : a list or array containing the edges of the graph (each edge is a
+# tuples of nodes)
+# 'distances' : a list or array containing the edge distances of the given edges
+# (it must have the same length as the list of edges)
+# Other possible attributes are:
+# 'weights' : a list or array containing the edge weights of the given edges (it# must hqve the same length as the list of edges)
 
 def check(D, make_distances_positive=False):
     """\
     Takes dissimilarity graph or matrix and returns dissimilarity graph. If D is
     a dictionary, it checks that all attributes are included.
     """
-    assert 'nodes' in D
     assert 'edges' in D
     assert 'distances' in D
     assert len(D['edges'])==len(D['distances'])
@@ -383,6 +390,45 @@ def add_noise(D,sigma,noise_type='relative'):
     else:
         sys.exit('Incorrect form.')
     return D_noisy
+
+class DG(object):
+    """\
+    Class of dissimilarity graphs for a set of objects
+    """
+
+    def __init__(self,N,node_labels=None,dissimilarities=None):
+        self.N = N
+        
+        if node_labels is None:
+            node_labels = range(N)
+        self.set_node_labels(node_labels)
+
+        if dissimilarities is not None:
+            K = len(dissimilarities)
+            self.D = dissimilarities
+            self.K = K
+
+    def set_node_labels(self,node_labels):
+        assert len(node_labels) == self.N
+        self.node_labels = node_labels
+
+    def from_perspectives(self,X,persp,**kwargs):
+        Y = persp.compute_Y(X)
+        D = []
+        for y in Y:
+            D.append(from_coordinates(y,**kwargs))
+        self.D = D
+        self.K = len(D)
+
+    def generate_binomial(self,K=1,p=0.1,distance=None,**kwargs):
+        D = []
+        for k in range(K):
+            D.append(generate_binomial(self.N,p=p,distances=None))
+        self.D = D
+        self.K = K
+        
+    def average_distances(self):
+        return
 
 ### TESTS ###
 
