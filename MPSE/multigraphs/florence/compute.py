@@ -3,13 +3,93 @@ import matplotlib.pyplot as plt
 import numpy as np
 import setup
 sys.path.insert(1,'../../mview')
-import distances, perspective, multiview, mds, compare
+import distances, perspective, multiview, mds, compare, multigraph, mpse, mds2
 
 attributes2 = ['marriage','loan']
 families2 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bischeri', 'Brancacci', 'Busini', 'Castellani', 'Cavalcanti', 'Ciai', 'Corbinelli', 'Da Uzzano', 'Degli Agli', 'Del Forese', 'Della Casa', 'Fioravanti', 'Gianfigliazzi', 'Ginori', 'Giugni', 'Guadagni', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Panciatichi', 'Pandolfini', 'Pazzi', 'Pecori', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Salviati', 'Scambrilla', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
 
 attributes3 = ['marriage','loan','business']
 families3 = ['Adimari', 'Ardinghelli', 'Arrigucci', 'Baldovinetti', 'Barbadori', 'Bardi', 'Bencivenni', 'Bischeri', 'Brancacci', 'Castellani', 'Cavalcanti', 'Da Uzzano', 'Della Casa', 'Guicciardini', 'Lamberteschi', 'Manelli', 'Manovelli', 'Medici', 'Orlandini', 'Panciatichi', 'Pazzi', 'Peruzzi', 'Ricasoli', 'Rondinelli', 'Rossi', 'Serragli', 'Serristori', 'Spini', 'Strozzi', 'Tornabuoni']
+
+def example1():
+    attribute = 'marriage'
+    families = setup.find_families([attribute])
+    S = setup.connections([attribute],families)[0]
+    D_all = multigraph.sim2dist(S)
+    colors = D_all[-2]
+
+    D0 = multigraph.from_matrix(S,transformation='reciprocal')
+    edges = D0['edges']
+    
+    mv = mds2.MDS(D0,verbose=1)
+    mv.initialize()
+    mv.stochastic()
+    mv.agd(min_step=1e-6)
+    mv.figureX(edges=True,colors=colors)
+    mv.figureH()
+
+    def f(x):
+        if x <3:
+            y = x
+        else:
+            y = None
+        return y
+    D = multigraph.from_matrix(D_all,transformation=f)
+    mv = mds2.MDS(D,verbose=1)
+    mv.initialize()
+    mv.stochastic()
+    mv.agd(min_step=1e-6)
+    mv.figureX(edges=edges,colors=colors)
+    mv.figureH()
+
+    def f(x):
+        if x <5:
+            y = x
+        else:
+            y = None
+        return y
+    D = multigraph.from_matrix(D_all,transformation=f)
+    mv = mds2.MDS(D,verbose=1)
+    mv.initialize()
+    mv.stochastic()
+    mv.agd(min_step=1e-6)
+    mv.figureX(edges=edges,colors=colors)
+    mv.figureH()
+    
+    plt.show()
+    
+def example3a():
+    attributes = attributes2
+    families = families2
+    
+    S = setup.connections(attributes_list=attributes,families_list=families)
+    D = []
+    edges = []
+    for s in S:
+        edges.append(multigraph.from_matrix(s,transformation='reciprocal')\
+                     ['edges'])
+        d = multigraph.sim2dist(s)
+        def f(x):
+            if x <3:
+                y = x
+            else:
+                y = None
+            return y
+        d = multigraph.from_matrix(d,transformation=f)
+        D.append(d)
+    K = len(S); N = len(S[0])
+
+    p = perspective.Persp()
+    p.fix_Q(number=K, special='standard')
+
+    mv = mpse.MPSE(D,persp=p,verbose=1)
+    mv.setup_visualization(visualization='mds')
+    mv.initialize_X()
+    mv.optimize_X(verbose=1)
+    mv.figureX()
+    mv.figureY(edges=edges)
+    mv.figureH()
+    plt.show()
 
 def example2():
     attributes = attributes2
@@ -147,6 +227,8 @@ def compute_mds(num=2):
     plt.show()
 
 if __name__=='__main__':
+    example1()
+    #example3a()
     #example2()
-    example3()
+    #example3()
     #compute_mds()

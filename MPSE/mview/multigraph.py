@@ -129,7 +129,7 @@ def from_matrix(D,transformation=None,weights=None):
     If callable(weights), w_ij = weights(D_ij)
     If array_like, w_ij = weights[i,j]
     """
-    N = len(D); NN = N*(N-1)/2
+    N = len(D); NN = int(N*(N-1)/2)
     e = np.empty((NN,2),dtype=int)
     d = np.empty(NN)
 
@@ -156,7 +156,7 @@ def from_matrix(D,transformation=None,weights=None):
                     y = 1/x
                 return y
         else:
-            assert callable(trasformation)
+            assert callable(transformation)
             f = transformation
         it = 0
         for i in range(N):
@@ -168,33 +168,10 @@ def from_matrix(D,transformation=None,weights=None):
                     it += 1
         e = e[0:it]
         d = d[0:it]
-
-    w = np.empty(NN)
-    if weights is None:
-        w = np.ones(NN)
-    elif weights == 'relative':
-        it = 0
-        for i in range(N):
-            for j in range(i+1,N):
-                w[it] = 1/D[i,j]**2
-                it += 1
-    elif callable(weights):
-        it = 0
-        for i in range(N):
-            for j in range(i+1,N):
-                w[it] = weights(D[i,j])
-                it += 1
-    else:
-        it = 0
-        for i in range(N):
-            for j in range(i+1,N):
-                w[it] = weights[i,j]
-                it += 1
-
     DD = {
+        'nodes' : range(N),
         'edges' : e,
-        'dissimilarities' : d,
-        'weights' : w
+        'distances' : d,
         }
     return DD
 

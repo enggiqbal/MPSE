@@ -135,27 +135,13 @@ class MPSE(object):
                 return (cost,[dX]+dQ)
             self.F = F
 
-            def FX(X,Q,batch_number=None,batch_size=None,Y=None):
+            def FX(X,Q,Y=None,**kwargs):
                 if Y is None:
                     Y = self.persp.compute_Y(X,Q=Q)
-                    
-                if batch_size is None and batch_number is None:
-                    batches = None
-                else:
-                    if isinstance(batch_number,int):
-                        batch_size = math.ceil(self.N/batch_number)
-                    elif isinstance(batch_size,int):
-                        batch_number = math.ceil(self.N/batch_size)
-                    else:
-                        sys.exit('wrong batch_size and batch_number')
-                    indices = list(range(self.N)); random.shuffle(indices)
-                    batches = [list(indices[j*batch_size:(j+1)*batch_size]) for\
-                               j in range(batch_number)]
-                    
                 cost = 0
                 dX = np.zeros((self.N,self.persp.dimX))
                 for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k])#,batches)
+                    costk, dYk = self.visualization[k].F(Y[k],**kwargs)
                     cost += costk
                     dX += dYk @ Q[k]
                 return (cost,dX)
@@ -290,20 +276,16 @@ class MPSE(object):
     def forget(self):
         self.X = self.X0; self.H = {}; self.update()
 
-    def optimize_X(self, agd=True, batch_size=None, batch_number=None, lr=0.01,
+    def optimize_X(self, agd=True, approx=0.5, lr=5.,
                    **kwargs):
         if self.verbose > 0:
             print('- Multiview.optimize_X():')
 
-        if batch_number is not None or batch_size is not None:
+        if approx is not None:
             if self.verbose > 0:
                 print('  method : stochastic gradient descent')
-                if batch_number is None:
-                    print(f'  batch size : {batch_size}')
-                else:
-                    print(f'  batch number : {batch_number}')
-            F = lambda X: self.FX(X,self.Q,batch_number=batch_number,
-                                  batch_size=batch_size)
+                print('  approx =',approx)
+            F = lambda X: self.FX(X,self.Q,approx=approx)
             self.X, H = gd.mgd(self.X,F,lr=lr,**kwargs)
             self.update(H=H)
         if agd is True:
@@ -416,7 +398,7 @@ class MPSE(object):
                 plt.pause(0.1)
 
     def figureY(self,title='perspectives',edges=False,colors=True,plot=True,
-                ax=None):
+                ax=None,**kwargs):
         if ax is None:
             fig, ax = plt.subplots(1,self.K)
         else:
@@ -424,13 +406,16 @@ class MPSE(object):
         for k in range(self.K):
             if edges is True:
                 edges_k = self.D[k]['edges']
-            else:
+            elif edges is False:
                 edges_k = None
+            else:
+                edges_k = edges[k]
             if colors is True:
                 colors_k = self.D[k]['colors']
             else:
                 colors_k = None
-            plots.plot2D(self.Y[k],edges=edges_k,colors=colors_k,ax=ax[k])
+            plots.plot2D(self.Y[k],edges=edges_k,colors=colors_k,ax=ax[k],
+                         **kwargs)
         plt.suptitle(title)
         if plot is True:
             plt.draw()
@@ -558,17 +543,61 @@ def noise_all(N=100):
     fig = plt.figure()
     plt.semilogx(noise_levels,stress)
     plt.show()
+
+def example_random_graph_perspectives(N=100):
+    probs = [0.04,0.05,0.1,0.2,0.5,1.0]
+    nums = [4,5,10,20,50,100]
+    Ks = [1,2,3,4,5]
+    error = np.empty((len(Ks),len(probs)))
+    fig = plt.figure()
+    for i in range(len(probs)):
+        p = probs[i]
+        for j in range(len(Ks)):
+            K = Ks[j]
+            D = multigraph.binomial(N,p,K=K)
+            if K==1: D= [D]
+            persp = perspective.Persp()
+            persp.fix_Q(number=K)
+            vis = MPSE(D,persp=persp)
+            vis.setup_visualization()
+            vis.initialize_X()
+            vis.initialize_Q()
+            vis.optimize_all(min_step=1e-8)
+            error[j,i] = max(vis.cost,1e-6)
+    for i in range(len(Ks)):
+        plt.semilogy(error[i],label=f'K {Ks[i]}')
+    plt.ylabel('MDS stress')
+    plt.xlabel('average neighbors')
+    plt.xticks(range(len(nums)),nums)
+    plt.legend()
+    plt.tight_layout
+    plt.show()
+    
+### Quick plots ###
+
+def xyz():
+    X = np.load('raw/xyz.npy')
+    persp = perspective.Persp()
+    persp.fix_Q(number=3,special='standard')
+    D = multigraph.binomial(N=1000,p=.01,K=3)
+    mv = MPSE(D,persp=persp,verbose=1)
+    mv.setup_visualization()
+    mv.initialize_X(X)
+    mv.figureY(plot=True,title='',axis=False)
+    plt.show()
+
     
 if __name__=='__main__':
     #example_disk(30)
     #example_disk_Q(30)
     #example_disk_all(N=30)
-    example_binomial(N=30,K=3)
+    #example_binomial(N=30,K=3)
     #noisy()
     #noisy_combine()
     #test_mds0()
     #test_mds123()#save_data=True)
-
+    example_random_graph_perspectives(N=100)
+    #xyz()
 ### Older Tests ###
 
 def test_mds123(save_data=False):

@@ -135,12 +135,13 @@ class Hull(object):
         from mpl_toolkits import mplot3d
         from scipy import stats
 
-        fig = plt.figure(figsize=(4*(self.K+1),4))
-        fig.suptitle(f'Hull sample w/ projections (N = {self.N})')
+        fig = plt.figure(figsize=(4*(self.K),4))
+        #fig.suptitle(f'Hull sample w/ projections (N = {self.N})')
 
-        ax = fig.add_subplot(1,self.K+1,1,projection='3d')
-        ax.set_title('X')
-        ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
+        #ax = fig.add_subplot(1,self.K+1,1,projection='3d')
+        #ax.set_title('X')
+        #ax.scatter3D(self.X[:,0],self.X[:,1],self.X[:,2])
+        #ax.set_axis_off()
         
         for k in range(self.K):  
             #xmin = self.Y[k,:,0].min()
@@ -151,13 +152,14 @@ class Hull(object):
             #positions = np.vstack([X.ravel(),Y.ravel()])
             #Z = np.reshape(self.kernel[k](positions).T,X.shape)
 
-            ax = fig.add_subplot(1,self.K+1,k+2)
+            ax = fig.add_subplot(0,self.K,k+1)
             #ax.imshow(np.rot90(Z), cmap=plt.cm.gist_earth_r,
                           #extent=[xmin, xmax, ymin, ymax])
             ax.scatter(self.Y[k,:,0],self.Y[k,:,1])
             #fig2.colorbar(np.rot90(Z)[3])
             ax.set_aspect(1.0)
-            ax.set_title(f'Projection {k+1}')
+            ax.set_axis_off()
+            #ax.set_title(f'Projection {k+1}')
         if plot is True:
             plt.show()
         return fig
@@ -302,16 +304,22 @@ def example_123(num=100,forgive=[.05,.01],save_data=False):
 
 def example_xyz(save_data=False):
     strings = ['x','y','z']
-    imgs0 = text.images(strings,justify='square',font=arial)
-    proj = projections.Proj(); proj.initialize(special='standard')
-    hull = Hull(imgs0,proj)
-    hull.add_points(1000,forgive=[.001,.0005])
-    hull.return_figure()
-    plt.show()
+    persp = perspective.Persp()
+    persp.fix_Q(special='standard',number=3)
+    font = 'leckerli_one'
+    arrays = text.array(strings,font=font)
+    imgs = image.images(arrays,labels=strings,justify='square')
+    h = Hull(imgs,persp)
+    h.add_points(5000)
+    #np.savetxt('examples/xyz/'+font+'_10000_xyz.csv',h.X,delimiter=',')
+    h.uniformize(target=1000)
+    X = h.X; np.save('xyz',X)
+    h.figure(plot=True)
 
 if __name__=='__main__':
 
     strings = ['1','2','3']
     font = 'spicy_rice'
     #example(font=font)
-    example2(number=10000,strings=strings,font=font)
+    #example2(number=10000,strings=strings,font=font)
+    example_xyz()

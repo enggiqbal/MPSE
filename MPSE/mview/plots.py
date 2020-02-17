@@ -18,7 +18,8 @@ def plot_cost(cost,steps=None,title='computations',plot=True,ax=None):
         plt.draw()
         plt.pause(1.0)
         
-def plot2D(Y,save=False,colors=None,edges=None,title=None,ax=None,plot=True):
+def plot2D(Y,save=False,colors=None,edges=None,title=None,axis=True,ax=None,
+           plot=True):
     if ax is None:
         fig, ax = plt.subplots()
     else:
@@ -31,6 +32,9 @@ def plot2D(Y,save=False,colors=None,edges=None,title=None,ax=None,plot=True):
                     linewidth=0.15,color='gray')
     ax.scatter(Y[:,0],Y[:,1],s=25,c=colors)
     ax.title.set_text(title)
+    
+    if axis is False:
+        ax.set_axis_off()
         
     if plot is True:
         plt.draw()
@@ -113,6 +117,14 @@ def load_hull2(filename):
                         ".csv","rb"),delimiter=',')
     plot3D(X)
 
+### Examples of plots ###
+
+def xyz():
+    X = np.load('raw/xyz.npy')
+    perspectives = np.identity(3)
+    plot3D(X,perspectives=perspectives)
+    plt.show()
+    
 if __name__=='__main__':
     load('mlv3')
     load('mlf3')
@@ -122,3 +134,4 @@ if __name__=='__main__':
     load_hull('gravitas_one_1000_123')
     load_hull('ceviche_one_500_123')
     plt.show()
+    #xyz()

@@ -210,8 +210,12 @@ class MDS(object):
         
         self.f = lambda X: stress(X,self.D)
         #self.df = lambda X: gradient(X,self.D)
-        def F(X, approx=None):
-            return stress_and_gradient(X,self.D,approx)
+        def F(X, approx=None, **kwargs):
+            if approx is None:
+                output = stress_and_gradient(X,self.D)
+            else:
+                output = approximate_stress_and_gradient(X,self.D,approx)
+            return output
         self.F = F
 
         self.H = {}
@@ -287,7 +291,7 @@ class MDS(object):
                           **kwargs)
         self.update(H=H)
     
-    def stochastic(self, approx=0.2, lr=10, max_iters=1000, min_step=1e-6,
+    def stochastic(self, approx=0.2, lr=10, max_iters=100, min_step=1e-6,
                    **kwargs):
         """\
         Optimizes approximate stress function using gradient descent with a
@@ -338,7 +342,7 @@ class MDS(object):
 
     ### Plotting methods ###
 
-    def figureX(self,title='mds embedding',edges=False,plot=True,ax=None):
+    def figureX(self,title='',edges=False,colors=False,axis=True,plot=True,ax=None):
         assert self.dim >= 2
         if ax is None:
             fig, ax = plt.subplots()
@@ -346,10 +350,14 @@ class MDS(object):
             plot = False
         if edges is True:
             edges = self.D['edges']
-        else:
+        elif edges is False:
             edges = None
-        colors = self.D['colors']
-        plots.plot2D(self.X,edges=edges,colors=colors,ax=ax)
+        if colors is True:
+            colors = self.D['colors']
+        elif colors is False:
+            colors = None
+        plots.plot2D(self.X,edges=edges,colors=colors,axis=axis,ax=ax,
+                     title=title)
         if plot is True:
             plt.draw()
             plt.pause(1)
@@ -490,15 +498,52 @@ def example_random_graph(N=100,dim=2):
     print('\n***mds.example_random_graph()***\n')
     print('Here we explore the MDS embedding for a random binomial graph with'+\
           'different edge probabilities.')
-    for p in [0.01,0.05,0.1,1.0]:
-        D = multigraph.generate_binomial(N,p)
+    fig, axes = plt.subplots(2,3)
+    #[ax.set_axis_off() for ax in axes.ravel()]
+    plt.tight_layout()
+    for p, ax in zip([0.01,0.02,0.03,0.05,0.1,1.0],axes.ravel()):
+        D = multigraph.binomial(N,p)
         mds = MDS(D,dim=dim,verbose=1)
         mds.initialize()
-        mds.stochastic(max_iters=50,approx=.6,lr=.5)
+        mds.stochastic(max_iters=100,approx=.6,lr=.5)
         mds.agd(min_step=1e-6)
-        mds.figure(title=f'edge prob = {p:0.2f}')
+        mds.figureX(ax=ax,edges=True)
+        ax.set_xlabel(f'ave. neighs. : {int(100*p)}')
+        ax.set_title(f'stress = {mds.cost:0.2e}')
+        ax.set_yticks([])
+        ax.set_xticks([])
     plt.show()
 
+def example_random_graph_2(N=100):
+    print('\n***mds.example_random_graph()***\n')
+    print('Here we explore the MDS embedding for a random binomial graph with'+\
+          'different edge probabilities.')
+    probs = [0.04,0.05,0.1,0.2,0.5,1.0]
+    nums = [4,5,10,20,50,100]
+    dims = [2,3,4,5,10,20]
+    error = np.empty((len(dims),len(probs)))
+    fig = plt.figure()
+    for i in range(len(probs)):
+        p = probs[i]
+        D = multigraph.binomial(N,p)
+        for j in range(len(dims)):
+            dim = dims[j]
+            mds = MDS(D,dim=dim)
+            mds.initialize()
+            mds.stochastic(max_iters=100,approx=.3,lr=5)
+            mds.stochastic(max_iters=100,approx=.6,lr=10)
+            mds.stochastic(max_iters=100,approx=.9,lr=15)
+            mds.agd(min_step=1e-8)
+            error[j,i] = max(mds.cost,1e-6)
+    for i in range(len(dims)):
+        plt.semilogy(error[i],label=f'dim {dims[i]}')
+    plt.ylabel('MDS stress')
+    plt.xlabel('average neighbors')
+    plt.xticks(range(len(nums)),nums)
+    plt.legend()
+    plt.tight_layout
+    plt.show()
+    
 def disk_compare(N=100,dim=2): ###
     print('\n***mds.disk_compare()***')
     
@@ -620,12 +665,13 @@ def embeddability_noise(ax=None):
         plt.show()
 if __name__=='__main__':
 
-    example_disk(N=100)
+    #example_disk(N=100)
     #test_gd_lr()
     #example_approx(N=100)
     #example_weights(N=100,dim=2)
     #example_fewer_edges(N=60,dim=2)
     #example_random_graph(N=100,dim=2)
+    example_random_graph_2(N=100)
     
     #disk_compare(N=100)
     #example_disk_noisy(50)
