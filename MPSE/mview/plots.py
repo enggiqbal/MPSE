@@ -92,6 +92,45 @@ def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
         with open("plots/"+save+".pkl","wb") as handle:
             pickle.dump(args, handle, protocol=pickle.HIGHEST_PROTOCOL)
 
+def plot3D_animate(X,save=False,perspectives=None,edges=None,colors=None,
+           title=None,axis=False,ax=None):
+        
+    if ax is None:
+        fig= plt.figure()
+        ax = fig.add_subplot(1,1,1,projection='3d')
+        plot = True
+    else:
+        plot = False
+
+    if perspectives is not None:
+        q = perspectives
+        for k in range(len(q)):
+            ind = np.argmax(np.sum(q[k]*X,axis=1))
+            m = np.linalg.norm(X[ind])/np.linalg.norm(q[k])
+            ax.plot([0,m*q[k][0]],[0,m*q[k][1]],[0,m*q[k][2]],'-',linewidth=3,
+                    color='black')
+    N = len(X)
+    if edges is not None:
+        for i in range(N):
+            for j in range(i+1,N):
+                if edges[i,j] > 0:
+                    ax.plot([X[i,0],X[j,0]],
+                            [X[i,1],X[j,1]],
+                            [X[i,2],X[j,2]],'-',
+                            linewidth=0.25,color='blue')
+                        
+    ax.scatter3D(X[:,0],X[:,1],X[:,2],c=colors)
+    #ax.set_aspect(1.0)
+    if axis is False:
+        ax.set_axis_off()
+    if title is not None:
+        ax.title.set_text(title)
+        
+    if plot is True:
+        plt.draw()
+        plt.pause(0.1)
+
+
 def load(filename,ax=None):
     assert isinstance(filename,str)
     with open("plots/"+filename+".pkl", 'rb') as handle:
