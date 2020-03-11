@@ -49,7 +49,7 @@ def dissimilarity_graph(D):
         
     return D
 
-def stress(X,D):
+def graph_f(X,D):
     """\
 
     Normalized MDS stress function.
@@ -75,9 +75,9 @@ def stress(X,D):
     stress /= D['normalization']
     return math.sqrt(stress)
 
-def stress_and_gradient(X,D,approx=None):
+def graph_F(X,D,edge_probability=None):
     """\
-    Returns normalized MDS stress and gradient.
+    Returns (normalized) MDS stress and gradient.
     
     Parameters:
 
@@ -87,98 +87,56 @@ def stress_and_gradient(X,D,approx=None):
     D : dictionary
     Dictionary containing list of dissimilarities.
 
-    approx : None or positive number
-    If not None, approximates gradient/stress by only each edge with probability
-    approx > 0.
-
     Returns:
 
-    stress : float
+    fX : float
     MDS stress at X.
     
-    grad : numpy array
+    dfX : numpy array
     MDS gradient at X.
     """
     e = D['edges']; d = D['distances']; w = D['weights']
-    stress = 0; dX = np.zeros(X.shape)
-    if approx is None:
+    fX = 0; dfX = np.zeros(X.shape)
+    if edge_probability is None:
         for n in range(len(e)):
             i,j = e[n]; Dij = d[n]; wij = w[n]
             Xij = X[i]-X[j]
             dij = np.linalg.norm(Xij)
             diffij = dij-Dij
-            stress += wij*diffij**2
+            fX += wij*diffij**2
             dXij = wij*2*diffij/dij*Xij
-            dX[i] += dXij
-            dX[j] -= dXij
-        stress /= D['normalization']
-        dX /= D['normalization']
+            dfX[i] += dXij
+            dfX[j] -= dXij
+        fX /= D['normalization']
+        dfX /= D['normalization']
     else:
-        assert isinstance(approx,numbers.Number); assert 0<approx<=1
+        assert isinstance(edge_probability,numbers.Number)
+        assert 0<edge_probability<=1
         normalization = 0
         for n in range(len(e)):
-            if np.random.rand() <= approx:
+            if np.random.rand() <= edge_probability:
                 i,j = e[n]; Dij = d[n]; wij = w[n]
                 Xij = X[i]-X[j]
                 dij = np.linalg.norm(Xij)
                 diffij = dij-Dij
-                stress += wij*diffij**2
+                fX += wij*diffij**2
                 dXij = wij*2*diffij/dij*Xij
-                dX[i] += dXij
-                dX[j] -= dXij
+                dfX[i] += dXij
+                dfX[j] -= dXij
                 normalization += wij*Dij**2
-        stress /= normalization
-        dX /= normalization
-    return math.sqrt(stress), dX
+        fX /= normalization
+        dfX /= normalization
+    return math.sqrt(fX), dfX
 
-def approximate_stress_and_gradient(X,D,edge_probability=0.5):
-    """\
-    Returns approximate normalized MDS stress and gradient.
-    
-    Parameters:
-
-    X : numpy array
-    Positions/embedding array.
-
-    D : dictionary
-    Dissimilarity graph.
-
-    edge_probability : positive number
-    Approximates stress and gradient by using each edge with probability
-    edge_probability > 0.
-
-    Returns:
-
-    stress : float
-    Approximate MDS stress at X.
-    
-    grad : numpy array
-    Approximate MDS gradient at X.
-    """
-    e = D['edges']; d = D['distances']; w = D['weights']
-    stress = 0; dX = np.zeros(X.shape)
-    p = edge_probability; assert isinstance(p,numbers.Number); assert p>0
-    normalization = 0
-    for n in range(len(e)):
-        if np.random.rand() <= p:
-            i,j = e[n]; Dij = d[n]; wij = w[n]
-            Xij = X[i]-X[j]
-            dij = np.linalg.norm(Xij)
-            diffij = dij-Dij
-            stress += wij*diffij**2
-            dXij = wij*2*diffij/dij*Xij
-            dX[i] += dXij
-            dX[j] -= dXij
-            normalization += wij*Dij**2
-    stress /= normalization
-    dX /= normalization
-    return math.sqrt(stress), dX
+def F(X,D,edge_probability=None,**kwargs):
+    fX, dfX = graph_F(X,D,edge_probability)
+    return fX, dfX
 
 class MDS(object):
     """\
-    Class with methods to solve MDS problems.
+    Class with methods to solve multi-dimensional scaling problems.
     """
-    def __init__(self, D, dim=2, verbose=0, title=''):
+    def __init__(self, D, dim=2, verbose=0, title='',**kwargs):
         """\
         Initializes MDS object.
 
@@ -208,23 +166,21 @@ class MDS(object):
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
         
-        self.f = lambda X: stress(X,self.D)
-        #self.df = lambda X: gradient(X,self.D)
-        def F(X, approx=None, **kwargs):
-            if approx is None:
-                output = stress_and_gradient(X,self.D)
-            else:
-                output = approximate_stress_and_gradient(X,self.D,approx)
-            return output
-        self.F = F
+        self.f = lambda X: graph_f(X,self.D)
+        self.F = lambda X, **kwargs : F(X,self.D,**kwargs)
 
         self.H = {}
         
         if verbose > 0:
-            print(f'  number of points : {self.N}')
-            print(f'  number of edges : {self.NN}')
-            print(f'  (weighted) distance rms : {self.D["rms"]:0.2e}')
-            print(f'  embedding dimension : {self.dim}')
+            print('  dissimilarity stats:')
+            print(f'    number of points : {self.N}')
+            print(f'    number of edges : {self.NN}')
+            print(f'    dissimilarity rms : {self.D["rms"]:0.2e}')
+            print(f'    normalization factor : {self.D["normalization"]:0.2e}')
+            print('  embedding stats:')
+            print(f'    dimension : {self.dim}')
+
+        self.initialize(title='automatic')
             
     def initialize(self, X0=None, title='',**kwargs):
         """\
@@ -237,18 +193,18 @@ class MDS(object):
         randomly using misc.initial_embedding().
         """
         if self.verbose > 0:
-            print('- MDS.initialize('+title+'):')
+            print(f'  MDS.initialize({self.title} - {title}):')
             
         if X0 is None:
             X0 = misc.initial_embedding(self.N,dim=self.dim,
                                         radius=self.D['rms'],**kwargs)
             if self.verbose > 0:
-                print('  method : random')
+                print('    method : random')
         else:
             assert isinstance(X0,np.ndarray)
             assert X0.shape == (self.N,self.dim)
             if self.verbose > 0:
-                print('  method : initialization given')
+                print('    method : initialization given')
             
         self.X = X0
         self.update()
@@ -256,13 +212,13 @@ class MDS(object):
         self.X0 = self.X.copy()
         
         if self.verbose > 0:
-            print(f'  initial stress : {self.cost:0.2e}')
+            print(f'    initial stress : {self.cost:0.2e}')
 
     def update(self,H=None):
         self.cost = self.f(self.X)
         if H is not None:
             if bool(self.H) is True:
-                H['cost'] = np.concatenate((self.H['cost'],H['cost']))
+                H['costs'] = np.concatenate((self.H['costs'],H['costs']))
                 H['steps'] = np.concatenate((self.H['steps'],H['steps']))
                 H['iterations'] = self.H['iterations']+H['iterations']
             self.H = H        
@@ -273,76 +229,21 @@ class MDS(object):
 
     ### Methods to update MDS embedding ###
 
-    def gd(self, approximate=None, lr=10, max_iters=1000, min_step=1e-6,
-           **kwargs):
-        """\
-        Updates MDS embedding using gradient descent.
-        """
+    def gd(self, method='fixed', edge_probability=None, title='', **kwargs):
         if self.verbose > 0:
-            print('- MDS.gd():')
-            print('  approximate =',approximate)
-        if approximate is None:
-            F = lambda X: self.F(X)
-        else:
-            assert isinstance(approximate,numbers.Number)
-            assert 0<approximate<=1
-            F = lambda X: self.F(X,approx=approx)
-        self.X, H = gd.gd(self.X,F,lr=lr,max_iters=max_iters,min_step=min_step,
-                          **kwargs)
+            print(f'  MDS.gd({self.title} - {title}):')
+            print(f'    method : {method}')
+            print(f'    edge probability : {edge_probability}')
+        F = lambda X: self.F(X,edge_probability=edge_probability)
+        self.X, H = gd.single(self.X,F,update_rule=method,**kwargs)
         self.update(H=H)
-    
-    def stochastic(self, approx=0.2, lr=10, max_iters=100, min_step=1e-6,
-                   **kwargs):
-        """\
-        Optimizes approximate stress function using gradient descent with a
-        fixed learning rate.
-        """
-        F = lambda X: self.F(X,approx=approx)
-        self.X, H = gd.mgd(self.X,F,lr=lr,max_iters=max_iters,min_step=min_step,
-                           **kwargs)
-        self.update(H=H)
-
-    def agd(self, X0=None, **kwargs):
-        F = lambda X: self.F(X)
         if self.verbose > 0:
-            print('  method : adaptive gradient descent')
-        self.X, H = gd.agd(self.X,F,**kwargs,**self.H)
-        self.update(H=H)
-        
-    def optimize(self, agd=True, batch_size=None, batch_number=None, lr=0.01,
-                 **kwargs):
-        """\
-        Optimize stress function using gradient-based methods. If batch size or
-        number are given, optimization begins with stochastic gradient descent.
-        If agd is set to True, optimization ends with adaptive gradient descent.
-        """
-        if self.verbose > 0:
-            print('- MDS.optimize():')
-
-        if batch_number is not None or batch_size is not None:
-            F = lambda X: self.F(X,batch_number=batch_number,
-                                 batch_size=batch_size)
-            if self.verbose > 0:
-                print('  method : stochastic gradient descent')
-                if batch_number is None:
-                    print(f'  batch size : {batch_size}')
-                else:
-                    print(f'  batch number : {batch_number}')
-            self.X, H = gd.mgd(self.X,F,lr=lr,**kwargs)
-            self.update(H=H)
-        if agd is True:
-            F = lambda X: self.F(X)
-            if self.verbose > 0:
-                print('  method : exact gradient & adaptive gradient descent')
-            self.X, H = gd.agd(self.X,F,**kwargs,**self.H)
-            self.update(H=H)
-
-        if self.verbose > 0:
-            print(f'  final stress : {self.cost:0.2e}')
+            print(f'    final stress : {self.cost:0.2e}')
 
     ### Plotting methods ###
 
-    def figureX(self,title='',edges=False,colors=False,axis=True,plot=True,ax=None):
+    def figureX(self,title='',edges=False,colors=False,axis=True,plot=True,
+                ax=None):
         assert self.dim >= 2
         if ax is None:
             fig, ax = plt.subplots()
@@ -366,7 +267,7 @@ class MDS(object):
         assert hasattr(self,'H')
         if ax is None:
             fig, ax = plt.subplots()
-        plots.plot_cost(self.H['cost'],self.H['steps'],title=title,ax=ax)
+        plots.plot_cost(self.H['costs'],self.H['steps'],title=title,ax=ax)
         if plot is True:
             plt.draw()
             plt.pause(1.0)
@@ -399,11 +300,9 @@ def example_disk(N=100,dim=2):
     D = multigraph.from_coordinates(Y,colors=colors)
     title = 'basic disk example'
     mds = MDS(D,dim=dim,verbose=1,title=title)
-    mds.initialize()
-    mds.figureX(title='initial embedding')
-    mds.gd(max_iters=50,approx=N/5,verbose=2)
-    mds.agd(min_step=1e-6,verbose=2)
-    mds.figureX(title='final embedding')
+    mds.figureX(title='initial embedding',colors=True)
+    mds.gd(method='adam',edge_probability=None,verbose=2,plot=True)
+    mds.figureX(title='final embedding',colors=True)
     mds.figureH()
     plt.show()
 
@@ -665,13 +564,13 @@ def embeddability_noise(ax=None):
         plt.show()
 if __name__=='__main__':
 
-    #example_disk(N=100)
+    example_disk(N=100)
     #test_gd_lr()
     #example_approx(N=100)
     #example_weights(N=100,dim=2)
     #example_fewer_edges(N=60,dim=2)
     #example_random_graph(N=100,dim=2)
-    example_random_graph_2(N=100)
+    #example_random_graph_2(N=100)
     
     #disk_compare(N=100)
     #example_disk_noisy(50)

@@ -4,19 +4,55 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 
-import misc, distances, multigraph, gd, perspective, mds2, tsne, plots
+import misc, distances, multigraph, gd, perspectives2, mds2, tsne, plots
+
+def setup_multigraph(D0):
+    """\
+    Sets up dissimilarity multigraph to be used by MPSE.
+    """
+    assert isinstance(D0,list) or isinstance(D0,dict)
+    DD = D0
+    DD['normalization'] = 0
+    DD['rms'] = 0
+    if isinstance(D0,dict):
+        K = len(D0['attributes'])
+        DD['number'] = K
+        for k in range(K):
+            D = D0[k]
+            if isinstance(D,np.ndarray):
+                shape = D.shape
+                assert len(shape) == 2 and shape[0] == shape[1]
+                D = multigraph.from_matrix(D)
+                DD[k] = D
+            elif isinstance(D,dict):
+                assert 'nodes' in D
+                assert 'edges' in D
+                assert 'distances' in D
+                if 'weights' not in D:
+                    D['weights'] = np.ones(len(D['edges']))
+                D['distances'] = np.maximum(D['distances'],1e-4)
+                d = D['distances']; w = D['weights']
+                D['normalization'] = np.dot(w,d**2)
+                D['rms'] = math.sqrt(D['normalization']/len(d))
+                DD[k] = D
+            DD[k] = D
+            DD['normalization'] += D['normalization']**2
+            DD['rms'] += D['rms']**2
+    DD['normalization'] **= 0.5
+    DD['rms'] **= 0.5
+    return DD
 
 class MPSE(object):
     """\
-    Collection of methods for multi-perspective simultaneous embedding.
+    Class with methods for multi-perspective simultaneous embedding.
     """
 
-    def __init__(self, dissimilarities, Xdim=3, Ydim=2, family='linear',
-                 constraint='orthogonal', projection_parameters=None,
+    def __init__(self, dissimilarities, d1=3, d2=2, family='linear',
+                 constraint='orthogonal', X=None, Q=None,
                  visualization='mds', total_cost_function='rms', verbose=0,
-                 title=''):
+                 title='',**kwargs):
         """\
-        Initializes MPSE method.
+        Initializes MPSE object.
 
         Parameters:
 
@@ -26,43 +62,55 @@ class MPSE(object):
         persp : Object instance of projections.Persp class or int > 0.
         Describes set of allowed projection functions and stores list of
         projection parameters. See perspective.py. If instead of a Persp object
-        a positive integer int is given, then it is assumed that dimX=dimY=int
+        a positive integer int is given, then it is assumed that d1=d2=int
         and that all projections are the identity. 
         """
         if verbose > 0:
             print('+ mpse.MPSE('+title+'):')
         self.verbose = verbose; self.title = title
 
-        self.D = D
-        self.N = len(D[0]['nodes'])
-        self.K = len(D)
+        self.D = setup_multigraph(dissimilarities)
+        self.N = len(self.D['nodes'])
+        self.NN = len(self.D[0]['edges']) #########
+        self.K = self.D['number']
 
-        if 'colors' in D[0]:
-            self.colors = D[0]['colors']
-        else:
-            self.colors = None
-        #self.individual_D_rms = np.sqrt(np.sum(D**2,axis=(1,2))/(self.N*(self.N-1)))
+        self.d1X = d1; self.d2 = d2
+        self.family = family; self.constraint='orthogonal'
+        proj = perspectives2.PROJ(d1,d2,family,constraint)
+        if Q is not None:
+            if isinstance(Q,str):
+                self.Q = proj.generate(number=self.K,
+                                       method=Q)
+            else:
+                self.Q = Q
+                proj.check(Q=self.Q)
+        self.proj = proj
+
+        self.setup_visualization(visualization=visualization,**kwargs)
+
+        #self.individual_D_rms = np.sqrt(np.sum(D**2,axis=(1,2))/ \
+        #(self.N*(self.N-1)))
         #self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)*self.K))
-
-        if isinstance(persp,int):
-            dim = persp; assert dim  > 0
-            persp = perspective.Persp(dimX=dim,dimY=dim,family='linear')
-            persp.fix_Q(number=self.K,special='identity')
-            self.Q = persp.Q
-        else:
-            if persp.fixed_Q:
-                assert persp.K == self.K
-                self.Q = persp.Q
-        self.persp = persp
 
         self.H = {}
         
         if verbose > 0:
-            print(f'  Number of views : {self.K}')
-            print(f'  Number of points : {self.N}')
-            print(f'  Embedding dimension : {self.persp.dimX}')
-            print(f'  Projection dimension : {self.persp.dimY}')
-            #print(f'  Root-mean-squared of D : {self.D_rms:0.2e}\n')
+            print('  dissimilarity stats:')
+            print(f'    number of views : {self.K}')
+            print(f'    number of points : {self.N}')
+            print(f'    number of edges : {self.NN}')
+            print(f'    dissimilarity rms : {self.D["rms"]:0.2e}')
+            print(f'    normalization factor : {self.D["normalization"]:0.2e}')
+            print('  embedding stats:')
+            print(f'    embedding dimension : {self.proj.d1}')
+            print(f'    projection dimension : {self.proj.d2}')
+
+        if X is None:
+            self.initialize_X(title='automatic')
+        else:
+            self.X = X
+        if Q is None:
+            self.initialize_Q(title='automatic')
 
     def setup_visualization(self,visualization='mds',**kwargs):
         assert visualization in ['mds','tsne']
@@ -76,12 +124,13 @@ class MPSE(object):
         self.visualization= []
         for k in range(self.K):
             self.visualization.append(visualization_class(self.D[k],
-                                                          self.persp.dimY,
+                                                          self.proj.d2,
+                                                          verbose=self.verbose,
                                                           **kwargs))
         
         def cost_function(X,Q,Y=None):
             if Y is None:
-                Y = self.persp.compute_Y(X,Q=Q)
+                Y = self.proj.project(X,Q=Q)
             cost = 0
             for k in range(self.K):
                 cost += self.visualization[k].cost_function(Y[k])**2
@@ -90,14 +139,14 @@ class MPSE(object):
 
         def cost_function_k(X,q,k,y=None):
             if y is None:
-                y = self.persp.compute_Y(X,q=q)
+                y = self.proj.project(X,q=q)
             cost_k = self.visualization[k].cost_function(y)
             return cost_k
         self.cost_function_k = cost_function_k
 
         def cost_function_all(X,Q,Y=None):
             if Y is None:
-                Y = self.persp.compute_Y(X,Q=Q)
+                Y = self.proj.project(X,Q=Q)
             cost = 0; individual_cost = np.zeros(self.K)
             for k in range(self.K):
                 cost_k = self.visualization[k].f(Y[k])
@@ -108,72 +157,45 @@ class MPSE(object):
         
         self.cost_function = cost_function
         
-        if self.persp.family == 'linear':
+        if self.proj.family == 'linear':
 
-            def F(X,Q,batch_number=None,batch_size=None,Y=None):
+            def F(X,Q,Y=None,**kwargs):
                 if Y is None:
-                    Y = self.persp.compute_Y(X,Q=Q)
-                if batch_size is None and batch_number is None:
-                    batches = None
-                else:
-                    if isinstance(batch_number,int):
-                        batch_size = math.ceil(self.N/batch_number)
-                    elif isinstance(batch_size,int):
-                        batch_number = math.ceil(self.N/batch_size)
-                    else:
-                        sys.exit('wrong batch_size and batch_number')
-                    indices = list(range(self.N)); random.shuffle(indices)
-                    batches = [list(indices[j*batch_size:(j+1)*batch_size]) for\
-                               j in range(batch_number)]
-                    
+                    Y = self.proj.project(Q,X)
                 cost = 0
-                dX = np.zeros((self.N,self.persp.dimX))
+                dX = np.zeros((self.N,self.proj.d1))
                 dQ = []
                 for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k])#,batches)
+                    costk, dYk = self.visualization[k].F(Y[k],**kwargs)
                     cost += costk**2
                     dX += dYk @ Q[k]
                     dQ.append(dYk.T @ X)
                 cost = math.sqrt(cost)
-                return (cost,[dX]+dQ)
+                return (cost,[dX,np.array(dQ)])
             self.F = F
 
             def FX(X,Q,Y=None,**kwargs):
                 if Y is None:
-                    Y = self.persp.compute_Y(X,Q=Q)
+                    Y = self.proj.project(Q,X)
                 cost = 0
-                dX = np.zeros((self.N,self.persp.dimX))
+                dX = np.zeros((self.N,self.proj.d1))
                 for k in range(self.K):
                     costk, dYk = self.visualization[k].F(Y[k],**kwargs)
-                    cost += costk
+                    cost += costk**2
                     dX += dYk @ Q[k]
-                return (cost,dX)
+                return (math.sqrt(cost),dX)
             self.FX = FX
 
-            def FQ(X,Q,batch_number=None,batch_size=None,Y=None):
+            def FQ(X,Q,Y=None,**kwargs):
                 if Y is None:
-                    Y = self.persp.compute_Y(X,Q=Q)
-                    
-                if batch_size is None and batch_number is None:
-                    batches = None
-                else:
-                    if isinstance(batch_number,int):
-                        batch_size = math.ceil(self.N/batch_number)
-                    elif isinstance(batch_size,int):
-                        batch_number = math.ceil(self.N/batch_size)
-                    else:
-                        sys.exit('wrong batch_size and batch_number')
-                    indices = list(range(self.N)); random.shuffle(indices)
-                    batches = [list(indices[j*batch_size:(j+1)*batch_size]) for\
-                               j in range(batch_number)]
-                    
+                    Y = self.proj.project(Q,X)
                 cost = 0
                 dQ = []
                 for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],batches)
+                    costk, dYk = self.visualization[k].F(Y[k],**kwargs)
                     cost += costk
                     dQ.append(dYk.T @ X)
-                return (cost,dQ)
+                return (cost,np.array(dQ))
             self.FQ = FQ
             
         else:
@@ -183,35 +205,12 @@ class MPSE(object):
                 print(pgradient[0])
                 if Y is None:
                     Y = self.proj.project(X,params_list=Q)
-                gradient = np.zeros((self.N,self.dimX))
+                gradient = np.zeros((self.N,self.d1))
                 for k in range(self.K):
                     gradient += self.visualization[k].gradient_function(Y[k]) \
                                 @ pgradient[k]
                 return gradient
             self.gradient_X = gradient_X
-
-            def partial_X(X,Q,n,Y=None):
-                pgradient = self.proj.compute_gradient(X[n],params_list=Q)
-                if Y is None:
-                    Y = self.proj.project(X,params_list=Q)
-                partial = np.zeros(self.dimX)
-                for k in range(self.K):
-                    partial += self.visualization[k].partial_function(Y[k],n) \
-                               @ pgradient[k]
-                return partial
-            self.partial_X = partial_X
-
-            def batch_X(X,Q,nn,Y=None):
-                pgradient = self.proj.compute_gradient(X[0],params_list=Q)
-                if Y is None:
-                    Y_batch = self.proj.project(X[nn],params_list=Q)
-                else:
-                    Y_batch = Y[nn]
-                gradient_batch = np.zeros((len(nn),self.dimX))
-                for k in range(self.K):
-                    gradient_batch += self.visualization[k].batch_function(Y)
-                return gradient_batch ######
-            self.batch_X = batch_X
 
     def initialize_Q(self, **kwargs):
         """\
@@ -219,7 +218,7 @@ class MPSE(object):
         """
         if self.verbose > 0:
             print('- Multiview.initialize_Q():')
-        self.Q = self.persp.generate_Q(number=self.K,**kwargs)
+        self.Q = self.proj.generate(number=self.K,**kwargs)
         self.Q0 = self.Q.copy()
         self.update()
         
@@ -245,27 +244,28 @@ class MPSE(object):
             if self.verbose > 0:
                 print('  method : X0 given')
             assert isinstance(X0,np.ndarray)
-            assert X0.shape == (self.N,self.persp.dimX)
+            assert X0.shape == (self.N,self.proj.d1)
             self.X = X0
         else:
             if self.verbose > 0:
                 print('  method : ',method)
             if method == 'random':
-                self.X = misc.initial_embedding(self.N,dim=self.persp.dimX,
+                self.X = misc.initial_embedding(self.N,dim=self.proj.d1,
                                                 radius=1)
                                                 #radius=self.D_rms,**kwargs)
             elif method == 'mds':
-                D = np.average(self.D,axis=0)
-                vis = mds.MDS(D,dim=self.persp.dimX)
+                D = multigraph.combine(self.D) #= np.average(self.D,axis=0)
+                vis = mds2.MDS(D,dim=self.proj.d1)
                 vis.initialize()
-                vis.optimize(max_iters=max_iters,**kwargs)
+                vis.gd(max_iters=max_iters,method='adaptive2',verbose=2,
+                       plot=True,**kwargs)
                 self.X = vis.X
         self.update()
         self.X0 = self.X.copy()
 
     def update(self,H=None):
         if hasattr(self,'X') and hasattr(self,'Q'):
-            self.Y = self.persp.compute_Y(self.X,Q=self.Q)
+            self.Y = self.proj.project(self.Q,self.X)
 
             self.cost, self.individual_cost = self.cost_function_all(self.X,self.Q,Y=self.Y)
             #self.individual_ncost = np.sqrt(self.individual_cost/(self.N*(self.N-1)/2))/self.individual_D_rms
@@ -279,60 +279,39 @@ class MPSE(object):
     def forget(self):
         self.X = self.X0; self.H = {}; self.update()
 
-    def optimize_X(self, agd=True, approx=0.5, lr=5.,
+    def optimize_X(self, method='fixed', edge_probability=None, lr=5.,
                    **kwargs):
         if self.verbose > 0:
             print('- Multiview.optimize_X():')
 
-        if approx is not None:
-            if self.verbose > 0:
-                print('  method : stochastic gradient descent')
-                print('  approx =',approx)
-            F = lambda X: self.FX(X,self.Q,approx=approx)
-            self.X, H = gd.mgd(self.X,F,lr=lr,**kwargs)
-            self.update(H=H)
-        if agd is True:
-            F = lambda X: self.FX(X,self.Q)
-            if self.verbose > 0:
-                print('  method : exact gradient & adaptive gradient descent')
-            self.X, H = gd.agd(self.X,F,**kwargs,**self.H)
-            self.update(H=H)
-
+        F = lambda X : self.FX(X,self.Q,edge_probability=edge_probability)
+        self.X, H = gd.single(self.X,F,update_rule=method,**kwargs)
+        self.update(H=H)
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}')
 
-    def optimize_Q(self,batch_size=None,batch_number=None,lr=0.01,**kwargs):
+    def optimize_Q(self, method='adaptive2',**kwargs):
         if self.verbose > 0:
             print('- Multiview.optimize_Q():')
 
-        F = lambda Q: self.FQ(self.X,Q,batch_number=batch_number,
-                              batch_size=batch_size)
-        if batch_number is None and batch_size is None:
-            self.Q, H = gd.cagd(self.Q,F,**kwargs)
-        else:
-            self.Q, H = gd.mgd(self.Q,F,lr=lr,**kwargs)
+        F = lambda Q: self.FQ(self.X,Q,**kwargs)
+        Q0 = np.array(self.Q)
+        self.Q, H = gd.single(Q0,F,p=self.proj.restrict,update_rule=method,
+                              **kwargs)
         self.update(H=H)
-
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}')
 
-    def optimize_all(self,agd=True,batch_size=None,batch_number=None,lr=0.01,
+    def optimize_all(self,method='fixed',
                      **kwargs):
         if self.verbose:
             print('- Multiview.optimize_all(): ')
 
-        p = [None]+[self.persp.c]*self.K
-        if batch_number is not None or batch_size is not None:
-            XQ = [self.X]+self.Q;
-            F = lambda XQ: self.F(XQ[0],XQ[1::],batch_number=batch_number,
-                                  batch_size=batch_size)
-            XQ, H = gd.mgd(XQ,F,lr=lr,**kwargs)
-            self.X = XQ[0]; self.Q = XQ[1::]; self.update(H=H)
-        if agd is True:
-            XQ = [self.X]+self.Q;
-            F = lambda XQ: self.F(XQ[0],XQ[1::])
-            XQ, H = gd.cagd(XQ,F,**kwargs,**self.H)
-            self.X = XQ[0]; self.Q = XQ[1::]; self.update(H=H)
+        p = [None,self.proj.restrict]
+        XQ = [self.X,np.array(self.Q)]
+        F = lambda XQ: self.F(XQ[0],XQ[1],**kwargs)
+        XQ, H = gd.multiple(XQ,F,p,update_rule=method,**kwargs,**self.H)
+        self.X = XQ[0]; self.Q = XQ[1]; self.update(H=H)
 
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}')
@@ -359,7 +338,7 @@ class MPSE(object):
                 labels=None,edges=None,colors=None,plot=True):
         if labels is None:
             labels = self.labels
-        if self.persp.dimX == 2:
+        if self.persp.d1 == 2:
             fig = plt.figure(1)
             plt.plot(self.X[:,0],self.X[:,1],'o',c=colors)
             plt.title(title+f', normalized cost : {self.ncost:0.2e}')
@@ -428,14 +407,14 @@ class MPSE(object):
         assert hasattr(self,'H')
         if ax is None:
             fig, ax = plt.subplots()
-        plots.plot_cost(self.H['cost'],self.H['steps'],title=title,ax=ax)
+        plots.plot_cost(self.H['costs'],self.H['steps'],title=title,ax=ax)
         if plot is True:
             plt.draw()
             plt.pause(0.2)
 
     def figureHY(self,title='multiview computation & embedding',colors=True,
                edges=False,plot=True):
-        assert self.persp.dimY >= 2
+        assert self.proj.d2 >= 2
         fig,axs = plt.subplots(1,self.K+1)
         plt.suptitle(title+f', cost : {self.cost:0.2e}')
         self.figureH(ax=axs[0])
@@ -448,42 +427,34 @@ class MPSE(object):
 
 def example_disk(N=100):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
-    persp = perspective.Persp()
-    persp.fix_Q(number=3,special='standard')
-    D = multigraph.from_perspectives(X,persp)
-    mv = MPSE(D,persp=persp,verbose=1)
-    mv.setup_visualization(visualization='mds')
-    mv.initialize_X(verbose=1)
-    mv.optimize_X(batch_size=10,max_iters=50,verbose=1)
+    proj = perspectives2.PROJ(); Q = proj.generate(number=3,method='standard')
+    D = multigraph.from_projections(proj,Q,X)
+    mv = MPSE(D,Q=Q,verbose=1)
+    mv.optimize_X(method='adaptive2',max_iters=150,edge_probability=.7,
+                  verbose=2,plot=True)
     mv.figureX(save='hola')
     mv.figureY()
-    mv.figureH()
-    mv.figureHY()
     plt.show()
 
 def example_disk_Q(N=100):
-    X = misc.disk(N,dim=3)
-    persp = perspective.Persp()
-    persp.fix_Q(number=3,special='standard')
-    D = multigraph.from_perspectives(X,persp)
-    mv = MPSE(D,persp=persp,verbose=1)
-    mv.setup_visualization(visualization='mds')
-    mv.initialize_Q(random='orthogonal')
-    mv.initialize_X(X0=X)
-    mv.optimize_Q(verbose=2)
+    X = misc.disk(N,dim=3); labels=misc.labels(X)
+    proj = perspectives2.PROJ(); Q = proj.generate(number=3,method='standard')
+    D = multigraph.from_projections(proj,Q,X)
+    mv = MPSE(D,X=X,verbose=1)
+    mv.optimize_Q(method='adaptive2',edge_probability=.3,verbose=2,
+                  plot=True,lr=2,max_iter=100)
     mv.figureHY()
+    mv.figureX()
     plt.show()
 
-def example_disk_all(N=100):
+def example_disk_all(N=100,**kwargs):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
-    persp = perspective.Persp()
-    persp.fix_Q(number=3,special='standard')
-    D = multigraph.from_perspectives(X,persp)
-    mv = MPSE(D,persp=persp,verbose=1)
-    mv.setup_visualization(visualization='mds')
-    mv.initialize_Q()
-    mv.initialize_X()
-    mv.optimize_all(agd=True)
+    proj = perspectives2.PROJ(); Q = proj.generate(number=3,method='standard')
+    D = multigraph.from_projections(proj,Q,X)
+    mv = MPSE(D,verbose=1)
+    #mv.initialize_X(method='mds')
+    mv.initialize_X(X0=X)
+    mv.optimize_all(plot=True,verbose=2,**kwargs)
     mv.figureX(plot=True)
     mv.figureY(plot=True)
     mv.figureH()
@@ -531,7 +502,7 @@ def noise_all(N=100):
     noise_levels = [0.001,0.01,0.07,0.15,0.4]
     stress = []
     X = misc.disk(N,dim=3)
-    proj = perspective.Proj(dimX=2,dimY=2)
+    proj = perspective.Proj(d1=2,d2=2)
     proj.set_params_list(special='identity',number=3)
     Y = proj.project(X)
     D = distances.compute(Y)
@@ -593,13 +564,14 @@ def xyz():
 if __name__=='__main__':
     #example_disk(30)
     #example_disk_Q(30)
-    #example_disk_all(N=30)
+    example_disk_all(N=30,edge_probability=.5,method='fixed',max_iter=300,
+                     lr=[.5,.5])
     #example_binomial(N=30,K=3)
     #noisy()
     #noisy_combine()
     #test_mds0()
     #test_mds123()#save_data=True)
-    example_random_graph_perspectives(N=100)
+    #example_random_graph_perspectives(N=100)
     #xyz()
 ### Older Tests ###
 
