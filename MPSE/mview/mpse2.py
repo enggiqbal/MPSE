@@ -257,7 +257,7 @@ class MPSE(object):
                 D = multigraph.combine(self.D) #= np.average(self.D,axis=0)
                 vis = mds2.MDS(D,dim=self.proj.d1)
                 vis.initialize()
-                vis.gd(max_iters=max_iters,method='adaptive2',verbose=2,
+                vis.gd(max_iters=max_iters,method='mm',verbose=2,
                        plot=True,**kwargs)
                 self.X = vis.X
         self.update()
@@ -290,7 +290,7 @@ class MPSE(object):
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}')
 
-    def optimize_Q(self, method='adaptive2',**kwargs):
+    def optimize_Q(self, method='mm',**kwargs):
         if self.verbose > 0:
             print('- Multiview.optimize_Q():')
 
@@ -310,7 +310,7 @@ class MPSE(object):
         p = [None,self.proj.restrict]
         XQ = [self.X,np.array(self.Q)]
         F = lambda XQ: self.F(XQ[0],XQ[1],**kwargs)
-        XQ, H = gd.multiple(XQ,F,p,update_rule=method,**kwargs,**self.H)
+        XQ, H = gd.multiple(XQ,F,p,step_rule=method,**kwargs,**self.H)
         self.X = XQ[0]; self.Q = XQ[1]; self.update(H=H)
 
         if self.verbose > 0:
@@ -430,7 +430,7 @@ def example_disk(N=100):
     proj = perspectives2.PROJ(); Q = proj.generate(number=3,method='standard')
     D = multigraph.from_projections(proj,Q,X)
     mv = MPSE(D,Q=Q,verbose=1)
-    mv.optimize_X(method='adaptive2',max_iters=150,edge_probability=.7,
+    mv.optimize_X(method='mm',max_iters=150,edge_probability=.7,
                   verbose=2,plot=True)
     mv.figureX(save='hola')
     mv.figureY()
@@ -441,7 +441,7 @@ def example_disk_Q(N=100):
     proj = perspectives2.PROJ(); Q = proj.generate(number=3,method='standard')
     D = multigraph.from_projections(proj,Q,X)
     mv = MPSE(D,X=X,verbose=1)
-    mv.optimize_Q(method='adaptive2',edge_probability=.3,verbose=2,
+    mv.optimize_Q(method='mm',edge_probability=.3,verbose=2,
                   plot=True,lr=2,max_iter=100)
     mv.figureHY()
     mv.figureX()
@@ -452,7 +452,6 @@ def example_disk_all(N=100,**kwargs):
     proj = perspectives2.PROJ(); Q = proj.generate(number=3,method='standard')
     D = multigraph.from_projections(proj,Q,X)
     mv = MPSE(D,verbose=1)
-    #mv.initialize_X(method='mds')
     mv.initialize_X(X0=X)
     mv.optimize_all(plot=True,verbose=2,**kwargs)
     mv.figureX(plot=True)
@@ -564,7 +563,7 @@ def xyz():
 if __name__=='__main__':
     #example_disk(30)
     #example_disk_Q(30)
-    example_disk_all(N=30,edge_probability=.5,method='fixed',max_iter=300,
+    example_disk_all(N=30,edge_probability=.5,method='mm',max_iter=300,
                      lr=[.5,.5])
     #example_binomial(N=30,K=3)
     #noisy()
@@ -573,27 +572,4 @@ if __name__=='__main__':
     #test_mds123()#save_data=True)
     #example_random_graph_perspectives(N=100)
     #xyz()
-### Older Tests ###
 
-def test_mds123(save_data=False):
-    Y1 = np.load('examples/123/true1.npy'); D1 = distances.coord2dist(Y1)
-    Y2 = np.load('examples/123/true2.npy'); D2 = distances.coord2dist(Y2)
-    Y3 = np.load('examples/123/true3.npy'); D3 = distances.coord2dist(Y3)
-    D = [D1,D2,D3]
-    
-    Q = np.load('examples/123/params.npy')
-    proj = perspective.Proj()
-    proj.set_params_list(params_list=Q)
-    
-    mv = Multiview(D,persp=proj)
-    mv.setup_visualization('mds')
-    mv.initialize_X(verbose=1)
-    mv.optimize_X(algorithm='cdm',learning_rate=0.005,iterations=300)
-    mv.figureX(); mv.figureY(); plt.show()
-
-    if save_data:
-        np.save('examples/123/computed123.npy',mv.X)
-        np.save('examples/123/computed1.npy',mv.Y[0])
-        np.save('examples/123/computed2.npy',mv.Y[1])
-        np.save('examples/123/computed3.npy',mv.Y[2])
-    

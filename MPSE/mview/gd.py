@@ -1,10 +1,20 @@
-import copy, random, math, numbers, time
+import sys, copy, random, math, numbers, time
 import matplotlib.pyplot as plt
 import numpy as np
 
-### UPDATE RULES ###
+### GRADIENT DESCENT ALGORITHMS (STEP RULES) ###
+
+# Each step rule requires the current position and gradient pair (x,dfx), along
+# with parameters specific to each algorithm. The output is the new position x
+# after one step, along with a dictionary out, containing the learning rate 'lr'
+# used in the step, the total step size 'ndx', a boolean 'stop' if the algorithm
+# is not able to produce an update (e.g. due to a zero gradient) and other keys
+# necessary to run the algorithm in subsequence iterations.
 
 def fixed(x,dfx,lr=1.0,**kwargs):
+    """\
+    Fixed learning rate GD scheme.
+    """
     dx = -lr*dfx
     ndx = np.linalg.norm(dx)
     x = x+dx
@@ -13,7 +23,10 @@ def fixed(x,dfx,lr=1.0,**kwargs):
            'stop' : False}
     return x, out
 
-def adaptive1(x,dfx,x0=0,dfx0=0,**kwargs):
+def bb(x,dfx,x0=0,dfx0=0,**kwargs):
+    """\
+    Barzilai and Borwein (1988) adaptive GD scheme.
+    """
     ddfx = dfx-dfx0
     nddfx = np.linalg.norm(ddfx)
     if nddfx == 0.0:
@@ -38,8 +51,11 @@ def adaptive1(x,dfx,x0=0,dfx0=0,**kwargs):
         }
     return x, out
 
-def adaptive2(x,dfx,ndx=0,dfx0=0,lr=0.1,theta=np.Inf,alpha=1.0,
+def mm(x,dfx,ndx=0,dfx0=0,lr=0.1,theta=np.Inf,alpha=1.0,
               **kwargs):
+    """\
+    Malitsky and Mishchenko (2019) adaptive GD scheme (algorithm 4).
+    """
     if ndx == 0:
         out = {
             'stop' : True
@@ -96,44 +112,44 @@ def adam(x,dfx,ndx=0,dfx0=0,lr=0.1,m=0,v=0,i=0,**kwargs):
            'stop' : False}
     return x, out
 
-update_rules = {
+step_rules = {
     'fixed' : fixed,
-    'adaptive1' : adaptive1,
-    'adaptive2' : adaptive2,
+    'bb' : bb,
+    'mm' : mm,
     'adam' : adam
     }
 
-def add_constraint(algorithm, p, x, dfx, **kwargs):
-    """\
-    Updates x and out using projection p
-    """
-    xx, out = algorithm(x,dfx,**kwargs)
-    pxx = p(xx)
-    out['ndx'] = np.linalg.norm(pxx-x)
-    return pxx, out
+def algorithms(stepping_scheme='fixed',projection=None):
+    algorithm0 = step_rules[stepping_scheme]
+    if projection is None:
+        algorithm = algorithm0
+    else:
+        def algorithm(x,dfx,**kwargs):
+            xx, out = algorithm0(x,dfx,**kwargs)
+            pxx = projection(xx)
+            out['ndx'] = np.linalg.norm(pxx-x)
+            return pxx, out
+    return algorithm
 
 ### ALGORITHMS ###
     
-def single(x0,F,p=None,update_rule='fixed',min_cost=None,
+def single(x0,F,p=None,step_rule='fixed',min_cost=None,
            min_grad=None, min_step=None,max_iter=100,max_step=1e4,
            lr=0.1,verbose=0,plot=False,**kwargs):
     """\
     Gradient descent algorithms.
     """
-    assert update_rule in update_rules
+    algorithm = algorithms(step_rule,p)
+    assert step_rule in step_rules
     if p is None:
         constraint = False
-        algorithm = update_rules[update_rule]
     else:
         constraint = True
-        alg = update_rules[update_rule]
-        algorithm = lambda x, dfx, **kwargs : \
-              add_constraint(alg,p,x,dfx,**kwargs)
     if verbose > 0:
         print('- gd.single(): ')
         print('  computation parameters:')
         print(f'    constraint : {constraint}')
-        print(f'    update rule : {update_rule}')
+        print(f'    update rule : {step_rule}')
         if min_cost is not None:
             print(f'    min_cost : {min_cost:0.2e}')
         if min_grad is not None:
@@ -164,6 +180,8 @@ def single(x0,F,p=None,update_rule='fixed',min_cost=None,
     conclusion = 'maximum number of iterations reached'
     kwargs['ndx'] = ndx
     kwargs['lr'] = lr
+    if verbose > 1:
+        print('  progress:')
     for i in range(max_iter):
         fx, dfx = F(x); ndfx = np.linalg.norm(dfx)
         costs[i] = fx; grads[i] = ndfx
@@ -187,8 +205,7 @@ def single(x0,F,p=None,update_rule='fixed',min_cost=None,
             conclusion = 'maximum step size reached (unstable)'
             break
         if verbose > 1:
-            print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e},'+
-                  f' cost = {costs[i]:0.2e}, lr = {lrs[i]:0.2e}',
+            print(f'    {i:>4}/{max_iter} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, cost = {costs[i]:0.2e}, lr = {lrs[i]:0.2e}',
                   flush=True, end="\r")
     
     tf = time.time()
@@ -200,10 +217,10 @@ def single(x0,F,p=None,update_rule='fixed',min_cost=None,
 
     if plot is True:
         fig, ax = plt.subplots()
-        ax.semilogy(costs,label='costs')
-        ax.semilogy(grads,label='gradient size')
-        ax.semilogy(lrs,label='learning rate')
-        ax.semilogy(steps,label='step size')
+        ax.semilogy(costs,label='cost',linewidth=3)
+        ax.semilogy(grads,label='gradient size',linestyle='--')
+        ax.semilogy(lrs,label='learning rate',linestyle='--')
+        ax.semilogy(steps,label='step size',linestyle='--')
         ax.legend()
         ax.set_xlabel('iterations')
         plt.draw()
@@ -231,7 +248,7 @@ def single(x0,F,p=None,update_rule='fixed',min_cost=None,
         print(f'    time : {tf-t0:0.2e} [sec]')
     return x, outputs
 
-def multiple(X0,F,p=None,update_rule='fixed',min_cost=None,
+def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
              min_grad=None, min_step=None,max_iter=100,max_step=1e4,
              lr=0.1,verbose=0,plot=False,**kwargs):
     """\
@@ -242,10 +259,10 @@ def multiple(X0,F,p=None,update_rule='fixed',min_cost=None,
         assert len(p) == K
     else:
         p = [p]*K
-    if isinstance(update_rule,list):
-        assert len(update_rule) == K
+    if isinstance(step_rule,list):
+        assert len(step_rule) == K
     else:
-        update_rule = [update_rule]*K
+        step_rule = [step_rule]*K
     if isinstance(lr,list):
         assert len(lr) == K
     else:
@@ -254,20 +271,16 @@ def multiple(X0,F,p=None,update_rule='fixed',min_cost=None,
     constraint = []
     algorithm = []
     for k in range(K):
-        assert update_rule[k] in update_rules
-        alg = update_rules[update_rule[k]]
+        algorithm.append(algorithms(step_rule[k],p[k]))
         if p[k] is None:
             constraint.append(False)
-            algorithm.append(alg)
         else:
             constraint.append(True)
-            algorithm.append(lambda x, dfx, **kwargs: \
-                             add_constraint(alg,p[k],x,dfx,**kwargs))
     if verbose > 0:
         print('- gd.multiple(): ')
         print('  computation parameters:')
         #print(f'    constraint : {constraint}')
-        print(f'    update rule : {update_rule}')
+        print(f'    update rule : {step_rule}')
         if min_cost is not None:
             print(f'    min_cost : {min_cost:0.2e}')
         if min_grad is not None:
@@ -302,6 +315,8 @@ def multiple(X0,F,p=None,update_rule='fixed',min_cost=None,
     for i in range(K):
         KWARGS[i]['ndx'] = ndX[i]
         KWARGS[i]['lr'] = lr[i]
+    if verbose > 1:
+        print('  progress:')
     for i in range(max_iter):
         fX, dfX = F(X); ndfX = [np.linalg.norm(a) for a in dfX]
         costs[i] = fX; grads[i] = ndfX
@@ -326,8 +341,14 @@ def multiple(X0,F,p=None,update_rule='fixed',min_cost=None,
           #  conclusion = 'maximum step size reached (unstable)'
            # break
         if verbose > 1:
-            print(f'  {i:>4} : step = {steps[i,0]:0.2e}, grad = {grads[i,0]:0.2e}, cost = {costs[i]:0.2e}, lr = {lrs[i,0]:0.2e}', flush=True, end="\r")
-    
+            sys.stdout.write("\033[K")
+            print(f'    {i:>4}/{max_iter} : step = {steps[i,0]:0.2e}, grad = {grads[i,0]:0.2e}, cost = {costs[i]:0.2e}, lr = {lrs[i,0]:0.2e}')
+            sys.stdout.write("\033[F")
+
+    if verbose > 1:
+        sys.stdout.write("\033[K")
+        sys.stdout.write("\033[F")
+        sys.stdout.write("\033[K")
     tf = time.time()
 
     costs = costs[0:i]
@@ -336,13 +357,16 @@ def multiple(X0,F,p=None,update_rule='fixed',min_cost=None,
     steps = steps[0:i]
 
     if plot is True:
-        fig, ax = plt.subplots()
-        ax.semilogy(costs,label='costs')
-        ax.semilogy(grads,label='gradient size')
-        ax.semilogy(lrs,label='learning rate')
-        ax.semilogy(steps,label='step size')
-        ax.legend()
-        ax.set_xlabel('iterations')
+        fig, axes = plt.subplots(1,1+K,figsize=(15,5))
+        axes[0].semilogy(costs,linewidth=3)
+        axes[0].set_title('cost')
+        for k in range(K):
+            axes[k+1].semilogy(grads[:,k],label='gradient size',linestyle='--')
+            axes[k+1].semilogy(lrs[:,k],label='learning rate',linestyle='--')
+            axes[k+1].semilogy(steps[:,k],label='step size',linestyle='--')
+            axes[k+1].set_title(f'coordinate {k}')
+            axes[k+1].legend()
+            axes[k+1].set_xlabel('iterations')
         plt.draw()
         plt.pause(0.1)
     
@@ -357,223 +381,14 @@ def multiple(X0,F,p=None,update_rule='fixed',min_cost=None,
         'time' : tf-t0
         }
         
-    if verbose > 2:
+    if verbose > 1:
         print('  results:')
         print(f'    conclusion : {conclusion}')
         print(f'    total iterations : {i}')
         print(f'    final cost : {costs[-1]:0.2e}')
-        print(f'    final gradient size : {grads[-1]:0.2e}')        
-        print(f'    final learning rate : {lrs[-1]:0.2e}')
-        print(f'    final step size : {steps[-1]:0.2e}')
         print(f'    time : {tf-t0:0.2e} [sec]')
     return X, outputs
 
-def cgd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,lr=0.1,
-        verbose=1,**kwargs):
-    """\
-    Coordinate gradient descent algorithm.
-
-    Parameters:
-
-    X0 : list of array-like objects
-    List of Initial parameter arrays.
-
-    F : function(array-like)
-    Function returning the tuple containing the cost and list of gradients at 
-    the list of parameters of interest. Given a list of arrays X, it returns
-    (f(X),df(X)), where f is the cost function and df is the gradient 
-    function.
-
-    min_step : number > 0
-    Minimum step size required to continue computation. If a step size goes
-    below this threshold, the computation is stopped and declared successful.
-
-    max_iters : integer > 0
-    Maximum number of iterations.
-
-    max_step : number > 0
-    Maximum step size allowed. If step size is larger, the computation is 
-    stopped and declared failed.
-
-    lr : number > 0
-    Learning rate.
-
-    Returns:
-
-    x : numpy array
-    Final parameter array.
-
-    specs : dictionary
-    Dictionary with information about computation, including cost history.
-    """
-    if verbose > 0:
-        print('+ gd.cgd():')
-        print(f'  min_step : {min_step:0.2e}')
-        print('  max_iters :',max_iters)
-        print(f'  max_step : {max_step:0.2e}')
-        print(f'  lr : ',lr)
-        
-    assert isinstance(X0,list); K = len(X0)
-    if isinstance(lr,numbers.Number):
-        lr = [lr]*K
-    else:
-        assert isinstance(lr,list) or isinstance(lr,np.ndarray)
-    alg = []
-    for k in range(K):
-        if p is None or p[k] is None:
-            alg.append(lambda x, dx: x-lr[k]*dx)
-        else:
-            alg.append(lambda x, dx: p[k](x-lr[k]*dx))
-        
-    cost = np.empty(max_iters)
-    steps = np.empty(max_iters)
-    grads = np.empty(max_iters)
-    
-    X = X0; i = 0;  step_size = (min_step+max_step)/2; specs=[{}]*K
-    while min_step < step_size < max_step and i < max_iters:
-        X0 = X.copy()
-        cost[i], GRAD = F(X0)
-        step_size = 0; grad_size = 0
-        for k in range(K):
-            X[k] = alg[k](X0[k],GRAD[k])
-            step_size += np.linalg.norm(X[k]-X0[k])
-            grad_size += np.linalg.norm(GRAD[k])
-        steps[i] = step_size; grads[i] = grad_size
-        if verbose > 1:
-            print(f'  {i>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, '+
-                  f'cost = {cost[i]:0.2e}', flush=True)
-        i += 1
-
-    specs = {
-        'cost' : cost[0:i],
-        'steps' : steps[0:i],
-        'grads' : grads[0:i],
-        'iterations' : i,
-        'X_prev' : X0,
-        'dX_prev' : GRAD,
-        'minimum_reached' : step_size <= min_step,
-        'unstable' : step_size > max_step
-        }
-    if verbose > 0:
-        print('  total iterations :',i)
-        print(f'  final step size : {step_size:0.2e}')
-        print(f'  final gradient size: {grad_size:0.2e}')
-        if specs['minimum_reached'] is True:
-            print('  LOCAL MINIMUM REACHED')
-        if specs['unstable'] is True:
-            print('  UNSTABLE')
-            
-    return X, specs
-
-def cagd(X0,F,p=None,max_iters=200,min_step=1e-15,max_step=1e4,X_prev=0,
-         dX_prev=0,verbose=1,**kwargs):
-    """\
-    Coordinate gradient descent algorithm.
-
-    Parameters:
-
-    X0 : list of array-like objects
-    List of Initial parameter arrays.
-
-    F : function(array-like)
-    Function returning the tuple containing the cost and list of gradients at 
-    the list of parameters of interest. Given a list of arrays X, it returns
-    (f(X),df(X)), where f is the cost function and df is the gradient 
-    function.
-
-    min_step : number > 0
-    Minimum step size required to continue computation. If a step size goes
-    below this threshold, the computation is stopped and declared successful.
-
-    max_iters : integer > 0
-    Maximum number of iterations.
-
-    max_step : number > 0
-    Maximum step size allowed. If step size is larger, the computation is 
-    stopped and declared failed.
-
-    X_prev : list of array-like objects, same shape as X0
-    List of parameter arrays obtained one previous step before initial parameter
-    array (optional). Used to more accurately define initial learning rate. 
-    Include if agd is used after some other gd algorithm.
-
-    dX_prev : list of array-like objects, same shape as X0
-    List of gradient arrays obtained one previous step before initial parameter
-    array.
-
-    Returns:
-
-    x : numpy array
-    Final parameter array.
-
-    specs : dictionary
-    Dictionary with information about computation, including cost history.
-    """
-    if verbose > 0:
-        print('+ gd.cagd():')
-        print(f'  min_step : {min_step:0.2e}')
-        print('  max_iters :',max_iters)
-        print(f'  max_step : {max_step:0.2e}')
-        
-    assert isinstance(X0,list); K = len(X0)
-    alg = []
-    for k in range(K):
-        if p is None or p[k] is None:
-            alg.append(lambda x, dx, lr: x-lr*dx)
-        else:
-            alg.append(lambda x, dx, lr: p[k](x-lr*dx))
-
-    if X_prev == 0.0:
-        X_prev = [0]*K
-    if dX_prev == 0.0:
-        dX_prev = [0]*K
-        
-    cost = np.empty(max_iters)
-    steps = np.empty(max_iters)
-    grads = np.empty(max_iters)
-    
-    X = X0.copy(); X0 = X_prev; dX0 = dX_prev; i = 0;
-    step_size = (min_step+max_step)/2; stop=0
-    while min_step < step_size < max_step and i < max_iters and stop<K:
-        cost[i], dX = F(X)
-        step_size = 0; grad_size = 0; stop = 0
-        for k in range(K):
-            dgrad = dX[k]-dX0[k]
-            norm = np.linalg.norm(dgrad)
-            if norm == 0.0:
-                stop += 1
-            else:
-                lr = abs(np.sum((X[k]-X0[k])*dgrad)/norm**2)
-                X0[k] = X[k]; dX0[k] = dX[k]
-                X[k] = alg[k](X[k],dX[k],lr)
-            step_size += np.linalg.norm(X[k]-X0[k])
-            grad_size += np.linalg.norm(dX[k])
-        steps[i] = step_size; grads[i] = grad_size
-        if verbose > 1:
-            print(f'  {i:>4} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e},'
-                  +f' cost = {cost[i]:0.2e}', flush=True)
-        i += 1
-
-    specs = {
-        'cost' : cost[0:i],
-        'steps' : steps[0:i],
-        'grads' : grads[0:i],
-        'iterations' : i,
-        'x_prev' : X0,
-        'dx_prev' : dX0,
-        'minimum_reached' : step_size <= min_step,
-        'unstable' : step_size > max_step
-        }
-    if verbose > 0:
-        print('  total iterations :',i)
-        print(f'  final step size : {step_size:0.2e}')
-        print(f'  final gradient size: {grad_size:0.2e}')
-        if specs['minimum_reached'] is True:
-            print('  LOCAL MINIMUM REACHED')
-        if specs['unstable'] is True:
-            print('  UNSTABLE')
-            
-    return X, specs
 
 def mgd(x0,F,lr=0.1,attempts=10,reduce_factor=10,verbose=0,**kwargs):
     """\
