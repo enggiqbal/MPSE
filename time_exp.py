@@ -10,7 +10,7 @@ import MPSE.mview as mview
 import matplotlib.pyplot as plt
 import shutil
 from sklearn.metrics import euclidean_distances, pairwise_distances
-
+import time
 def get_D(n,p):
     D=[]
     for i in range(0,p):
@@ -28,26 +28,43 @@ stopping_eps=0.1
 projections=3
 max_iters=200
 lr=0.01
- 
-n=10
-projection_set="standard"
-import time
-ns=[]
-ts=[]
-cs=[]
-T=500
-print("datapoints,time,cost")
-for i in range(1, T):
-    n=i * 10
-    D=get_D(n,projections)
-    start_time = time.time()
-    pos,_,costs=mview.MULTIVIEW0(D,Q= projection_set,X0=None, lr=lr,max_iters=max_iters,verbose=0)
-    cost=costs[len(costs)-1]
-    t= time.time() - start_time
-    print(f'%d,%.2f,%.2f' %(n,t, cost), flush=True)
-    ns.append(n)
-    ts.append(t)
-    cs.append(cost)
+def points_exp(max_points):
+    projection_set="standard"
+    T=int(max_points/100)+1
+    print("datapoints,avgtime,avgcost")
+    for n in range(1, T):
+        points=n * 100
+        D=get_D(points,projections)
+        costs=[]
+        timeRec=[]
+        for i in range(0,3):
+            start_time = time.time()
+            _,_,c=mview.MULTIVIEW0(D,X0=None, lr=lr,max_iters=max_iters,verbose=0)
+            costs.append(c[len(c)-1])
+            t= time.time() - start_time
+            timeRec.append( time.time() - start_time)
+        print(f'%d,%.2f,%.2f' %(projections,sum(timeRec)/len(timeRec),sum(costs)/len(costs)), flush=True)
+  
+
+def projection_exp(points,total_projections):
+    n=points
+    projection_set="standard"
+    T=total_projections
+    print("projections,avgtime,avgcost")
+    for projections in range(3, T):
+        D=get_D(n,projections+1)
+        costs=[]
+        timeRec=[]
+        for i in range(0,3):
+            start_time = time.time()
+            _,_,c=mview.MULTIVIEW0(D,X0=None, lr=lr,max_iters=max_iters,verbose=0)
+            costs.append(c[len(c)-1])
+            timeRec.append( time.time() - start_time)
+        print(f'%d,%.2f,%.2f' %(projections,sum(timeRec)/len(timeRec),sum(costs)/len(costs)), flush=True)
+  
+#projection_exp()
+points_exp(200,10)
+points_exp(1000)
 '''
 # libraries
 import matplotlib.pyplot as plt
