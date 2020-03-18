@@ -12,6 +12,20 @@ import networkx as nx
 # Other possible attributes are:
 # 'weights' : a list or array containing the edge weights of the given edges (it# must hqve the same length as the list of edges)
 
+### ATTRIBUTE GRAPH FUNCTIONS ###
+
+def check_attribute(D, distances=False, weights=False):
+    assert 'edges' in D
+    assert isinstance(D['edges'],list) or isinstance(D['edges'],np.ndarray)
+    if distances is True:
+        assert 'distances' in D
+        assert isinstances(D['distances'],np.ndarray)
+        assert len(D['distances'])==len(D['edges'])
+    if weights is True:
+        assert 'weights' in D
+        assert isinstances(D['weights'],np.ndarray)
+        assert len(D['weights'])==len(D['edges'])
+        
 def check(D, make_distances_positive=False):
     """\
     Takes dissimilarity graph or matrix and returns dissimilarity graph. If D is
@@ -106,7 +120,7 @@ def from_coordinates(X,norm=2,edges=None,weights=None,colors=None):
         }
     return DD
 
-def from_matrix(D,transformation=None,weights=None):
+def from_matrix(D,remove_zeros=True,transformation=None,weights=None):
     """\
     Returns diccionary with dissimilarity relations from dissimilarity matrix.
     
@@ -137,9 +151,10 @@ def from_matrix(D,transformation=None,weights=None):
         it = 0
         for i in range(N):
             for j in range(i+1,N):
-                e[it] = [i,j]
-                d[it] = D[i,j]
-                it += 1
+                if D[i,j] != 0:
+                    e[it] = [i,j]
+                    d[it] = D[i,j]
+                    it += 1
     else:
         if transformation == 'binary':
             def f(x):
@@ -175,9 +190,23 @@ def from_matrix(D,transformation=None,weights=None):
         }
     return DD
 
-def from_perspectives(X,persp,**kwargs):
+### MULTIGRAPHS ###
+
+def check_multigraph(DD):
     """\
-    Generates list of graphs generated from objects X and perspectives persp.
+    Checks/complete multigraph dictionary DD.
+    """
+    assert 'nodes' in DD; N = len(DD['nodes'])
+    assert 'attributes' in DD; K = len(DD['attributes'])
+    for attribute in DD['attributes']:
+        assert attribute in DD
+        assert isinstance(DD[attribute],dict)
+        check(DD[attribute])
+
+def from_projections(proj,Q,X,**kwargs):
+    """\
+    Generates list of graphs generated from objects X using projection rule proj
+    with parameters Q.
 
     X : numpy array
     Positions of objects
@@ -185,11 +214,13 @@ def from_perspectives(X,persp,**kwargs):
     persp : perspective object
     Describes perspectives on X.
     """
-    Y = persp.compute_Y(X)
-    D = []
-    for y in Y:
-        D.append(from_coordinates(y,**kwargs))
-    return D
+    Y = proj.project(Q,X)
+    DD = {}
+    DD['nodes'] = range(len(X))
+    DD['attributes'] = range(len(Q))
+    for k in range(len(Q)):
+        DD[k] = from_coordinates(Y[k],**kwargs)
+    return DD
 
 def set_weights(D,function=None,scaling=0):
     """\
@@ -239,6 +270,19 @@ def remove_edges(D,number=None,proportion=0.2):
 
 def sim2dict(S,mapping='reciprocal',connect_paths=None,connect_components=None):
     return
+
+def combine(DD,method='maximum'):
+    """\
+    Combine dissimilarity matrices.
+    """
+    N = len(DD['nodes'])
+    K = len(DD['attributes'])
+    D = np.zeros((N,N))
+    for k in range(K):
+        for edge,distance in zip(DD[k]['edges'],DD[k]['distances']):
+            D[edge] = max(D[edge[0],edge[1]],distance)
+    D = from_matrix(D)
+    return D
 
 ### GENERATORS ###
 
