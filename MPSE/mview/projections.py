@@ -1,272 +1,259 @@
 import os, sys
 import numpy as np
 import scipy.stats
-import math, numbers
+import math, numbers, itertools
 
-class Proj(object):
+families = ['linear']
+constraints = [None,'orthogonal','similar']
+
+### LINEAR PROJECTIONS ###
+
+class PROJ(object):
     """\
-    Class specifying the set of allowed projection functions and containing
-    methods to call and update a list of projection parameters.
+    Class use to define the desired collection of perspective functions and    
+    containing methods to call perspective functions in such collection.
     """
-
-    def __init__(self, dimX=3, dimY=2, family='linear',
-                 restriction='orthogonal', set_params=True, **kwargs):
+    
+    def __init__(self, d1=3, d2=2, family='linear',
+                 constraint='orthogonal',**kwargs):
         """\
-        Initializes Proj object, by setting the dimensions of the input and
-        output spaces, the family of allowed projection functions, and 
-        restrictions on the projection parameters.
-
+        Initializes Persp object, by setting the dimensions of the input and
+        output spaces, the family of allowed perspective functions, and 
+        constraints on the perspective parameters.
+        
         Parameters:
         
-        dimX : int
+        d1 : int
         Dimension of input space.
        
-        dimY : int
+        d2 : int
         Dimension of output space.
 
         family : string
-        Family of projection functions. Current options is linear'.
+        Family of perspective functions. Currently, the only option is linear.
 
-        restriction : None or string
-        Restriction on the projection parameters. Current options are None,
+        constraint : None or string
+        Constraint on the perspective parameters. Current options are None,
         'orthogonal', and 'similar'.
         """
-        self.dimX = dimX
-        self.dimY = dimY
-        self.family = family
-        self.restriction = restriction
+        assert isinstance(d1,int) and d1>0; self.d1 = d1
+        assert isinstance(d2,int) and d2>0; self.d2 = d2
+        assert family in families; self.family = family
+        assert constraint in constraint; self.constraint = constraint
 
-        assert family in ['linear']
-        self.setup_projection_functions()
-                
-        if restriction is None:
-            self.rfunction = lambda x: x
-        elif restriction is 'orthogonal':
-            self.rfunction = restriction_orthogonal
-        elif restrict is 'similar':
-            self.rfunction = restriction_similar
-        else:
-            sys.exit('Restriction unknown')
-
-        self.generate_params_list(**kwargs)
-
-    def setup_projection_functions(self):
-
+        #setup family of projection functions:
         if self.family == 'linear':
-            self.param_shape = (self.dimY,self.dimX)
-            self.projection_function = lambda q,x: x @ q.T
-            self.array_projection_function = lambda q,X : X @ q.T
-            self.gradient_function = lambda q,x: q
+            self.setup_linear()
+        elif self.family == 'stereographic':
+            self.shape = 1 #
         else:
-            sys.exit('Family of projections unknown.')
+            sys.exit('Persp family unknown.')
 
-    def check(self, param=None, params_list=None, X=None, verbose=0):
+    def setup_linear(self):
         """\
-        Checks that input projection parameters or position array have the 
+        Sets up functions for linear projection family.
+        """
+        assert self.d1 >= self.d2
+    
+        self.shape = (self.d2,self.d1)
+        self.p = lambda q,x : x @ q.T
+        self.P = lambda q,X : X @ q.T
+        self.dp = lambda q,x : q
+
+        def special(number,method='identity'):
+            if method == 'identity':
+                q = np.identity(self.d1)
+                q = q[0:self.d2]
+                return [q]*number
+            elif method == 'standard':
+                Q = []
+                for comb in itertools.combinations(range(self.d1),self.d2):
+                    Q.append(np.identity(self.d1)[comb,:])
+                assert len(Q) >= number
+                return Q[0:number]
+            elif method == 'cylinder':
+                assert self.d1 == 3 and self.d2 == 2 ### generalize! ###
+                Q = []
+                for k in range(number):
+                    theta = math.pi/number * k
+                    Q.append(np.array([[math.cos(theta),math.sin(theta),0],
+                                   [0,0,1]]))
+            return Q
+        self.special = special
+            
+        assert self.constraint in [None,'orthogonal','similar']
+        if self.constraint is None:
+            self.c = lambda x : x
+            self.random = lambda : np.random.randn(self.d2,self.d1)
+        elif self.constraint is 'orthogonal':
+            def c(P):
+                """\
+                Returns nearest orthogonal matrix to P, that is, Q minimizing 
+                |P-Q|_F such that Q @ Q.T = I and Q.T @ Q = I.
+                """
+                U,s,Vh = np.linalg.svd(P, full_matrices=False)
+                return U @ Vh
+            self.c = c
+            self.random = lambda : scipy.stats.ortho_group.rvs(self.d1) \
+                          [0:self.d2,:]
+        elif self.constraint is 'similar':
+            def c(P):
+                """\
+                Returns nearest scaled orthogonal matrix to P, that is, Q 
+                minimizing |P-Q|_F such that Q @ Q.T = sI and Q.T @ Q = sI, for 
+                some s >= 0.
+                """
+                U,s,Vh = np.linalg.svd(P, full_matrices=False)
+                s = np.sum(s)/len(s)
+                return s * U @ Vh
+            self.c = c
+            def random(rmax=2,rmin=0.5):
+                q = scipy.stats.ortho_group.rvs(d1)[0:self.d2,:]
+                q *= np.random.rand()*(rmax-rmin)+rmin
+                return q
+            self.random = random
+
+    def check(self, q=None, Q=None, X=None):
+        """\
+        Checks that input perspective parameters or position array have the 
         correct form.
 
-        --- Parameters ---
+        Parameters
 
-        param : numpy array
+        q : numpy array
         Array with parameters for one projection.
 
-        param_list : list
+        Q : list
         List with parameter arrays for multiple projections.
 
         X : ndarray
         Input coordinate or array of input coordinates.
         """
-        if param is not None:
-            assert isinstance(param,np.ndarray)
-            assert param.shape == self.param_shape
-        if params_list is not None:
-            assert isinstance(params_list,list) or \
-                isinstance(params_list,np.ndarray)
-            for param in params_list:
-                assert isinstance(param,np.ndarray)
-                assert param.shape == self.param_shape
+        if q is not None:
+            assert isinstance(q,np.ndarray)
+            assert q.shape == self.shape
+        if Q is not None:
+            assert isinstance(Q,list) or isinstance(Q,np.ndarray)
+            for q in Q:
+                assert isinstance(q,np.ndarray)
+                assert q.shape == self.shape
         if X is not None:
             assert isinstance(X,np.ndarray)
             if X.ndim == 1:
-                assert len(X) == self.dimX
+                assert len(X) == self.d1
             else:
                 assert X.ndim == 2
-                assert X.shape[1] == self.dimX
-        if verbose > 0:
-            print('Projs.check(): complete')
+                assert X.shape[1] == self.d1
 
-    def generate_params_list(self, number=3, special=None, random='orthogonal'):
-        """\
-        Returns a parameter list.
-
-        Parameters:
-        
-        number : int
-        Number of parameter arrays
-
-        special : string
-        Returns a special list of parameters. Current options are 'standard' and
-        'cylinder'.
-
-        random : string
-        If special is not specified, returns a random list of parameters, as
-        specified by random. Current options are 'uniform'.
-        """
-        if special is not None:
-            if special == 'identity':
-                assert self.dimX == self.dimY
-                params = [np.identity(self.dimX)]*number
-            elif special == 'standard':
-                params = standard(self.dimX,self.dimY,number)
-            elif special == 'cylinder':
-                params = cylinder(self.dimX,self.dimY,number)
-            else:
-                sys.exit('Special parameter choice does not exist.')
-        elif random is not None:
-            params = random_parameters(self.dimX,self.dimY,number,method=random)
-        else:
-            sys.exit('No parameter family was specified.')
-        return params
-
-    def set_params_list(self, params_list=None, number=3, special=None,
-                       random='uniform'):
-        """\
-        Saves list with parameters array into Proj object. For use when the
-        list of projection parameters is fixed.
-        """
-        if params_list is not None:
-            self.check(params_list=params_list)
-        else:
-            params_list = self.generate_params_list(number,special,random)
-        self.params_list = params_list
-        self.params_number = number
-            
-    def project(self, X, param=None, params_list=None):
+    def project(self, q, X):
         """\
         Returns projected data.
+        
+        Parameters:
+        
+        q : array or list
+        Projection parameters or list of projection parameters.
+
+        X : array (N x d1)
+        Coordinate array.
+
+        Returns:
+        
+        Y : array or list
+        Projected coordinates p_q(X) or [p_q1(X),...,p_qK(X)].
         """
-        if param is not None:
-            Y = self.projection_function(param,X)
-        elif params_list is not None:
-            Y = []
-            for param in params_list:
-                Y.append(self.array_projection_function(param,X))
-        elif hasattr(self,'params_list'):
-            Y = []
-            for param in self.params_list:
-                Y.append(self.array_projection_function(param,X))
+        if isinstance(q,np.ndarray) and q.shape==self.shape:
+            Y = self.P(q,X)
         else:
-            sys.exit('Error: Proj.project() - shape of Q is incorrect.')
+            Y = []
+            for qk in q:
+                Y.append(self.P(qk,X))
+            if isinstance(q,np.ndarray):
+                Y = np.array(Y)
         return Y
-
-    def compute_gradient(self, x, param=None, params_list=None):
-        if param is not None:
-            J = self.gradient_function(param,x)
-        elif params_list is not None:
-            J = []
-            for param in params_list:
-                J.append(self.gradient_function(param,x))
-        return J
-
-    def restrict(self, param=None, param_list=None):
-        if Q.shape==self.param_shape:
-            Qr = self.restriction(Q)
+            
+    def gradient(self, q, x):
+        if isinstance(q,np.ndarray) and q.shape==self.shape:
+            dpx = self.dp(q,x)
         else:
-            Qr = np.empty(Q.shape)
-            for i in range(self.number):
-                Qr[i] = self.restriction(Q[i])
-        return Qr
+            dpx = []
+            for qk in q:
+                dpx.append(self.dp(q,x))
+            if isinstance(q,np.ndarray):
+                dpx = np.array(dpx)
+        return dpx
 
-    def plot3D(self, X, Q=None, Y=None, labels=None):
-        import matplotlib.pyplot as plt
-        from mpl_toolkits import mplot3d
+    def restrict(self, q):
+        if isinstance(q,np.ndarray) and q.shape==self.shape:
+            qq = self.c(q)
+        else:
+            qq = []
+            for qk in q:
+                qq.append(self.c(qk))
+            qq = np.array(qq)
+        return qq
 
-        if Q is None:
-            Q = self.params_list
-        fig, axs = plt.subplots(1,self.number,sharex=True)
-        plt.tight_layout()
-        if Y is None:
-            Y = self.project(Q,X)
-        if labels is None:
-            labels = range(self.number)
-        for i in range(self.number):
-            axs[i].scatter(Y[i][:,0],Y[i][:,1])
-            axs[i].set_aspect(1.0)
-            axs[i].set_title(f'Projection {labels[i]}')
-        plt.suptitle('Projected Data')
-        plt.show(block=False)
+    def generate(self, number=3, method='random',**kwargs):
+        """\
+        Returns a list of projection parameter arrays.
 
-        fig = plt.figure()
-        ax = plt.axes(projection='3d')
-        ax.scatter3D(X[:,0],X[:,1],X[:,2])
-        ax.set_aspect(1.0)
-        plt.show()
+        Parameters:
 
-    
-### Restriction mappings ###
+        number : int
+        Number of parameter arrays.
 
-# Here, the parameter P is 'projected' to the subset of parameters that is
-# specified. Hence, the parameter choice Q minimizing |P-Q|_F is returned.
+        method : string
+        Method used to generate parameters. Choices that work for every set of
+        projection/perspective families are ['identity','random']. Other choices
+        are dependent on the family and constraints.
+        """
+        if method == 'random':
+            Q = []
+            for i in range(number):
+                Q.append(self.random())
+        else:
+            Q = self.special(number,method=method)
+        return Q
 
-def restriction_orthogonal(P):
-    """\
-    Returns nearest orthogonal matrix to P, that is, Q minimizing |P-Q|_F such
-    that Q @ Q.T = I and Q.T @ Q = I.
-    """
-    U,s,Vh = np.linalg.svd(P, full_matrices=False)
-    return U @ Vh
+### Functions returning special parameters ###.
 
-def restriction_similar(P):
-    """\
-    Returns nearest scaled orthogonal matrix to P, that is, Q minimizing |P-Q|_F
-    such that Q @ Q.T = sI and Q.T @ Q = sI, for some s >= 0.
-    """
-    U,s,Vh = np.linalg.svd(P, full_matrices=False)
-    s = np.sum(s)/len(s)
-    return s * U @ Vh
+def special_parameters(d1,d2,number,method='identity'):
+    if method == 'identity':
+        assert d1 == d2
+        Q = [np.identity(d1)]*number
+    elif method == 'same':
+        Q = [np.identity(d1)[0:d2,:]]*number
+    elif method == 'standard':
+        assert d1 >= d2
+        Q = []
+        for comb in itertools.combinations(range(d1),d2):
+            Q.append(np.identity(d1)[comb,:])
+        assert len(Q) >= number
+        Q = Q[0:number]
+    elif method == 'cylinder':
+        assert d1 == 3 and d2 == 2 ### to be generalized ###
+        Q = []
+        for k in range(number):
+            theta = math.pi/number * k
+            Q.append(np.array([[math.cos(theta),math.sin(theta),0],
+                               [0,0,1]]))
+    else:
+        sys.exit('perspective.special_parameters() method does not exist.')
+    return Q
 
-### Functions returning special parameters ###
-
-# These are functions returning special choices for the projections' parameters.
-
-def standard(dimX,dimY,K):
-    import itertools
-    assert dimX >= dimY
-    par = []
-    for comb in itertools.combinations(range(dimX),dimY):
-        par.append(np.identity(dimX)[comb,:])
-    assert len(par) >= K
-    return par[0:K]
-
-def cylinder(dimX,dimY,K): ### TBD ###
-    assert dimX == 3 and dimY == 2 ### to be generalized ###
-    params_list = []
-    for k in range(K):
-        theta = math.pi/K * k
-        params_list.append(np.array([[math.cos(theta),math.sin(theta),0],
-                                     [0,0,1]]))
-    return params_list
-
-### Generation of parameters list using random methods ###
-
-def random_uniform(dimX,dimY):
-    return np.random.rand(dimY,dimX)-0.5
-
-def random_normal(dimX,dimY):
-    return np.random.randn(dimY,dimX)
-
-def random_orthogonal(dimX,dimY):
-    return scipy.stats.ortho_group.rvs(dimX)[0:dimY,:]
-
-random_methods = {
-    'uniform' : random_uniform,
-    'normal' : random_normal,
-    'orthogonal' : random_orthogonal
-    }
-
-def random_parameters(dimX,dimY,K,method='orthogonal'):
-    method = random_methods[method]
-    params_list = []
-    for k in range(K):
-        params_list.append(method(dimX,dimY))
-    return params_list
+def random_parameters(d1,d2,number,method='orthogonal'):
+    if method == 'uniform':
+        Q = []
+        for k in range(number):
+            Q.append(np.random.rand(d2,d1)-0.5)
+    elif method == 'normal':
+        Q = []
+        for k in range(number):
+            Q.append(np.random.randn(d2,d1))
+    elif method == 'orthogonal':
+        Q = []
+        for k in range(number):
+            Q.append(scipy.stats.ortho_group.rvs(d1)[0:d2,:])
+    else:
+        sys.exit('perspective.random_parameters() method does not exist.')
+    return Q

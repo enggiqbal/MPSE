@@ -133,7 +133,7 @@ def algorithms(stepping_scheme='fixed',projection=None):
 
 ### ALGORITHMS ###
     
-def single(x0,F,p=None,step_rule='fixed',min_cost=None,
+def single(x0,F,p=None,step_rule='mm',min_cost=None,
            min_grad=None, min_step=None,max_iter=100,max_step=1e4,
            lr=0.1,verbose=0,plot=False,**kwargs):
     """\
@@ -333,16 +333,18 @@ def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
                 break
             lrs[i,k] = KWARGS[k]['lr']
             steps[i,k] = KWARGS[k]['ndx']
-       # if max(kwargs['ndx']) < min_step:
-        #    conclusion = 'minimum step reached reached'
-         #   break
-        #elif max(kwargs['ndx']) > max_step:
-         #   success = False
-          #  conclusion = 'maximum step size reached (unstable)'
-           # break
+        if max(steps[i]) < min_step:
+            conclusion = 'minimum step reached reached'
+            break
+        elif max(steps[i]) > max_step:
+            success = False
+            conclusion = 'maximum step size reached (unstable)'
+            break
         if verbose > 1:
             sys.stdout.write("\033[K")
-            print(f'    {i:>4}/{max_iter} : step = {steps[i,0]:0.2e}, grad = {grads[i,0]:0.2e}, cost = {costs[i]:0.2e}, lr = {lrs[i,0]:0.2e}')
+            print(f'    {i:>4}/{max_iter} : step = {steps[i,0]:0.2e}, '+\
+                  f'grad = {grads[i,0]:0.2e}, cost = {costs[i]:0.2e}, '+\
+                  f'lr = {lrs[i,0]:0.2e}')
             sys.stdout.write("\033[F")
 
     if verbose > 1:

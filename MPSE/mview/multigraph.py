@@ -35,7 +35,69 @@ def check(D, make_distances_positive=False):
     assert 'distances' in D
     assert len(D['edges'])==len(D['distances'])
 
-def from_coordinates(X,norm=2,edges=None,weights=None,colors=None):
+def remove_edges(D, edge_min_distance=None, edge_max_distance=None,
+                 edge_remove_probability=None, **kwargs):
+    """\
+    Removes edges from graph dictionary as specified.
+    
+    Parameters:
+
+    D : dictionary
+    Graph dictionary.
+
+    min_distance : boolean
+    If set to True, removes edges whose distance is less than or equal to
+    min_distance.
+
+    max_distance : None or number
+    If set to a number, removes edges whose distance is greater than 
+    max_distance.
+
+    edge_probability : None or number
+    If set to a number, removes edges with probability given by
+    edge_probability.
+    """
+    if edge_min_distance is None and edge_max_distance is None and \
+       edge_remove_probability is None:
+        print('hi')
+        return D
+    
+    edges = D['edges']; distances = D['distances']; weights = D['weights']
+    
+    if edge_min_distance is not None:
+        keep_indices = []
+        for i in range(len(edges)):
+            if distances[i] > edge_min_distance:
+                keep_indices.append(i)
+        edges = edges[keep_indices]
+        distances = distances[keep_indices]
+        weights = weights[keep_indices]
+
+    if edge_max_distance is not None:
+        keep_indices = []
+        for i in range(len(edges)):
+            if distances[i] < edge_max_distance:
+                keep_indices.append(i)
+        edges = edges[keep_indices]
+        distances = distances[keep_indices]
+        weights = weights[keep_indices]
+
+    if edge_remove_probability is not None:
+        keep_indices = []
+        for i in range(len(edges)):
+            if np.random.rand() <= edge_remove_probability:
+                keep_indices.append(i)
+        edges = edges[keep_indices]
+        distances = distances[keep_indices]
+        weights = weights[keep_indices]
+
+    D['edges'] = edges
+    D['distances'] = distances
+    D['weights'] = weights
+
+    return D
+
+def from_coordinates(X,norm=2,edges=None,weights=None,colors=None,**kwargs):
     """\
     Returns dictionary with dissimilarity measures from coordinates.
 
@@ -214,12 +276,14 @@ def from_projections(proj,Q,X,**kwargs):
     persp : perspective object
     Describes perspectives on X.
     """
-    Y = proj.project(Q,X)
     DD = {}
     DD['nodes'] = range(len(X))
     DD['attributes'] = range(len(Q))
+    Y = proj.project(Q,X)
     for k in range(len(Q)):
-        DD[k] = from_coordinates(Y[k],**kwargs)
+        D = from_coordinates(Y[k],**kwargs)
+        D = remove_edges(D,**kwargs)
+        DD[k] = D
     return DD
 
 def set_weights(D,function=None,scaling=0):
@@ -250,7 +314,7 @@ def set_weights(D,function=None,scaling=0):
             weights[nn] = distances[nn]**(-scaling)
     D['weights'] = weights
 
-def remove_edges(D,number=None,proportion=0.2):
+def remove_edges0(D,number=None,proportion=0.2):
     """\
     Reduces number of edges in graph by eliminating far away neighbors.
     """
@@ -314,7 +378,7 @@ def binomial(N,p,distances=None,K=1):
     Number of graphs.
     """
     assert isinstance(p,float); assert 0<p<=1
-    D = []
+    D = {}
     for k in range(K):
         edges = []
         for i in range(N):
@@ -331,9 +395,9 @@ def binomial(N,p,distances=None,K=1):
             'edges' : edges,
             'distances' : dist
         }
-        D.append(d)
-    if K == 1:
-        D = D[0]
+        D[k] = d
+    D['attributes'] = range(K)
+    D['nodes'] = range(N)
     return D
 
 ### OLDER ###
