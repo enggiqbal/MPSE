@@ -135,7 +135,7 @@ def algorithms(stepping_scheme='fixed',projection=None):
     
 def single(x0,F,p=None,step_rule='mm',min_cost=None,
            min_grad=None, min_step=None,max_iter=100,max_step=1e4,
-           lr=0.1,verbose=0,plot=False,**kwargs):
+           lr=10,verbose=0,plot=False,**kwargs):
     """\
     Gradient descent algorithms.
     """
@@ -172,6 +172,7 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
 
     t0 = time.time()
 
+    normalization = math.sqrt(np.size(x0))
     fx0, dfx0 = F(x0)
     dx = -lr*dfx0
     ndx = np.linalg.norm(dx)
@@ -183,12 +184,13 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
     if verbose > 1:
         print('  progress:')
     for i in range(max_iter):
-        fx, dfx = F(x); ndfx = np.linalg.norm(dfx)
-        costs[i] = fx; grads[i] = ndfx
+        fx, dfx = F(x) #cost and gradient evaluated at x
+        grads[i] = np.linalg.norm(dfx)/normalization #rms of gradient
+        costs[i] = fx
         if fx < min_cost:
             conclusion = 'minimum cost reached'
             break
-        if ndfx < min_grad:
+        if grads[i] < min_grad:
             conclusion = 'minimum gradient size reached'
             break
         x, kwargs = algorithm(x,dfx,**kwargs)
@@ -196,11 +198,11 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
             conclusion = 'update rule'
             break
         lrs[i] = kwargs['lr']
-        steps[i] = kwargs['ndx']
-        if kwargs['ndx'] < min_step:
+        steps[i] = kwargs['ndx']/normalization #rms of step size
+        if steps[i] < min_step:
             conclusion = 'minimum step reached reached'
             break
-        elif kwargs['ndx'] > max_step:
+        elif steps[i] > max_step:
             success = False
             conclusion = 'maximum step size reached (unstable)'
             break
@@ -210,10 +212,10 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
     
     tf = time.time()
 
-    costs = costs[0:i]
-    grads = grads[0:i]
-    lrs = lrs[0:i]
-    steps = steps[0:i]
+    costs = costs[0:i+1]
+    grads = grads[0:i+1]
+    lrs = lrs[0:i+1]
+    steps = steps[0:i+1]
 
     if plot is True:
         fig, ax = plt.subplots()
@@ -237,7 +239,7 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
         'time' : tf-t0
         }
         
-    if verbose > 2:
+    if verbose > 1:
         print('  results:')
         print(f'    conclusion : {conclusion}')
         print(f'    total iterations : {i}')
@@ -303,6 +305,7 @@ def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
 
     t0 = time.time()
 
+    normalization = [math.sqrt(np.size(a)) for a in X0]
     fX0, dfX0 = F(X0)
     dX = [-a*b for a,b in zip(lr,dfX0)]
     ndX = [np.linalg.norm(a) for a in dX]
@@ -318,12 +321,13 @@ def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
     if verbose > 1:
         print('  progress:')
     for i in range(max_iter):
-        fX, dfX = F(X); ndfX = [np.linalg.norm(a) for a in dfX]
-        costs[i] = fX; grads[i] = ndfX
+        fX, dfX = F(X)
+        grads[i] = [np.linalg.norm(a)/b for a, b in zip(dfX,normalization)]
+        costs[i] = fX
         if fX < min_cost:
             conclusion = 'minimum cost reached'
             break
-        if max(ndfX) < min_grad:
+        if max(grads[i]) < min_grad:
             conclusion = 'minimum gradient size reached'
             break
         for k in range(K):
@@ -332,7 +336,7 @@ def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
                 conclusion = 'update rule'
                 break
             lrs[i,k] = KWARGS[k]['lr']
-            steps[i,k] = KWARGS[k]['ndx']
+            steps[i,k] = KWARGS[k]['ndx']/normalization[k]
         if max(steps[i]) < min_step:
             conclusion = 'minimum step reached reached'
             break

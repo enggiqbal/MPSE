@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0,os.path.dirname(os.path.realpath(__file__)))
 import matplotlib.pyplot as plt
-import misc, distances, gd, perspective, mds, multiview
+import mds, mpse
 
 def MDS(D,dim=2,X0=None,batch_number=None,batch_size=10,lr=0.01,max_iters0=200,
         max_iters=200,verbose=0,plot=False,title='MDS solution',labels=None,
@@ -174,10 +174,8 @@ def MULTIVIEW0(D,dimX=3,dimY=2,Q='same',X0=None,batch_number=None,batch_size=10,
         plt.show()
     return vis.X, vis.cost, vis.H['cost']
 
-def MULTIVIEW(D,dimX=3,dimY=2,X0=None,batch_number=None,batch_size=10,lr=0.01,
-              max_iters0=200,max_iters=200,verbose=0,plot=False,
-              title='MULTIVIEW solution',
-              labels=None,**kwargs):
+def MULTIVIEW(D,dimX=3,dimY=2,X0=None,batch_number=None,batch_size=10,
+              max_iters=200,**kwargs):
     """\
     MULTIVIEW function, finding multiview-mds embedding with variable 
     projections. It looks for embedding X by 1) if X0 is not give, initializing 
@@ -241,21 +239,43 @@ def MULTIVIEW(D,dimX=3,dimY=2,X0=None,batch_number=None,batch_size=10,lr=0.01,
     cost_history : numpy array
     Array containing cost history through computation.
     """
-    assert isinstance(D,list)
+    X, Q, c, H = MPSE(D,d1=dimX,d2=dimY,X0=X0,max_iter=max_iters,**kwargs)
+    return X, Q, c, H['costs']
 
-    persp = perspective.Persp(dimX=dimX,dimY=dimY)
-    vis = multiview.Multiview(D,persp,verbose=verbose,title=title,labels=labels)
-    vis.setup_visualization(visualization='mds')
-    vis.initialize_Q()
-    vis.initialize_X(X0=X0,method='mds',batch_number=batch_number,
-                    batch_size=batch_size,lr=lr,max_iters=max_iters0)
+def MPSE(D,Q=None,X0=None,verbose=0,plot=False,
+         title='',**kwargs):
+    """\
+    MPSE function, finding mpse embedding/projections (the projections can be
+    specified beforehand). It uses the mpse.MPSE() methods.
 
-    vis.optimize_all(batch_number=batch_number,batch_size=batch_size,lr=lr,
-                     verbose=verbose,max_iters=max_iters0)
-    #vis.optimize_all(max_iters=max_iters,verbose=verbose)
+    Parameters:
 
+    D : dictionary or list or numpy array
+    Distance or dissimilarity matrices.
+
+    verbose : number
+    Prints verbose if > 0.
+
+    plot : boolean
+    Return plots of computation history and final embedding if True.
+    
+    title : string
+    Title used through computation (for verbose and plot purposes).
+
+    Returns:
+
+    (X,Q) : tuple
+    Final embedding and projection parameters (if not specified)
+
+    stats : dictionary
+    Computation history and results.
+    """
+    vis = mpse.MPSE(D,Q=Q,verbose=verbose,title=title,**kwargs)
+    if X0 is not None:
+        vis.initialize_X(X0)
+    vis.gd(verbose=verbose,**kwargs)
     if plot is True:
-        vis.figureX(title=title)
-        vis.figure(title=title)
+        vis.figureX()
+        vis.figureHY()
         plt.show()
-    return vis.X, vis.Q, vis.cost, vis.H['cost']
+    return vis.X, vis.Q, vis.cost, vis.H

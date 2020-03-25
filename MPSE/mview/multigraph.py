@@ -1,39 +1,41 @@
-import numbers, copy
+import numbers, copy, math
 import numpy as np
 import networkx as nx
 
-### Functions to set up a dissimilarity graph ###
+### Functions to set up distance graph and multigraphs ###
 
-# A dissimilarity graph is a dictionary containing the following attributes:
-# 'edges' : a list or array containing the edges of the graph (each edge is a
-# tuples of nodes)
+# A (distance) graph is a dictionary containing the following attributes:
+# 'node_number' : number of nodes
+# 'edge_number' : number of edges
+# 'edges' : a list or array containing the edges of the graph
 # 'distances' : a list or array containing the edge distances of the given edges
 # (it must have the same length as the list of edges)
 # Other possible attributes are:
 # 'weights' : a list or array containing the edge weights of the given edges (it# must hqve the same length as the list of edges)
 
-### ATTRIBUTE GRAPH FUNCTIONS ###
+### Check and setu graph ###
 
-def check_attribute(D, distances=False, weights=False):
+def graph_check(D, distances=True, weights=False):
+    assert 'node_number' in D
+    assert 'edge_number' in D
     assert 'edges' in D
-    assert isinstance(D['edges'],list) or isinstance(D['edges'],np.ndarray)
+    assert len(D['edges']) == D['edge_number']
     if distances is True:
         assert 'distances' in D
-        assert isinstances(D['distances'],np.ndarray)
-        assert len(D['distances'])==len(D['edges'])
+        assert len(D['distances']) == D['edge_number']
     if weights is True:
         assert 'weights' in D
-        assert isinstances(D['weights'],np.ndarray)
-        assert len(D['weights'])==len(D['edges'])
-        
-def check(D, make_distances_positive=False):
-    """\
-    Takes dissimilarity graph or matrix and returns dissimilarity graph. If D is
-    a dictionary, it checks that all attributes are included.
-    """
-    assert 'edges' in D
-    assert 'distances' in D
-    assert len(D['edges'])==len(D['distances'])
+        assert len(D['weights']) == D['edge_number']
+
+def graph_setup(D, distances=True, weights=False,**kwargs):
+    if isinstance(D,np.ndarray):
+        shape = D.shape; assert len(shape)==2; assert shape[0]==shape[1]
+        D = graph_from_matrix(D,**kwargs)
+    else:
+        graph_check(D)
+    return D
+
+### Edit graph ###
 
 def remove_edges(D, edge_min_distance=None, edge_max_distance=None,
                  edge_remove_probability=None, **kwargs):
@@ -97,7 +99,10 @@ def remove_edges(D, edge_min_distance=None, edge_max_distance=None,
 
     return D
 
-def from_coordinates(X,norm=2,edges=None,weights=None,colors=None,**kwargs):
+### Generate graph ###
+
+def graph_from_coordinates(X,norm=2,edges=None,weights=None,colors=None,
+                           **kwargs):
     """\
     Returns dictionary with dissimilarity measures from coordinates.
 
@@ -174,7 +179,9 @@ def from_coordinates(X,norm=2,edges=None,weights=None,colors=None,**kwargs):
         if isinstance(colors,int):
             colors = misc.labels(Y,axis=colors)
     DD = {
-        'nodes' : range(N),
+        'node_number' : N,
+        'node_labels' : range(N),
+        'edge_number' : len(e),
         'edges' : e,
         'distances' : d,
         'weights' : w,
@@ -182,7 +189,7 @@ def from_coordinates(X,norm=2,edges=None,weights=None,colors=None,**kwargs):
         }
     return DD
 
-def from_matrix(D,remove_zeros=True,transformation=None,weights=None):
+def graph_from_matrix(D,remove_zeros=True,transformation=None,weights=None):
     """\
     Returns diccionary with dissimilarity relations from dissimilarity matrix.
     
@@ -243,29 +250,95 @@ def from_matrix(D,remove_zeros=True,transformation=None,weights=None):
                     e[it] = [i,j]
                     d[it] = Dij
                     it += 1
-        e = e[0:it]
-        d = d[0:it]
+    e = e[0:it]
+    d = d[0:it]
+    w = np.ones(len(e))
+    
     DD = {
+        'node_number' : N,
+        'node_label' : range(N),
         'nodes' : range(N),
         'edges' : e,
         'distances' : d,
+        'weights' : w
         }
     return DD
 
-### MULTIGRAPHS ###
+### Check and setup multigraph ###
 
-def check_multigraph(DD):
+def multigraph_check(DD):
     """\
     Checks/complete multigraph dictionary DD.
     """
-    assert 'nodes' in DD; N = len(DD['nodes'])
-    assert 'attributes' in DD; K = len(DD['attributes'])
-    for attribute in DD['attributes']:
-        assert attribute in DD
-        assert isinstance(DD[attribute],dict)
-        check(DD[attribute])
+    assert 'attribute_number' in DD
+    assert 'attribute_labels' in DD
+    assert 'node_number' in DD
+    for attribute in DD['attribute_labels']:
+        graph_check(DD[attribute])
 
-def from_projections(proj,Q,X,**kwargs):
+def multigraph_setup(D0,**kwargs):
+    """\
+    Sets up distance multigraph from array or list or dictionary.
+
+    If D0 is a an array or list of arrays, then it is assumed that it consists 
+    of square matrices containing pairwise distances.
+    
+    If D0 is a dictionary, it is assumed that it already contains the distance
+    graphs.
+    """
+    if isinstance(D0,np.ndarray):
+        if len(D0.shape) == 2:
+            K=1; (N,NN) = D0.shape; assert N==NN
+            D0 = [D0]
+        else:
+            assert len(D0.shape) == 3
+            (K,N,NN) = D0.shape; assert N==NN
+
+    if isinstance(D0,list) or isinstance(D0,np.ndarray):
+        DD = {}
+        DD['attribute_number'] = K
+        DD['node_number'] = N
+        
+        DD['attribute_labels'] = range(K)
+        DD['node_labels'] = range(N)
+        
+        for i in range(K):
+            if isinstance(D0[i],np.ndarray):
+                DD[i] = graph_from_matrix(D0[i],**kwargs)
+            else:
+                graph_check(D0[i])
+                DD[i] = D0[i]
+                
+    elif isinstance(D0,dict):
+        multigraph_check(D0)
+        DD = D0
+        K = DD['attribute_number']; N = DD['node_number']
+    else:
+        sys.error('incorrect type for dissimilarity matrice(s)/graph(s)')
+
+    DD['normalization'] = 0
+    DD['rms'] = 0
+    for k in range(K):
+        D = DD[k]
+        assert 'edges' in D
+        assert 'distances' in D
+        if 'weights' not in D:
+            D['weights'] = np.ones(len(D['edges']))
+        D['distances'] = np.maximum(D['distances'],1e-4)
+        d = D['distances']; w = D['weights']
+        D['normalization'] = np.dot(w,d**2)
+        D['rms'] = math.sqrt(D['normalization']/len(d))
+        DD[k] = D
+        DD['normalization'] += D['normalization']**2
+        DD['rms'] += D['rms']**2
+    DD['normalization'] **= 0.5
+    DD['rms'] **= 0.5
+    
+    return DD
+
+### Generate multigraph ###
+
+def multigraph_from_projections(proj,Q,X,**kwargs):
     """\
     Generates list of graphs generated from objects X using projection rule proj
     with parameters Q.
@@ -277,11 +350,13 @@ def from_projections(proj,Q,X,**kwargs):
     Describes perspectives on X.
     """
     DD = {}
-    DD['nodes'] = range(len(X))
-    DD['attributes'] = range(len(Q))
+    DD['attribute_number'] = len(Q)
+    DD['attribute_labels'] = range(len(Q))
+    DD['node_number'] = len(X)
+    DD['node_labels'] = range(len(X))
     Y = proj.project(Q,X)
     for k in range(len(Q)):
-        D = from_coordinates(Y[k],**kwargs)
+        D = graph_from_coordinates(Y[k],**kwargs)
         D = remove_edges(D,**kwargs)
         DD[k] = D
     return DD

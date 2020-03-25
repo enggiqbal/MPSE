@@ -21,7 +21,7 @@ def mds_credit(number_of_points=990,dim=3,**kwargs):
     
 ### MULTIVIEW0 examples ###
     
-def multiview0_credit(number_of_points=100,number_of_projs=2,**kwargs):
+def credit_fixed(number_of_points=100,number_of_projs=2,**kwargs):
     path = 'datasets/dataset_tabluar/data/'
     D1 = np.genfromtxt(path+'discredit3_1000_1.csv', delimiter=',')
     D2 = np.genfromtxt(path+'discredit3_1000_2.csv', delimiter=',')
@@ -30,12 +30,11 @@ def multiview0_credit(number_of_points=100,number_of_projs=2,**kwargs):
     D1 = (D1[sub])[:,sub]; D2 = (D2[sub])[:,sub]; D3 = (D3[sub])[:,sub]
     D = [D1,D2,D3]; D = D[0:number_of_projs]
     D = [D1,D2]; D = D[0:number_of_projs]
-    points,cost,costhistory=mview.MULTIVIEW0(D,verbose=2,Q='standard',
-                                             plot=True,**kwargs)
+    mview.MULTIVIEW0(D,verbose=2,Q='standard',plot=True,**kwargs)
 
 ### MULTIVIEW examples ###
 
-def multiview_credit(number_of_points=100,number_of_projs=2,**kwargs):
+def credit(number_of_points=100,number_of_projs=2,**kwargs):
     path = 'datasets/dataset_tabluar/data/'
     D1 = np.genfromtxt(path+'discredit3_1000_1.csv', delimiter=',')
     D2 = np.genfromtxt(path+'discredit3_1000_2.csv', delimiter=',')
@@ -43,13 +42,11 @@ def multiview_credit(number_of_points=100,number_of_projs=2,**kwargs):
     sub = range(number_of_points) #subsample of data
     D1 = (D1[sub])[:,sub]; D2 = (D2[sub])[:,sub]; D3 = (D3[sub])[:,sub]
     D = [D1,D2,D3]; D = D[0:number_of_projs]
-    D = [D1,D2]; D = D[0:number_of_projs]
-    points,projections,cost,costhistory=mview.MULTIVIEW(D,verbose=2,plot=True,
-                                                        **kwargs)
+    mview.MULTIVIEW(D,verbose=2,plot=True,**kwargs)
 
 if __name__=='__main__':
     #MDS:
     #mds_disk()
     #mds_credit(number_of_points=100)
-    multiview0_credit(number_of_points=100,number_of_projs=2)
-    multiview_credit(number_of_points=100,number_of_projs=2)
+    credit_fixed(number_of_points=100,number_of_projs=2)
+    credit(number_of_points=30,number_of_projs=3,edge_probability=.7)

@@ -1,0 +1,30 @@
+import sys
+import numbers, math, random
+import matplotlib.pyplot as plt
+import numpy as np
+
+sys.path.insert(1, '../')
+import misc, multigraph, mds
+
+def reliability(N=100,trials=3,repeats=5,**kwargs):
+    """\
+    Check number of times the mds algorithm is able to reach the optimal
+    solution for different random embeddings.
+    """
+    print('\n***mds.reliability()***')
+    cost = np.empty((repeats,trials))
+    success = np.zeros(repeats)
+    for i in range(repeats):
+        X = misc.disk(N,2)
+        D = multigraph.graph_from_coordinates(X,**kwargs)
+        for j in range(trials):
+            vis = mds.MDS(D,dim=2,**kwargs)
+            vis.gd(min_step=1e-3,**kwargs)
+            cost[i,j] = vis.cost
+            if vis.cost < 1e-3:
+                success[i] += 1
+    print(cost)
+    print(success)
+
+if __name__=='__main__':
+    reliability(30)

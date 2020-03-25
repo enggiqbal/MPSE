@@ -5,13 +5,13 @@ import numpy as np
 
 import misc, multigraph, gd, plots
 
-def dissimilarity_graph(D):
+def setup_dissimilarity_graph(dissimilarity):
     """\
     Sets up dissimilarity graph to be used by MDS.
     
     Parameters:
 
-    D : dictionary or numpy array
+    dissimilarity : dictionary or numpy array
     Can be either i) a dictionary containing keys 'nodes', 'edges', 'distances',
     and 'weights'. D['nodes'] is a list of nodes (must be range(N) for some N as
     of now) and the rest are lists of the same size; ii) a dissimilarity 
@@ -26,23 +26,11 @@ def dissimilarity_graph(D):
     'distances' = list of distances corresponding to 'edges'
     'weights' = list of weights corresponding to 'edges'
     """
-    if isinstance(D,np.ndarray):
-        shape = D.shape; assert len(shape)==2; assert shape[0]==shape[1]
-        D = multigraph.from_matrix(D)
-        D['nodes'] = range(shape[0])
+    D = multigraph.graph_setup(dissimilarity,distances=True,weights=True)
 
-    assert 'nodes' in D
-    assert 'edges' in D
-    assert 'distances' in D
-
-    if 'weights' not in D:
-        D['weights'] = np.ones(len(D['edges']))
-
-    D['distances'] = np.maximum(D['distances'],1e-4)
-    
     d = D['distances']; w = D['weights']
     D['normalization'] = np.dot(w,d**2)
-    D['rms'] = math.sqrt(D['normalization']/len(d))
+    D['rms'] = math.sqrt(D['normalization']/D['edge_number'])
 
     if 'colors' not in D:
         D['colors'] = None
@@ -136,7 +124,7 @@ class MDS(object):
     """\
     Class with methods to solve multi-dimensional scaling problems.
     """
-    def __init__(self, D, dim=2, verbose=0, title='',**kwargs):
+    def __init__(self, D, dim=2, verbose=0, title='',level=0,**kwargs):
         """\
         Initializes MDS object.
 
@@ -157,11 +145,11 @@ class MDS(object):
         Title assigned to MDS object.
         """
         if verbose > 0:
-            print('+ mds.MDS('+title+'):')
+            print('  '*level+'mds.MDS('+title+'):')
         self.verbose = verbose; self.title = title
 
-        self.D = dissimilarity_graph(D)
-        self.N = len(D['nodes']); self.NN = len(D['edges'])
+        self.D = setup_dissimilarity_graph(D)
+        self.N = D['node_number']; self.NN = D['edge_number']
         
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
@@ -172,13 +160,13 @@ class MDS(object):
         self.H = {}
         
         if verbose > 0:
-            print('  dissimilarity stats:')
-            print(f'    number of points : {self.N}')
-            print(f'    number of edges : {self.NN}')
-            print(f'    dissimilarity rms : {self.D["rms"]:0.2e}')
-            print(f'    normalization factor : {self.D["normalization"]:0.2e}')
-            print('  embedding stats:')
-            print(f'    dimension : {self.dim}')
+            print('  '*level+'  dissimilarity stats:')
+            print('  '*level+f'    number of points : {self.N}')
+            print('  '*level+f'    number of edges : {self.NN}')
+            print('  '*level+f'    dissimilarity rms : {self.D["rms"]:0.2e}')
+            print('  '*level+f'    normalization factor : {self.D["normalization"]:0.2e}')
+            print('  '*level+'  embedding stats:')
+            print('  '*level+f'    dimension : {self.dim}')
             
     def initialize(self, X0=None, title='',**kwargs):
         """\
@@ -227,7 +215,8 @@ class MDS(object):
 
     ### Methods to update MDS embedding ###
 
-    def gd(self, step_rule='mm', edge_probability=None, title='', **kwargs):
+    def gd(self, step_rule='mm', min_step=1e-4, edge_probability=None,
+           title='', **kwargs):
         if hasattr(self,'X') is False:
             self.initialize(title='automatic')
         if self.verbose > 0:
@@ -236,7 +225,8 @@ class MDS(object):
             print(f'    edge probability : {edge_probability}')
             print(f'    initial stress : {self.cost:0.2e}')
         F = lambda X: self.F(X,edge_probability=edge_probability)
-        self.X, H = gd.single(self.X,F,step_rule=step_rule,**kwargs)
+        self.X, H = gd.single(self.X,F,step_rule=step_rule,
+                              min_step=min_step,**kwargs)
         self.update(H=H)
         if self.verbose > 0:
             print(f'    final stress : {self.cost:0.2e}')
@@ -287,7 +277,7 @@ class MDS(object):
                                    
 ### TESTS ###
 
-def example_disk(N=100,dim=2):
+def example_disk(N=100,dim=2,**kwargs):
     print('\n***mds.example_disk()***')
     
     Y = misc.disk(N,dim); colors = misc.labels(Y)
@@ -298,15 +288,27 @@ def example_disk(N=100,dim=2):
     plt.draw()
     plt.pause(1)
     
-    D = multigraph.from_coordinates(Y,colors=colors)
+    D = multigraph.graph_from_coordinates(Y,colors=colors)
     title = 'basic disk example'
     mds = MDS(D,dim=dim,verbose=1,title=title)
     mds.initialize()
     mds.figureX(title='initial embedding',colors=True)
-    mds.gd(edge_probability=None,verbose=2,plot=True)
+    mds.gd(edge_probability=None,verbose=2,plot=True,**kwargs)
     mds.figureX(title='final embedding',colors=True)
     mds.figureH()
     plt.show()
+
+def test1(N=100,trials=3,repeats=5,**kwargs):
+    print('\n***mds.test1()***')
+    cost = np.empty((repeats,trials))
+    for i in range(repeats):
+        X = misc.disk(N,2)
+        D = multigraph.graph_from_coordinates(X,**kwargs)
+        for j in range(trials):
+            mds = MDS(D,dim=2,**kwargs)
+            mds.gd(min_step=1e-3,**kwargs)
+            cost[i,j] = mds.cost
+    print(cost)
 
 def test_gd_lr(N=100,dim=2):
     print('\n***mds.gd_lr()***')
@@ -566,7 +568,8 @@ def embeddability_noise(ax=None):
         plt.show()
 if __name__=='__main__':
 
-    example_disk(N=100)
+    example_disk(N=1000)
+    #test1(N=100,edge_probability=.5)
     #test_gd_lr()
     #example_approx(N=100)
     #example_weights(N=100,dim=2)

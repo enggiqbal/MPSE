@@ -6,51 +6,15 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import misc, multigraph, gd, projections, mds, tsne, plots
 
-def setup_multigraph(D0):
-    """\
-    Sets up dissimilarity multigraph to be used by MPSE.
-    """
-    assert isinstance(D0,list) or isinstance(D0,dict)
-    DD = D0
-    DD['normalization'] = 0
-    DD['rms'] = 0
-    if isinstance(D0,dict):
-        K = len(D0['attributes'])
-        DD['number'] = K
-        for k in range(K):
-            D = D0[k]
-            if isinstance(D,np.ndarray):
-                shape = D.shape
-                assert len(shape) == 2 and shape[0] == shape[1]
-                D = multigraph.from_matrix(D)
-                DD[k] = D
-            elif isinstance(D,dict):
-                assert 'nodes' in D
-                assert 'edges' in D
-                assert 'distances' in D
-                if 'weights' not in D:
-                    D['weights'] = np.ones(len(D['edges']))
-                D['distances'] = np.maximum(D['distances'],1e-4)
-                d = D['distances']; w = D['weights']
-                D['normalization'] = np.dot(w,d**2)
-                D['rms'] = math.sqrt(D['normalization']/len(d))
-                DD[k] = D
-            DD[k] = D
-            DD['normalization'] += D['normalization']**2
-            DD['rms'] += D['rms']**2
-    DD['normalization'] **= 0.5
-    DD['rms'] **= 0.5
-    return DD
-
 class MPSE(object):
     """\
     Class with methods for multi-perspective simultaneous embedding.
     """
 
     def __init__(self, dissimilarities, d1=3, d2=2, family='linear',
-                 constraint='orthogonal', X=None, Q=None,
+                 constraint='orthogonal', X=None, Q=None, X0=None, Q0=None,
                  visualization='mds', total_cost_function='rms', verbose=0,
-                 title='',**kwargs):
+                 title='',level=0,**kwargs):
         """\
         Initializes MPSE object.
 
@@ -66,26 +30,24 @@ class MPSE(object):
         and that all projections are the identity. 
         """
         if verbose > 0:
-            print('+ mpse.MPSE('+title+'):')
-        self.verbose = verbose; self.title = title
+            print('mpse.MPSE('+title+'):')
+        self.verbose = verbose; self.title = title; self.level = level
 
-        self.D = setup_multigraph(dissimilarities)
-        self.N = len(self.D['nodes'])
-        self.NN = len(self.D[0]['edges']) #########
-        self.K = self.D['number']
+        self.D = multigraph.multigraph_setup(dissimilarities)
 
-        self.d1X = d1; self.d2 = d2
+        self.K = self.D['attribute_number']
+        self.N = self.D['node_number']
+
+        self.d1 = d1; self.d2 = d2
         self.family = family; self.constraint='orthogonal'
         proj = projections.PROJ(d1,d2,family,constraint)
 
         assert X is None or Q is None
-        
         if X is None:
             self.Xfixed = False
         else:
             self.Xfixed = True
         self.X = X
-
         if Q is None:
             self.Qfixed = False
             self.Q = Q
@@ -99,11 +61,10 @@ class MPSE(object):
                 proj.check(Q=self.Q)
         self.proj = proj
 
-        self.setup_visualization(visualization=visualization,**kwargs)
+        self.X0 = X0
+        self.Q0 = Q0
 
-        #self.individual_D_rms = np.sqrt(np.sum(D**2,axis=(1,2))/ \
-        #(self.N*(self.N-1)))
-        #self.D_rms = np.sqrt(np.sum(D**2)/(self.N*(self.N-1)*self.K))
+        self.setup_visualization(visualization=visualization,**kwargs)
 
         self.H = {}
         
@@ -111,19 +72,11 @@ class MPSE(object):
             print('  dissimilarity stats:')
             print(f'    number of views : {self.K}')
             print(f'    number of points : {self.N}')
-            print(f'    number of edges : {self.NN}')
             print(f'    dissimilarity rms : {self.D["rms"]:0.2e}')
             print(f'    normalization factor : {self.D["normalization"]:0.2e}')
             print('  embedding stats:')
             print(f'    embedding dimension : {self.proj.d1}')
             print(f'    projection dimension : {self.proj.d2}')
-
-        if X is None:
-            self.initialize_X(title='automatic')
-        else:
-            self.X = X
-        if Q is None:
-            self.initialize_Q(title='automatic')
 
     def setup_visualization(self,visualization='mds',**kwargs):
         assert visualization in ['mds','tsne']
@@ -136,10 +89,12 @@ class MPSE(object):
 
         self.visualization= []
         for k in range(self.K):
-            self.visualization.append(visualization_class(self.D[k],
-                                                          self.proj.d2,
-                                                          verbose=self.verbose,
-                                                          **kwargs))
+            self.visualization.\
+                append(visualization_class(self.D[k],self.proj.d2,
+                                           verbose=self.verbose,
+                                           level=self.level+1,
+                                           title=f'perspective # {k+1}',
+                                           **kwargs))
         
         def cost_function(X,Q,Y=None):
             if Y is None:
@@ -230,7 +185,7 @@ class MPSE(object):
         Set initial parameters for perspective functions.
         """
         if self.verbose > 0:
-            print('- Multiview.initialize_Q():')
+            print('  Multiview.initialize_Q():')
         self.Q = self.proj.generate(number=self.K,**kwargs)
         self.Q0 = self.Q.copy()
         self.update()
@@ -251,17 +206,17 @@ class MPSE(object):
         retained.
         """
         if self.verbose > 0:
-            print('- Multiview.initialize_X():')
+            print('  MPSE.initialize_X():')
 
         if X0 is not None:
             if self.verbose > 0:
-                print('  method : X0 given')
+                print('    method : X0 given')
             assert isinstance(X0,np.ndarray)
             assert X0.shape == (self.N,self.proj.d1)
             self.X = X0
         else:
             if self.verbose > 0:
-                print('  method : ',method)
+                print('    method : ',method)
             if method == 'random':
                 self.X = misc.initial_embedding(self.N,dim=self.proj.d1,
                                                 radius=1)
@@ -293,14 +248,14 @@ class MPSE(object):
         self.X = self.X0; self.H = {}; self.update()
 
     def gd(self, step_rule='mm', min_step=1e-6,**kwargs):
-        if self.verbose > 0:
-            print('-  MPSE.gd()')
-
         if self.Q is None:
             self.initialize_Q(title='automatic')
         if self.X is None:
             self.initialize_X(title='automatic')
 
+        if self.verbose > 0:
+            print('  MPSE.gd():')
+            
         if self.Qfixed is True:
             if self.verbose > 0:
                 print('    mpse method : fixed projections')
@@ -402,7 +357,7 @@ class MPSE(object):
 def disk(N=100,Qfixed=False,Xfixed=False,**kwargs):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
     proj = projections.PROJ(); Q = proj.generate(number=3,method='standard')
-    D = multigraph.from_projections(proj,Q,X,**kwargs)
+    D = multigraph.multigraph_from_projections(proj,Q,X,**kwargs)
     if Qfixed is True:
         mv = MPSE(D,Q=Q,verbose=1)
     elif Xfixed is True:
