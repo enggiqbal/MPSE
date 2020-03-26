@@ -260,7 +260,7 @@ class MPSE(object):
             if self.verbose > 0:
                 print('    mpse method : fixed projections')
                 print(f'    initial stress : {self.cost:0.2e}')
-            F = lambda X : self.FX(X,self.Q)
+            F = lambda X : self.FX(X,self.Q,**kwargs)
             self.X, H = gd.single(self.X,F,step_rule=step_rule,
                                   min_step=min_step,**kwargs)
             self.update(H=H)
@@ -364,7 +364,7 @@ def disk(N=100,Qfixed=False,Xfixed=False,**kwargs):
         mv = MPSE(D,X=X,verbose=1)
     else:
         mv = MPSE(D,verbose=1)
-    mv.gd(verbose=2,plot=True,**kwargs)
+    mv.gd(verbose=2,min_step=1e-4,plot=True,**kwargs)
     mv.figureX()
     mv.figureHY()
     plt.show()
@@ -467,7 +467,7 @@ def xyz():
 
     
 if __name__=='__main__':
-    disk(30,Qfixed=True,edge_max_distance=2,edge_probability=.5,max_iter=300)
+    disk(1000,edge_max_distance=2,edge_probability=.1,max_iter=300)
     #disk(30,Xfixed=True)
     #disk(30)
     #example_binomial(N=30,K=3)

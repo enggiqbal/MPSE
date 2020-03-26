@@ -252,7 +252,7 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
 
 def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
              min_grad=None, min_step=None,max_iter=100,max_step=1e4,
-             lr=0.1,verbose=0,plot=False,**kwargs):
+             lr=10,verbose=0,plot=False,**kwargs):
     """\
     Gradient descent algorithms.
     """

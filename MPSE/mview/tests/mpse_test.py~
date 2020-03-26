@@ -58,12 +58,12 @@ def reliability(N=[100],edge_probability=[None],trials=10,**kwargs):
     success_ratio = success_count/trials
 
     plt.figure()
-    df = pd.DataFrame(success_ratio.T,E,N)
+    df = pd.DataFrame(time_ave.T,E,N)
     sn.set(font_scale=1.4)
-    sn.heatmap(df, annot=time_ave.T, cbar_kws={'label': 'success ratio'})
+    sn.heatmap(df, annot=success_ratio.T, cbar_kws={'label': 'time'})
     plt.xlabel('number of nodes')
     plt.ylabel('edge probabilities')
-    plt.title('computation time')
+    plt.title('Success ratio')
     plt.show()
     
 if __name__=='__main__':

@@ -13,7 +13,7 @@ import networkx as nx
 # Other possible attributes are:
 # 'weights' : a list or array containing the edge weights of the given edges (it# must hqve the same length as the list of edges)
 
-### Check and setu graph ###
+### Check and setup graph ###
 
 def graph_check(D, distances=True, weights=False):
     assert 'node_number' in D

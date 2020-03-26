@@ -250,8 +250,15 @@ def MPSE(D,Q=None,X0=None,verbose=0,plot=False,
 
     Parameters:
 
-    D : dictionary or list or numpy array
+    D : dictionary or list or numpy arrays
     Distance or dissimilarity matrices.
+
+    Q : None or string or list of numpy arrays
+    If None, Q is not specified and optimization runs for both X and Q.
+    If not None, then Q is fixed and given as specified.
+
+    X0 : None or numpy array
+    Optional initial embedding.
 
     verbose : number
     Prints verbose if > 0.
@@ -264,11 +271,33 @@ def MPSE(D,Q=None,X0=None,verbose=0,plot=False,
 
     Returns:
 
-    (X,Q) : tuple
-    Final embedding and projection parameters (if not specified)
+    X : array
+    Final embedding.
 
-    stats : dictionary
-    Computation history and results.
+    Q : list of arrays
+    Final projection parameters.
+
+    cost : number
+    Final normalized cost.
+    
+    H : dictionary
+    Dictionary with computation stats, such as:
+    H['cost'] = cost history
+    H['step'] = step size history
+    H['grad'] = gradient size history
+    H['time'] = total computation time
+
+    kwargs:
+
+    max_iter = number of maximum iterations
+    min_step = minimum step size stopping criterion
+    max_step = maximum step size stopping criterion
+    min_cost = minimum cost stopping criterion
+    lr = initial learning rate (unnecessary for adaptive schemes)
+
+    edge_probability = None or a number between 0 and 1. If given, stochastic
+    gradient descent is used (edges are included in computation with given
+    probability).
     """
     vis = mpse.MPSE(D,Q=Q,verbose=verbose,title=title,**kwargs)
     if X0 is not None:
