@@ -6,6 +6,27 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import misc, multigraph, gd, projections, mds, tsne, plots
 
+def maybe():
+    DD['normalization'] = 0
+    DD['rms'] = 0
+    for k in range(K):
+        D = DD[k]
+        assert 'edges' in D
+        assert 'distances' in D
+        if 'weights' not in D:
+            D['weights'] = np.ones(len(D['edges']))
+        D['distances'] = np.maximum(D['distances'],1e-4)
+        d = D['distances']; w = D['weights']
+        D['normalization'] = np.dot(w,d**2)
+        D['rms'] = math.sqrt(D['normalization']/len(d))
+        DD[k] = D
+        DD['normalization'] += D['normalization']**2
+        DD['rms'] += D['rms']**2
+    DD['normalization'] **= 0.5
+    DD['rms'] **= 0.5
+    
+    return DD
+
 class MPSE(object):
     """\
     Class with methods for multi-perspective simultaneous embedding.
@@ -33,13 +54,14 @@ class MPSE(object):
             print('mpse.MPSE('+title+'):')
         self.verbose = verbose; self.title = title; self.level = level
 
-        self.D = multigraph.multigraph_setup(dissimilarities)
+        self.DD = multigraph.multigraph_setup(dissimilarities)
+        self.D = self.DD.D
 
-        self.K = self.D['attribute_number']
-        self.N = self.D['node_number']
+        self.K = self.DD.attributes
+        self.N = self.DD.nodes
 
         self.d1 = d1; self.d2 = d2
-        self.family = family; self.constraint='orthogonal'
+        self.family = family; self.constraint=constraint
         proj = projections.PROJ(d1,d2,family,constraint)
 
         assert X is None or Q is None
@@ -72,8 +94,8 @@ class MPSE(object):
             print('  dissimilarity stats:')
             print(f'    number of views : {self.K}')
             print(f'    number of points : {self.N}')
-            print(f'    dissimilarity rms : {self.D["rms"]:0.2e}')
-            print(f'    normalization factor : {self.D["normalization"]:0.2e}')
+            #print(f'    dissimilarity rms : {self.D["rms"]:0.2e}')
+            #print(f'    normalization factor : {self.D["normalization"]:0.2e}')
             print('  embedding stats:')
             print(f'    embedding dimension : {self.proj.d1}')
             print(f'    projection dimension : {self.proj.d2}')
@@ -290,8 +312,8 @@ class MPSE(object):
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}')            
  
-    def figureX(self,title='Final embedding',perspectives=True,
-                labels=None,edges=None,colors=None,plot=True,save=False):
+    def figureX(self,title=None,perspectives=True,
+                labels=None,edges=None,colors=True,plot=True,save=False):
 
         if perspectives is True:
             perspectives = []
@@ -305,6 +327,8 @@ class MPSE(object):
         if edges is not None:
             if isinstance(edges,numbers.Number):
                 edges = edges-self.D
+        if colors is True:
+            colors = self.DD.ncolor
         plots.plot3D(self.X,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,save=save)
 
@@ -322,7 +346,7 @@ class MPSE(object):
             else:
                 edges_k = edges[k]
             if colors is True:
-                colors_k = self.D[k]['colors']
+                colors_k = self.DD.ncolor ####
             else:
                 colors_k = None
             plots.plot2D(self.Y[k],edges=edges_k,colors=colors_k,ax=ax[k],
@@ -357,13 +381,19 @@ class MPSE(object):
 def disk(N=100,Qfixed=False,Xfixed=False,**kwargs):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
     proj = projections.PROJ(); Q = proj.generate(number=3,method='standard')
-    D = multigraph.multigraph_from_projections(proj,Q,X,**kwargs)
+    DD = multigraph.DISS(N,ncolor=labels)
+    for i in range(3):
+        DD.from_features(proj.project(Q[i],X))
+    #D = multigraph.multigraph_from_projections(proj,Q,X,**kwargs)
     if Qfixed is True:
-        mv = MPSE(D,Q=Q,verbose=1)
+        mv = MPSE(DD,Q=Q,verbose=1)
     elif Xfixed is True:
-        mv = MPSE(D,X=X,verbose=1)
+        mv = MPSE(DD,X=X,verbose=1)
     else:
-        mv = MPSE(D,verbose=1)
+        mv = MPSE(DD,verbose=1)
+    mv.initialize_Q()
+    mv.initialize_X()
+    mv.figureX(title='initial embedding')
     mv.gd(verbose=2,min_step=1e-4,plot=True,**kwargs)
     mv.figureX()
     mv.figureHY()
@@ -467,7 +497,7 @@ def xyz():
 
     
 if __name__=='__main__':
-    disk(1000,edge_max_distance=2,edge_probability=.1,max_iter=300)
+    disk(30,edge_max_distance=2,edge_probability=.1,max_iter=300)
     #disk(30,Xfixed=True)
     #disk(30)
     #example_binomial(N=30,K=3)

@@ -1,4 +1,4 @@
-import numbers, copy, math
+import sys, numbers, copy, math
 import numpy as np
 import networkx as nx
 
@@ -13,27 +13,245 @@ import networkx as nx
 # Other possible attributes are:
 # 'weights' : a list or array containing the edge weights of the given edges (it# must hqve the same length as the list of edges)
 
-### Check and setup graph ###
+### Check and setup attribute or dissimilarity graph ###
 
-def graph_check(D, distances=True, weights=False):
-    assert 'node_number' in D
-    assert 'edge_number' in D
-    assert 'edges' in D
-    assert len(D['edges']) == D['edge_number']
-    if distances is True:
-        assert 'distances' in D
-        assert len(D['distances']) == D['edge_number']
-    if weights is True:
-        assert 'weights' in D
-        assert len(D['weights']) == D['edge_number']
-
-def graph_setup(D, distances=True, weights=False,**kwargs):
-    if isinstance(D,np.ndarray):
-        shape = D.shape; assert len(shape)==2; assert shape[0]==shape[1]
-        D = graph_from_matrix(D,**kwargs)
+def attribute_check(D):
+    assert isinstance(D,dict)
+    for key in ['nodes','edges','type','complete']:
+        assert key in D
+    if D['complete'] is True:
+        assert 'dfunction' in D
     else:
-        graph_check(D)
+        assert 'elist' in D
+    if D['type'] == 'matrix':
+        assert 'matrix' in D
+    elif D['type'] == 'features':
+        assert 'features' in D
+    elif D['type'] == 'graph':
+        'dlist' in D
+    else:
+        sys.abort('Attribute type incorrect')
+
+def attribute_setup(D,**kwargs):
+    """\
+    Sets up attribute dictionary without having to call DISS explicitly.
+
+    Parameters:
+
+    D : array or dictionary
+    """
+    if isinstance(D,dict) and 'type' in D:
+        D = D
+    elif isinstance(D,np.ndarray):
+        N = len(D)
+        diss = DISS(N,**kwargs)
+        if len(D.shape)==2 and D.shape[0]==D.shape[1]:
+            diss.from_matrix(D,**kwargs)
+        else:
+            diss.from_features(D,**kwargs)
+        D = diss.D[0]
+    elif isinstance(D,dict):
+        if 'nodes' in D:
+            N = D['nodes']
+        else:
+            assert 'elist' in D
+            N = np.max(D['elist'])
+        diss = DISS(N,**kwargs)
+        diss.from_graph(**D,**kwargs)
+        D = diss.D[0]
     return D
+
+def multigraph_check(DD):
+    """\
+    Checks/complete multigraph dictionary DD.
+    """
+    assert isinstance(DD,DISS)
+
+def multigraph_setup(D0,**kwargs):
+    """\
+    Sets up distance multigraph from array or list or dictionary.
+
+    If D0 is a an array or list of arrays, then it is assumed that it consists 
+    of square matrices containing pairwise distances.
+    
+    If D0 is a dictionary, it is assumed that it already contains the distance
+    graphs.
+    """
+    if isinstance(D0,DISS):
+        DD = D0
+    else:
+        if isinstance(D0,np.ndarray):
+            if len(D0.shape) <= 2:
+                K=1; D0 = [D0]
+            else:
+                K=len(D0)
+        D = []
+        for k in range(K):
+            D.append(attribute_setup(D0[k]))
+
+        nodes = max([D[k]['nodes'] for k in range(K)])
+        DD = DISS(nodes,**kwargs)
+        DD.D = D
+        DD.attributes = K
+
+    return DD
+
+### CLASS ###
+
+class DISS(object):
+    """\
+    Class with methods to compute dissimilarity relations
+    """
+    def __init__(self, nodes, nlabel=None, ncolor=None,**kwargs):
+        self.nodes = nodes
+        self.nlabel = nlabel
+        self.ncolor = ncolor
+        self.attributes = 0
+        self.D = []
+
+    def return_attribute(self,attribute=0,**kwargs):
+        """\
+        Returns dictionary for specified attribute.
+        """
+        assert isinstance(attribute,int)
+        assert attribute in range(self.attributes)
+        D = self.D[attribute]
+        if 'ncolor' not in D or D['ncolor'] is None:
+            D['ncolor'] = self.ncolor
+        return D
+
+    def from_matrix(self,matrix,label=None,**kwargs):
+        """\
+        Adds a perspective to self using a pairwise dissimilarity matrix.
+        
+        Parameters:
+        matrix : (N by N) numpy array
+        Dissimilarity matrix.
+        """
+        assert isinstance(matrix,np.ndarray)
+        shape = matrix.shape; assert len(shape)==2;
+        assert shape[0]==self.N; assert shape[1]==self.N
+
+        D = {}
+        D['nodes'] = self.nodes
+        D['type'] = 'matrix'
+        D['matrix'] = matrix
+        D['complete'] = True
+        D['edges'] = int(self.N*(self.N-1)/2)
+        D['dfunction'] = lambda i,j : D['matrix'][i,j]                
+        D['label'] = label
+        
+        self.add_weights(D,**kwargs)
+        self.D.append(D)
+        self.attributse += 1
+
+    def from_features(self,features,distance=None,label=None,**kwargs):
+        """\
+        Adds a perspective to self node features and a distance function.
+        
+        Parameters:
+        
+        features : (length N) list or array
+        Contains node features.
+
+        distance :None or callable
+        If None, uses Euclidean distance (each feature must be np.ndarray).
+        If callable, uses distance as pairwise distance function.
+        """
+        assert len(features) == self.nodes
+        if distance is None:
+            distance = lambda x,y : np.linalg.norm(x-y)
+        else:
+            assert callable(distance)
+
+        D = {}
+        D['nodes'] = self.nodes
+        D['type'] = 'features'
+        D['complete'] = True
+        D['edges'] = int(self.nodes*(self.nodes-1)/2)
+        D['features'] = features
+        D['dfunction'] = lambda i,j :\
+            distance(D['features'][i],D['features'][j])
+        D['label'] = label
+        
+        self.add_weights(D,**kwargs)
+        self.D.append(D)
+        self.attributes += 1
+
+    def from_graph(self,elist,dlist,nodes=None,label=None,**kwargs):
+        """\
+        Adds an attribute to self using lists of edges and distances.
+        
+        Parameters:
+        
+        elist : (NN x 2) array-like
+        List of edges in the graph.
+
+        dlist : (lenght NN) array-like
+        Distances/dissimilarities corresponding to elist.
+        """
+        assert len(elist) == len(dlist)
+
+        D = {}
+        D['nodes'] = self.nodes
+        D['type'] = 'graph'
+        d['complete'] = False
+        D['edges'] = len(elist)
+        D['elist'] = elist
+        D['dlist'] = dlist
+        D['label'] = label
+        
+        self.add_weights(D,**kwargs)
+        self.D.append(D)
+        self.attributes += 1
+
+    def compose_distances(self,attribute,function=None,**kwargs):
+        if function is None:
+            return
+        if isinstance(function,str):
+            assert function in ['ones','reciprocal']
+        if function == 'ones':
+            if 'dfunction' in self.D[attribute]:
+                self.D[attribute]['dfunction'] = lambda i,j : 1
+            if 'dlist' in self.D[attribute]:
+                NN = self.D[attribute]['edges']
+                self.D[attribute]['dlist'] = np.ones(NN)
+        elif function == 'reciprocal':
+            if 'dfunction' in self.D[attribute]:
+                return None ####
+            if 'dlist' in self.D[attribute]:
+                dlist = self.D[attribute]['dlist']
+                self.D[attribute]['dlist'] = 1.0/dlist
+        else:   
+            if 'dfunction' in self.D[attribute]:
+                return None ####
+            if 'dlist' in self.D[attribute]:
+                dlist = self.D[attribute]['dlist']
+                NN = self.D[attribute]['edges']
+                new_dlist = np.empty(NN)
+                for i in range(NN):
+                    new_dlist[i] = function(dlist[i])
+                self.D[attribute]['dlist'] = new_list
+                
+    def reduce_to_subgraph(self,attribute,**kwargs):
+        return None
+        
+    ### Weights ###
+
+    def add_weights(self,D,weights=None,**kwargs):
+        if weights is None:
+            D['weighted'] = False
+        else:
+            D['weighted'] = True
+            if isinstance(weights,np.ndarray):
+                D['weight_matrix'] = weights
+                D['weights'] = lambda i,j : D['weight_matrix'][i,j]
+            elif callable(weights):
+                D['weight_function'] = weights
+                D['weights'] = lambda i,j :\
+                    D['weight_function'](D['weight_matrix'][i,j])
+            else:
+                sys.error('Incorrect weights type')
 
 ### Edit graph ###
 
@@ -264,78 +482,6 @@ def graph_from_matrix(D,remove_zeros=True,transformation=None,weights=None):
         }
     return DD
 
-### Check and setup multigraph ###
-
-def multigraph_check(DD):
-    """\
-    Checks/complete multigraph dictionary DD.
-    """
-    assert 'attribute_number' in DD
-    assert 'attribute_labels' in DD
-    assert 'node_number' in DD
-    for attribute in DD['attribute_labels']:
-        graph_check(DD[attribute])
-
-def multigraph_setup(D0,**kwargs):
-    """\
-    Sets up distance multigraph from array or list or dictionary.
-
-    If D0 is a an array or list of arrays, then it is assumed that it consists 
-    of square matrices containing pairwise distances.
-    
-    If D0 is a dictionary, it is assumed that it already contains the distance
-    graphs.
-    """
-    if isinstance(D0,np.ndarray):
-        if len(D0.shape) == 2:
-            K=1; (N,NN) = D0.shape; assert N==NN
-            D0 = [D0]
-        else:
-            assert len(D0.shape) == 3
-            (K,N,NN) = D0.shape; assert N==NN
-
-    if isinstance(D0,list) or isinstance(D0,np.ndarray):
-        DD = {}
-        DD['attribute_number'] = K
-        DD['node_number'] = N
-        
-        DD['attribute_labels'] = range(K)
-        DD['node_labels'] = range(N)
-        
-        for i in range(K):
-            if isinstance(D0[i],np.ndarray):
-                DD[i] = graph_from_matrix(D0[i],**kwargs)
-            else:
-                graph_check(D0[i])
-                DD[i] = D0[i]
-                
-    elif isinstance(D0,dict):
-        multigraph_check(D0)
-        DD = D0
-        K = DD['attribute_number']; N = DD['node_number']
-    else:
-        sys.error('incorrect type for dissimilarity matrice(s)/graph(s)')
-
-    DD['normalization'] = 0
-    DD['rms'] = 0
-    for k in range(K):
-        D = DD[k]
-        assert 'edges' in D
-        assert 'distances' in D
-        if 'weights' not in D:
-            D['weights'] = np.ones(len(D['edges']))
-        D['distances'] = np.maximum(D['distances'],1e-4)
-        d = D['distances']; w = D['weights']
-        D['normalization'] = np.dot(w,d**2)
-        D['rms'] = math.sqrt(D['normalization']/len(d))
-        DD[k] = D
-        DD['normalization'] += D['normalization']**2
-        DD['rms'] += D['rms']**2
-    DD['normalization'] **= 0.5
-    DD['rms'] **= 0.5
-    
-    return DD
-
 ### Generate multigraph ###
 
 def multigraph_from_projections(proj,Q,X,**kwargs):
@@ -475,6 +621,9 @@ def binomial(N,p,distances=None,K=1):
     D['nodes'] = range(N)
     return D
 
+
+
+        
 ### OLDER ###
 
 def coord2dist(X,p=2):

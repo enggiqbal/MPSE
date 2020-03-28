@@ -35,3 +35,17 @@ def labels(X,function=None,axis=0):
         temp = sorted(X[:,axis])     
         labels = [temp.index(i) for i in X[:,axis]]
     return labels
+
+### Function to label entries in upper triangular (without diagonal) ###
+
+def list_to_triangular(N,index_list):
+    edges = np.empty((len(index_list),2),dtype=int)
+    i = N-2-np.floor(np.sqrt(-8*index_list+4*N*(N-1)-7)/2.0-0.5)
+    j = index_list+i+1-N*(N-1)/2+(N-i)*((N-i)-1)/2
+    edges[:,0] = i; edges[:,1] = j
+    return edges
+
+def random_triangular(N,number,replace=False):
+    k = np.random.choice(round(N*(N-1)/2),number,replace=replace)
+    edges = list_to_triangular(N,k)
+    return edges
