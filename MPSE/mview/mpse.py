@@ -497,7 +497,7 @@ def xyz():
 
     
 if __name__=='__main__':
-    disk(30,edge_max_distance=2,edge_probability=.1,max_iter=300)
+    disk(100,stochastic=None,max_iter=300)
     #disk(30,Xfixed=True)
     #disk(30)
     #example_binomial(N=30,K=3)

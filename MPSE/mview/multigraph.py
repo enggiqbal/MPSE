@@ -2,6 +2,7 @@ import sys, numbers, copy, math
 import numpy as np
 import networkx as nx
 
+import misc
 ### Functions to set up distance graph and multigraphs ###
 
 # A (distance) graph is a dictionary containing the following attributes:
@@ -60,6 +61,27 @@ def attribute_setup(D,**kwargs):
         diss.from_graph(**D,**kwargs)
         D = diss.D[0]
     return D
+
+def attribute_rms(D,estimate=True,**kwargs):
+    if D['complete'] is True:
+        rms = 0
+        if estimate is True and D['nodes'] > 64:
+            edges = misc.random_triangular(D['nodes'],int(64*63/2))
+            for i1,i2 in edges:
+                rms += D['dfunction'](i1,i2)**2
+            rms = math.sqrt(rms/(64*63/2))
+        else:
+            for i in range(D['nodes']):
+                for j in range(D['nodes']):
+                    rms += D['dfunction'](i,j)**2
+            rms = math.sqrt(rms/(D['nodes']*(D['nodes']-1)/2))
+    else:
+        if estimate is True and D['edges'] > 64*63/2:
+            inds = np.random.choice(D['edges'],int(64*63/2))
+            rms = np.linalg.norm(D['dlist'][inds])/math.sqrt(64*63/2)
+        else:
+            rms = np.linalg.norm(D['dlist'])/math.sqrt(D['edges'])
+    return rms
 
 def multigraph_check(DD):
     """\
