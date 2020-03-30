@@ -104,9 +104,9 @@ def multigraph_setup(D0,**kwargs):
     else:
         if isinstance(D0,np.ndarray):
             if len(D0.shape) <= 2:
-                K=1; D0 = [D0]
-            else:
-                K=len(D0)
+                D0 = [D0]
+
+        K = len(D0)
         D = []
         for k in range(K):
             D.append(attribute_setup(D0[k]))
@@ -152,20 +152,20 @@ class DISS(object):
         """
         assert isinstance(matrix,np.ndarray)
         shape = matrix.shape; assert len(shape)==2;
-        assert shape[0]==self.N; assert shape[1]==self.N
+        assert shape[0]==self.nodes; assert shape[1]==self.nodes
 
         D = {}
         D['nodes'] = self.nodes
         D['type'] = 'matrix'
         D['matrix'] = matrix
         D['complete'] = True
-        D['edges'] = int(self.N*(self.N-1)/2)
+        D['edges'] = int(self.nodes*(self.nodes-1)/2)
         D['dfunction'] = lambda i,j : D['matrix'][i,j]                
         D['label'] = label
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
-        self.attributse += 1
+        self.attributes += 1
 
     def from_features(self,features,distance=None,label=None,**kwargs):
         """\

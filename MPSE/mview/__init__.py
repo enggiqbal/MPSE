@@ -300,11 +300,10 @@ def MPSE(D,Q=None,X0=None,verbose=0,plot=False,
     probability).
     """
     vis = mpse.MPSE(D,Q=Q,verbose=verbose,title=title,**kwargs)
-    if X0 is not None:
-        vis.initialize_X(X0)
     vis.gd(verbose=verbose,**kwargs)
     if plot is True:
-        vis.figureX()
-        vis.figureHY()
+        vis.figureX(title='final embedding')
+        vis.figureY()
+        vis.figureH()
         plt.show()
     return vis.X, vis.Q, vis.cost, vis.H

@@ -67,7 +67,7 @@ def fF(X,D):
     Returns exact stress and gradient for embedding X with target distances D.
     """
     if D['normalization'] is None:
-        D['normalization'] = f(X,D)
+        D['normalization'] = f(np.zeros(X.shape),D)
     
     N, dim = X.shape
     if D['complete'] is True:
@@ -119,9 +119,8 @@ def sF(X,D,number_of_edges,replace=False):
         dX = (2*diff/d)*Xij
         dfX[edge[0]] += dX
         dfX[edge[1]] -= dX
-    fX /= normalization
+    fX = math.sqrt(fX)/normalization
     dfX /= normalization
-
     return fX, dfX
 
 def old():
@@ -273,7 +272,7 @@ class MDS(object):
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
         
-        self.f = lambda X: f(X,self.D,**kwargs)
+        self.f = lambda X, **kwargs : f(X,self.D,**kwargs)
         self.F = lambda X, **kwargs : F(X,self.D,**kwargs)
 
         self.H = {}

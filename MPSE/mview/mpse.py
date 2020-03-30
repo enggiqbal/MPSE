@@ -65,14 +65,13 @@ class MPSE(object):
         proj = projections.PROJ(d1,d2,family,constraint)
 
         assert X is None or Q is None
+        self.X = X; self.Q = Q
         if X is None:
             self.Xfixed = False
         else:
             self.Xfixed = True
-        self.X = X
         if Q is None:
             self.Qfixed = False
-            self.Q = Q
         else:
             self.Qfixed = True
             if isinstance(Q,str):
@@ -124,7 +123,7 @@ class MPSE(object):
             cost = 0
             for k in range(self.K):
                 cost += self.visualization[k].cost_function(Y[k])**2
-            return math.sqrt(cost)
+            return math.sqrt(cost/self.K)
         self.cost_function = cost_function
 
         def cost_function_k(X,q,k,y=None):
@@ -160,7 +159,7 @@ class MPSE(object):
                     cost += costk**2
                     dX += dYk @ Q[k]
                     dQ.append(dYk.T @ X)
-                cost = math.sqrt(cost)
+                cost = math.sqrt(cost/self.K)
                 return (cost,[dX,np.array(dQ)])
             self.F = F
 
@@ -173,7 +172,7 @@ class MPSE(object):
                     costk, dYk = self.visualization[k].F(Y[k],**kwargs)
                     cost += costk**2
                     dX += dYk @ Q[k]
-                return (math.sqrt(cost),dX)
+                return (math.sqrt(cost/self.K),dX)
             self.FX = FX
 
             def FQ(X,Q,Y=None,**kwargs):
@@ -257,10 +256,11 @@ class MPSE(object):
         if self.X is not None and self.Q is not None:
             self.Y = self.proj.project(self.Q,self.X)
 
-            self.cost, self.individual_cost = self.cost_function_all(self.X,self.Q,Y=self.Y)
-            #self.individual_ncost = np.sqrt(self.individual_cost/(self.N*(self.N-1)/2))/self.individual_D_rms
+            self.cost, self.individual_cost = \
+                self.cost_function_all(self.X,self.Q,Y=self.Y)
+
         if H is not None:
-            if bool(self.H) is True:
+            if 'cost' in self.H:
                 H['cost'] = np.concatenate((self.H['cost'],H['cost']))
                 H['steps'] = np.concatenate((self.H['steps'],H['steps']))
                 H['iterations'] = self.H['iterations']+H['iterations']
@@ -358,9 +358,43 @@ class MPSE(object):
     
     def figureH(self,title='computations',plot=True,ax=None):
         assert hasattr(self,'H')
+        
+        if self.Xfixed is True:
+            var = 1
+            title = 'Q'
+        elif self.Qfixed is True:
+            var = 1
+            title = 'X'
+        else:
+            var = 2
+            title = ['X','Q']
         if ax is None:
-            fig, ax = plt.subplots()
-        plots.plot_cost(self.H['costs'],self.H['steps'],title=title,ax=ax)
+            fig, ax = plt.subplots(1,var+1,figsize=(3*(var+1),3))
+        ax[0].semilogy(self.H['costs'],linewidth=3)
+        ax[0].set_title('cost')
+        
+        if self.Xfixed is True or self.Qfixed is True:
+            ax[1].semilogy(self.H['grads'][:],label='gradient size',
+                             linestyle='--')
+            ax[1].semilogy(self.H['lrs'][:],label='learning rate',
+                             linestyle='--')
+            ax[1].semilogy(self.H['steps'][:],label='step size',
+                             linestyle='--')
+            ax[1].set_title(title)
+            ax[1].legend()
+            ax[1].set_xlabel('iterations')
+        else:
+            for k in range(2):
+                ax[k+1].semilogy(self.H['grads'][:,k],label='gradient size',
+                                 linestyle='--')
+                ax[k+1].semilogy(self.H['lrs'][:,k],label='learning rate',
+                                 linestyle='--')
+                ax[k+1].semilogy(self.H['steps'][:,k],label='step size',
+                                 linestyle='--')
+                ax[k+1].set_title(title[k])
+                ax[k+1].legend()
+                ax[k+1].set_xlabel('iterations')
+                
         if plot is True:
             plt.draw()
             plt.pause(0.2)
@@ -396,7 +430,8 @@ def disk(N=100,Qfixed=False,Xfixed=False,**kwargs):
     mv.figureX(title='initial embedding')
     mv.gd(verbose=2,min_step=1e-4,plot=True,**kwargs)
     mv.figureX()
-    mv.figureHY()
+    mv.figureY()
+    mv.figureH()
     plt.show()
 
 def example_binomial(N=100,K=2):
@@ -497,7 +532,7 @@ def xyz():
 
     
 if __name__=='__main__':
-    disk(100,stochastic=None,max_iter=300)
+    disk(1000,stochastic=128,max_iter=300,lr=1)
     #disk(30,Xfixed=True)
     #disk(30)
     #example_binomial(N=30,K=3)
