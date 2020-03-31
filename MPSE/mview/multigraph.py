@@ -83,6 +83,41 @@ def attribute_rms(D,estimate=True,**kwargs):
             rms = np.linalg.norm(D['dlist'])/math.sqrt(D['edges'])
     return rms
 
+def attribute_sample(D,edge_proportion=None,average_neighbors=None,
+                     replace=True,**kwargs):
+    if edge_proportion is None and average_neighbors is None:
+        return D
+    else:
+        N = D['nodes']; NN0 = D['edges']
+        if edge_proportion is not None:
+            NN = round(edge_proportion*NN0)
+        elif average_neighbors is not None:
+            NN = min(round(average_neighbors*N/2),NN0)
+        
+        if D['complete'] is True:
+            edges = misc.random_triangular(N,NN,replace=replace)
+            dlist = np.empty(NN)
+            for i in range(NN):
+                edge = edges[i]
+                dlist[i] = D['dfunction'](int(edge[0]),int(edge[1]))
+        else:
+            inds = np.random.choice(NN0,NN)
+            edges = D['elist'][inds]
+            dlist = D['dlist'][inds]
+
+        Ds = {}
+        Ds['nodes'] = N
+        Ds['type'] = 'graph'
+        Ds['complete'] = False
+        Ds['edges'] = NN
+        Ds['elist'] = edges
+        Ds['dlist'] = dlist
+        Ds['label'] = 'sample'
+        Ds['weighted'] = False
+
+        return Ds
+    
+
 def multigraph_check(DD):
     """\
     Checks/complete multigraph dictionary DD.
@@ -257,7 +292,37 @@ class DISS(object):
                 
     def reduce_to_subgraph(self,attribute,**kwargs):
         return None
-        
+
+    ### Sample multigraph ###
+
+    def sample(self,**kwargs):
+        Ds = []
+        for i in range(self.attributes):
+            Ds.append(attribute_sample(self.D[i],**kwargs))
+        return Ds
+               
+    ### Combine attribute ###
+
+    def combine_attributes(self,complete=True,**kwargs):
+        """\
+        Produces a single attribute that best represents all of the data.
+        """
+        D0 = {}
+        D0['nodes'] = self.nodes
+        if complete is True:
+            D0['type'] = 'features'
+            D0['complete'] = True
+            D0['edges'] = int(self.nodes*(self.nodes-1)/2)               
+            D0['label'] = 'combined'
+            def dfunction(i,j):
+                Dij = 0
+                for k in range(self.attributes):
+                    Dij += self.D[k]['dfunction'](i,j)
+                return Dij
+            D0['dfunction'] = dfunction
+        self.add_weights(D0)
+        self.D0 = D0
+                
     ### Weights ###
 
     def add_weights(self,D,weights=None,**kwargs):

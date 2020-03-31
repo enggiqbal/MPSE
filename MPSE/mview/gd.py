@@ -133,18 +133,43 @@ def algorithms(stepping_scheme='fixed',projection=None):
 
 ### ALGORITHMS ###
     
-def single(x0,F,p=None,step_rule='mm',min_cost=None,
+def single(x0,F,Xi=None,p=None,step_rule='mm',min_cost=None,
            min_grad=None, min_step=None,max_iter=100,max_step=1e4,
            lr=1,verbose=0,plot=False,**kwargs):
     """\
-    Gradient descent algorithms.
+    Gradient descent algorithm, with different options for update rule and 
+    stochastic and/or projected variaties.
+
+    Parameters:
+
+    x0 : array
+    Initial point.
+
+    F : callable
+    Function returning the cost and gradient at a point (either exactly or
+    stochastically).
+    If Xi is None, the function must be of the form x |-> (f(x),df(x))
+    Otherwise, the form is x, xi |-> (f(x,xi),df(x,xi)).
+
+    Xi : None or callable
+    If Xi is None, then F is exact.
+    Otherwise, Xi() produces stochastic parameters xi.
+
+    p : None or callable
+    If callable, then updates are projected (constraint optimization).
+    It takes the form x -> p(x).
     """
-    algorithm = algorithms(step_rule,p)
-    assert step_rule in step_rules
+    if Xi is None:
+        stochastic = False
+    else:
+        stochastic = True
     if p is None:
         constraint = False
     else:
         constraint = True
+    assert step_rule in step_rules
+    algorithm = algorithms(step_rule,p)
+    
     if verbose > 0:
         print('- gd.single(): ')
         print('  computation parameters:')
@@ -173,7 +198,10 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
     t0 = time.time()
 
     normalization = math.sqrt(np.size(x0))
-    fx0, dfx0 = F(x0)
+    if stochastic is False:
+        fx0, dfx0 = F(x0)
+    else:
+        fx0, dfx0 = F(x0,Xi())
     dx = -lr*dfx0
     ndx = np.linalg.norm(dx)
     x = x0 + dx
@@ -184,15 +212,31 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
     if verbose > 1:
         print('  progress:')
     for i in range(max_iter):
-        fx, dfx = F(x) #cost and gradient evaluated at x
+        if stochastic is False:
+            fx, dfx = F(x) #cost and gradient evaluated at x
+        else:
+            xi = Xi()
+            fx, dfx = F(x,xi)
         grads[i] = np.linalg.norm(dfx)/normalization #rms of gradient
         costs[i] = fx
         if fx < min_cost:
             conclusion = 'minimum cost reached'
+            costs = costs[0:i+1]
+            grads = grads[0:i+1]
+            lrs = lrs[0:i]
+            steps = steps[0:i]
             break
         if grads[i] < min_grad:
             conclusion = 'minimum gradient size reached'
+            costs = costs[0:i+1]
+            grads = grads[0:i+1]
+            lrs = lrs[0:i]
+            steps = steps[0:i]
             break
+        if stochastic is True and step_rule in ['bb','mm']:
+            fx0, dfx0 = F(x0,xi)
+            kwargs['dfx0'] = dfx0
+        x0 = x
         x, kwargs = algorithm(x,dfx,**kwargs)
         if kwargs['stop'] == True:
             conclusion = 'update rule'
@@ -201,21 +245,24 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
         steps[i] = kwargs['ndx']/normalization #rms of step size
         if steps[i] < min_step:
             conclusion = 'minimum step reached reached'
+            costs = costs[0:i+1]
+            grads = grads[0:i+1]
+            lrs = lrs[0:i+1]
+            steps = steps[0:i+1]
             break
         elif steps[i] > max_step:
             success = False
             conclusion = 'maximum step size reached (unstable)'
+            costs = costs[0:i+1]
+            grads = grads[0:i+1]
+            lrs = lrs[0:i+1]
+            steps = steps[0:i+1]
             break
         if verbose > 1:
             print(f'    {i:>4}/{max_iter} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, cost = {costs[i]:0.2e}, lr = {lrs[i]:0.2e}',
                   flush=True, end="\r")
     
     tf = time.time()
-
-    costs = costs[0:i+1]
-    grads = grads[0:i+1]
-    lrs = lrs[0:i+1]
-    steps = steps[0:i+1]
 
     if plot is True:
         fig, ax = plt.subplots()
@@ -250,13 +297,19 @@ def single(x0,F,p=None,step_rule='mm',min_cost=None,
         print(f'    time : {tf-t0:0.2e} [sec]')
     return x, outputs
 
-def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
+def multiple(X0,F,Xi=None,p=None,step_rule='fixed',min_cost=None,
              min_grad=None, min_step=None,max_iter=100,max_step=1e4,
              lr=1,verbose=0,plot=False,**kwargs):
     """\
     Gradient descent algorithms.
     """
     assert isinstance(X0,list); K = len(X0)
+
+    if Xi is None:
+        stochastic = False
+    else:
+        stochastic = True
+        
     if isinstance(p,list):
         assert len(p) == K
     else:
@@ -306,7 +359,11 @@ def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
     t0 = time.time()
 
     normalization = [math.sqrt(np.size(a)) for a in X0]
-    fX0, dfX0 = F(X0)
+    if stochastic is False:
+        fX0, dfX0 = F(X0)
+    else:
+        print(Xi)
+        fX0, dfX0 = F(X0,Xi())
     dX = [-a*b for a,b in zip(lr,dfX0)]
     ndX = [np.linalg.norm(a) for a in dX]
     X = [a+b for a,b in zip(X0,dX)]
@@ -321,7 +378,11 @@ def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
     if verbose > 1:
         print('  progress:')
     for i in range(max_iter):
-        fX, dfX = F(X)
+        if stochastic is False:
+            fX, dfX = F(X)
+        else:
+            xi = Xi()
+            fX, dfX = F(X,xi)
         grads[i] = [np.linalg.norm(a)/b for a, b in zip(dfX,normalization)]
         costs[i] = fX
         if fX < min_cost:
@@ -330,7 +391,11 @@ def multiple(X0,F,p=None,step_rule='fixed',min_cost=None,
         if max(grads[i]) < min_grad:
             conclusion = 'minimum gradient size reached'
             break
+        if stochastic is True:
+            fX0, dfX0 = F(X0,xi)
         for k in range(K):
+            if stochastic is True:
+                KWARGS[k]['dfx0'] = dfX0[k]
             X[k], KWARGS[k] = algorithm[k](X[k],dfX[k],**KWARGS[k])
             if KWARGS[k]['stop'] == True:
                 conclusion = 'update rule'

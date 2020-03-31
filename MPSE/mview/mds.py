@@ -32,9 +32,9 @@ def f(X,D,estimate=True):
                 dX = np.linalg.norm(X[i1]-X[i2])
                 stress += (dX-D['dfunction'](i1,i2))**2
         else:
-            inds = np.random.choice(D['edges'],int(64*63/2))
+            inds = np.random.choice(D['edges'],int(64*63/2),replace=False)
             for i in range(int(64*63/2)):
-                i1,i2 = inds[i]
+                i1,i2 = D['elist'][inds[i]]
                 dX = np.linalg.norm(X[i1]-X[i2])
                 stress += (dX-D['dlist'][i])**2
         stress = math.sqrt(stress/(64*63*2))
@@ -56,18 +56,19 @@ def f(X,D,estimate=True):
         else:
             if D['weighted'] is False:
                 stress = 0
-                for (i,j) in D['edges']:
-                    dXij = np.linalg.nodm(X[i]-X[j])
-                    stress += (D['dissimilarities'][i,j]-dXij)
-                stress = math.sqrt(stress)/D['normalization']
+                for i in range(D['edges']):
+                    i1,i2 = D['elist'][i]
+                    dXij = np.linalg.norm(X[i1]-X[i2])
+                    stress += (D['dlist'][i]-dXij)**2
+                stress = math.sqrt(stress)/np.linalg.norm(D['elist'])
     return stress
 
-def fF(X,D):
+def F(X,D):
     """\
     Returns exact stress and gradient for embedding X with target distances D.
     """
-    if D['normalization'] is None:
-        D['normalization'] = f(np.zeros(X.shape),D)
+    #if D['normalization'] is None:
+    #    D['normalization'] = f(np.zeros(X.shape),D)
     
     N, dim = X.shape
     if D['complete'] is True:
@@ -85,42 +86,23 @@ def fF(X,D):
 
         fX = math.sqrt(fX) / D['normalization']
         dfX /= D['normalization']
-    return fX, dfX
-
-def sF(X,D,number_of_edges,replace=False):
-    """\
-    Returns stress and gradient for embedding X.
-    """
-    N, dim = X.shape
-
-    #Create list of edges to be used in computation:
-    if D['complete'] is True:
-        NN = round(number_of_edges)
-        edges = misc.random_triangular(N,NN,replace=replace)
-        dlist = np.empty(NN)
-        for i in range(NN):
-            edge = edges[i]
-            dlist[i] = D['dfunction'](int(edge[0]),int(edge[1]))
     else:
-        NN = int(number_of_edges)
-        inds = np.random.choice(len(D['edges']),NN)
-        edges = D['edges'][inds]
-        dlist = D['dlist'][inds]
-    normalization = np.linalg.norm(dlist)
-
-    fX = 0
-    dfX = np.zeros(X.shape)
-    for i in range(NN):
-        edge = edges[i]
-        Xij = X[edge[0]]-X[edge[1]]
-        d = np.linalg.norm(Xij)
-        diff = d-dlist[i]
-        fX += diff**2
-        dX = (2*diff/d)*Xij
-        dfX[edge[0]] += dX
-        dfX[edge[1]] -= dX
-    fX = math.sqrt(fX)/normalization
-    dfX /= normalization
+        assert D['type'] == 'graph'
+        dfX = np.zeros(X.shape)
+        f0 = np.linalg.norm(D['elist'])
+        fX = 0
+        for i in range(D['edges']):
+            i1,i2 = D['elist'][i]
+            Xij = X[i1]-X[i2]
+            dij = np.linalg.norm(Xij)
+            diffij = dij-D['dlist'][i]
+            fX += diffij**2
+            dXij = 2*diffij/dij*Xij
+            dfX[i1] += dXij
+            dfX[i2] -= dXij
+        fX = math.sqrt(fX)/f0
+        dfX /= f0
+        
     return fX, dfX
 
 def old():
@@ -144,96 +126,6 @@ def old():
     fX /= normalization
     dfX /= normalization
 
-    return fX, dfX
-
-def graph_f(X,D):
-    """\
-
-    Normalized MDS stress function.
-
-    Parameters:
-
-    X : numpy array
-    Position/coordinate/embedding array for nodes 0,1,...,N-1
-
-    D : dictionary
-    Dissimilarity graph, containing edges, distances, and weights.
-
-    Returns:
-
-    stress : float
-    MDS stress at X.
-    """
-    e = D['edges']; d = D['distances']; w = D['weights']
-    stress = 0
-    for (i,j), Dij, wij in zip(e,d,w):
-        dij = np.linalg.norm(X[i]-X[j])
-        stress += wij*(Dij-dij)**2
-    stress /= D['normalization']
-    return math.sqrt(stress)
-
-def graph_F(X,D,edge_probability=None):
-    """\
-    Returns (normalized) MDS stress and gradient.
-    
-    Parameters:
-
-    X : numpy array
-    Positions/embedding array.
-
-    D : dictionary
-    Dictionary containing list of dissimilarities.
-
-    Returns:
-
-    fX : float
-    MDS stress at X.
-    
-    dfX : numpy array
-    MDS gradient at X.
-    """
-    e = D['edges']; d = D['distances']; w = D['weights']
-    fX = 0; dfX = np.zeros(X.shape)
-    if edge_probability is None:
-        for n in range(len(e)):
-            i,j = e[n]; Dij = d[n]; wij = w[n]
-            Xij = X[i]-X[j]
-            dij = np.linalg.norm(Xij)
-            diffij = dij-Dij
-            fX += wij*diffij**2
-            dXij = wij*2*diffij/dij*Xij
-            dfX[i] += dXij
-            dfX[j] -= dXij
-        fX /= D['normalization']
-        dfX /= D['normalization']
-    else:
-        assert isinstance(edge_probability,numbers.Number)
-        assert 0<edge_probability<=1
-        normalization = 0
-        for n in range(len(e)):
-            if np.random.rand() <= edge_probability:
-                i,j = e[n]; Dij = d[n]; wij = w[n]
-                Xij = X[i]-X[j]
-                dij = np.linalg.norm(Xij)
-                diffij = dij-Dij
-                fX += wij*diffij**2
-                dXij = wij*2*diffij/dij*Xij
-                dfX[i] += dXij
-                dfX[j] -= dXij
-                normalization += wij*Dij**2
-        fX /= normalization
-        dfX /= normalization
-    return math.sqrt(fX), dfX
-
-def F(X,D,stochastic=None,**kwargs):
-    if stochastic is None:
-        fX, dfX = fF(X,D)
-    else:
-        if stochastic >= 1:
-            number_of_edges = round(len(X)*stochastic/2)
-        elif 0 < stochastic < 1:
-            number_of_edges = round(D['edges']*stochastic)
-        fX, dfX = sF(X,D,number_of_edges)
     return fX, dfX
 
 class MDS(object):
@@ -272,8 +164,8 @@ class MDS(object):
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
         
-        self.f = lambda X, **kwargs : f(X,self.D,**kwargs)
-        self.F = lambda X, **kwargs : F(X,self.D,**kwargs)
+        self.f = lambda X, D=self.D, **kwargs : f(X,D,**kwargs)
+        self.F = lambda X, D=self.D, **kwargs : F(X,D,**kwargs)
 
         self.H = {}
         
@@ -332,18 +224,29 @@ class MDS(object):
         self.update()
 
     ### Methods to update MDS embedding ###
+    
+    def subsample_generator(self,edge_proportion=None,average_neighbors=None,
+                            **kwargs):
+        if edge_proportion is None and average_neighbors is None:
+            return None
+        else:
+            Xi = lambda : multigraph.\
+                attribute_sample(self.D,edge_proportion=edge_proportion,
+                                 average_neighbors=average_neighbors,**kwargs)
+            return Xi
 
-    def gd(self, step_rule='mm', min_step=1e-4,
-           title='', **kwargs):
+    def gd(self, step_rule='mm', min_step=1e-4,**kwargs):
         if hasattr(self,'X') is False:
             self.initialize(title='automatic')
         if self.verbose > 0:
-            print(f'  MDS.gd({self.title} - {title}):')
-            print(f'    step rule : {step_rule}')
+            print(f'  MDS.gd({self.title}):')
+            #print(f'    step rule : {step_rule}')
             #print(f'    edge probability : {edge_probability}')
             print(f'    initial stress : {self.cost:0.2e}')
-        F = lambda X: self.F(X,**kwargs)
-        self.X, H = gd.single(self.X,F,step_rule=step_rule,
+
+        Xi = self.subsample_generator(**kwargs)
+        F = lambda X, xi=self.D : self.F(X,D=xi)
+        self.X, H = gd.single(self.X,F,Xi=Xi,step_rule=step_rule,
                               min_step=min_step,**kwargs)
         self.update(H=H)
         if self.verbose > 0:
@@ -409,32 +312,11 @@ def disk(N=100,**kwargs):
     mds.figureX(title='original data',colors=True)
     mds.initialize()
     mds.figureX(title='initial embedding',colors=True)
-    mds.gd(max_iter=500,min_cost=1e-3,min_step=1e-5,verbose=2,plot=True,
+    mds.gd(max_iter=200,min_grad=1e-10,min_step=1e-10,verbose=2,plot=True,
            **kwargs)
     mds.figureX(title='final embedding',colors=True)
     plt.show()
 
-def example_disk(N=100,dim=2,**kwargs):
-    print('\n***mds.example_disk()***')
-    
-    Y = misc.disk(N,dim); colors = misc.labels(Y)
-    
-    plt.figure()
-    plt.scatter(Y[:,0],Y[:,1],c=colors)
-    plt.title('original data')
-    plt.draw()
-    plt.pause(1)
-    
-    D = multigraph.graph_from_coordinates(Y,colors=colors)
-    title = 'basic disk example'
-    mds = MDS(D,dim=dim,verbose=1,title=title)
-    mds.initialize()
-    mds.figureX(title='initial embedding',colors=True)
-    mds.gd(edge_probability=None,verbose=2,plot=True,**kwargs)
-    mds.figureX(title='final embedding',colors=True)
-    mds.figureH()
-    plt.show()
-
 if __name__=='__main__':
 
-    disk(N=1000,stochastic=128)
+    disk(N=1000,step_rule='mm',edge_proportion=.01)

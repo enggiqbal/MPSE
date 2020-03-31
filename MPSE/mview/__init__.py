@@ -242,8 +242,7 @@ def MULTIVIEW(D,dimX=3,dimY=2,X0=None,batch_number=None,batch_size=10,
     X, Q, c, H = MPSE(D,d1=dimX,d2=dimY,X0=X0,max_iter=max_iters,**kwargs)
     return X, Q, c, H['costs']
 
-def MPSE(D,Q=None,X0=None,verbose=0,plot=False,
-         title='',**kwargs):
+def MPSE(D,Q=None,X0=None,verbose=0,plot=False,**kwargs):
     """\
     MPSE function, finding mpse embedding/projections (the projections can be
     specified beforehand). It uses the mpse.MPSE() methods.
@@ -266,9 +265,6 @@ def MPSE(D,Q=None,X0=None,verbose=0,plot=False,
     plot : boolean
     Return plots of computation history and final embedding if True.
     
-    title : string
-    Title used through computation (for verbose and plot purposes).
-
     Returns:
 
     X : array
@@ -299,7 +295,7 @@ def MPSE(D,Q=None,X0=None,verbose=0,plot=False,
     gradient descent is used (edges are included in computation with given
     probability).
     """
-    vis = mpse.MPSE(D,Q=Q,verbose=verbose,title=title,**kwargs)
+    vis = mpse.MPSE(D,Q=Q,verbose=verbose,**kwargs)
     vis.gd(verbose=verbose,**kwargs)
     if plot is True:
         vis.figureX(title='final embedding')

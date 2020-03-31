@@ -65,21 +65,15 @@ class MPSE(object):
         proj = projections.PROJ(d1,d2,family,constraint)
 
         assert X is None or Q is None
-        self.X = X; self.Q = Q
-        if X is None:
-            self.Xfixed = False
-        else:
-            self.Xfixed = True
-        if Q is None:
-            self.Qfixed = False
-        else:
-            self.Qfixed = True
-            if isinstance(Q,str):
-                self.Q = proj.generate(number=self.K,
-                                       method=Q)
-            else:
-                self.Q = Q
-                proj.check(Q=self.Q)
+        self.X = X; self.X_is_fixed = X is not None
+        self.Q = Q; self.Q_is_fixed = Q is not None
+        self.X0 = X0; self.X0_is_fixed = X0 is not None
+        self.Q0 = Q0; self.Q0_is_fixed = Q0 is not None
+        if isinstance(self.Q,str):
+            self.Q = proj.generate(number=self.K,method=self.Q)
+        if isinstance(self.Q0,str):
+            self.Q0 = proj.generate(number=self.K,method=self.Q0)        
+
         self.proj = proj
 
         self.X0 = X0
@@ -148,14 +142,18 @@ class MPSE(object):
         
         if self.proj.family == 'linear':
 
-            def F(X,Q,Y=None,**kwargs):
-                if Y is None:
-                    Y = self.proj.project(Q,X)
+            def F(X,Q,D=None,**kwargs):
+                """\
+                Returns cost and gradient at (X,Q) for dissimilarities D.
+                """
+                if D is None:
+                    D = self.D
                 cost = 0
                 dX = np.zeros((self.N,self.proj.d1))
                 dQ = []
+                Y = self.proj.project(Q,X)
                 for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],**kwargs)
+                    costk, dYk = self.visualization[k].F(Y[k],D=D[k])
                     cost += costk**2
                     dX += dYk @ Q[k]
                     dQ.append(dYk.T @ X)
@@ -163,25 +161,27 @@ class MPSE(object):
                 return (cost,[dX,np.array(dQ)])
             self.F = F
 
-            def FX(X,Q,Y=None,**kwargs):
-                if Y is None:
-                    Y = self.proj.project(Q,X)
+            def FX(X,Q,D=None,**kwargs):
+                if D is None:
+                    D = self.D
                 cost = 0
                 dX = np.zeros((self.N,self.proj.d1))
+                Y = self.proj.project(Q,X)
                 for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],**kwargs)
+                    costk, dYk = self.visualization[k].F(Y[k],D=D[k])
                     cost += costk**2
                     dX += dYk @ Q[k]
                 return (math.sqrt(cost/self.K),dX)
             self.FX = FX
 
-            def FQ(X,Q,Y=None,**kwargs):
-                if Y is None:
-                    Y = self.proj.project(Q,X)
+            def FQ(X,Q,D=None,**kwargs):
+                if D is None:
+                    D = self.D
                 cost = 0
                 dQ = []
+                Y = self.proj.project(Q,X)
                 for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],**kwargs)
+                    costk, dYk = self.visualization[k].F(Y[k],D=D[k])
                     cost += costk
                     dQ.append(dYk.T @ X)
                 return (cost,np.array(dQ))
@@ -201,56 +201,42 @@ class MPSE(object):
                 return gradient
             self.gradient_X = gradient_X
 
-    def initialize_Q(self, **kwargs):
-        """\
-        Set initial parameters for perspective functions.
-        """
+    def initialize(self,X0=None,Q0=None,initialization='mds',**kwargs):
         if self.verbose > 0:
-            print('  Multiview.initialize_Q():')
-        self.Q = self.proj.generate(number=self.K,**kwargs)
-        self.Q0 = self.Q.copy()
-        self.update()
-        
-    def initialize_X(self, X0=None, method='random',max_iters=50,**kwargs):
-        """\
-        Set initial embedding using misc.initial function.
-
-        Parameters:
-
-        Y0 : numpy array
-        Initial embedding (optional)
-
-        number : int > 0
-        Number of initial embeddings to be generated and saved. When looking for
-        a minimizer of the stress function, the optimization algorithm is run
-        using the different initial embeddings and the best solution is 
-        retained.
-        """
-        if self.verbose > 0:
-            print('  MPSE.initialize_X():')
-
-        if X0 is not None:
-            if self.verbose > 0:
-                print('    method : X0 given')
-            assert isinstance(X0,np.ndarray)
-            assert X0.shape == (self.N,self.proj.d1)
-            self.X = X0
-        else:
-            if self.verbose > 0:
-                print('    method : ',method)
-            if method == 'random':
-                self.X = misc.initial_embedding(self.N,dim=self.proj.d1,
-                                                radius=1)
+            print('  MPSE.initialize():')
+            
+        if self.Q_is_fixed is False and self.Q0_is_fixed is False:
+            if Q0 is None:
+                self.Q = self.proj.generate(number=self.K,**kwargs)
+            else:
+                self.Q = Q0
+            self.Q0 = self.Q.copy()
+                
+        if self.X_is_fixed is False and self.X0_is_fixed is False:
+            if X0 is None:
+                if self.verbose > 0:
+                    print('    initialization : ',initialization)
+                if initialization == 'random':
+                    self.X = misc.initial_embedding(self.N,dim=self.proj.d1,
+                                                    radius=1)
                                                 #radius=self.D_rms,**kwargs)
-            elif method == 'mds':
-                D = multigraph.combine(self.D) #= np.average(self.D,axis=0)
-                vis = mds.MDS(D,dim=self.proj.d1)
-                vis.initialize()
-                vis.gd(max_iters=max_iters,method='mm',verbose=2,
-                       plot=True,**kwargs)
-                self.X = vis.X
+                elif initialization == 'mds':
+                    self.DD.combine_attributes() #= np.average(self.D,axis=0)
+                    D = self.DD.D0
+                    D = multigraph.attribute_sample(D,average_neighbors=64)
+                    vis = mds.MDS(D,dim=self.proj.d1,max_iters=50,min_grad=1e-4,
+                                  verbose=self.verbose)
+                    vis.gd(**kwargs)
+                    self.X = vis.X
+            else:
+                if self.verbose > 0:
+                    print('    initialization : X0 was given')
+                assert isinstance(X0,np.ndarray)
+                assert X0.shape == (self.N,self.proj.d1)
+                self.X = X0
+            self.X0 = self.X.copy()
+
         self.update()
-        self.X0 = self.X.copy()
 
     def update(self,H=None):
         if self.X is not None and self.Q is not None:
@@ -269,25 +255,37 @@ class MPSE(object):
     def forget(self):
         self.X = self.X0; self.H = {}; self.update()
 
+    def subsample_generator(self,edge_proportion=None,
+                            average_neighbors=None,**kwargs):
+        if edge_proportion is None and average_neighbors is None:
+            return None
+        else:
+            Xi = lambda :\
+                self.DD.sample(edge_proportion=edge_proportion,
+                               average_neighbors=average_neighbors,
+                               **kwargs)
+
     def gd(self, step_rule='mm', min_step=1e-6,**kwargs):
-        if self.Q is None:
-            self.initialize_Q(title='automatic')
-        if self.X is None:
-            self.initialize_X(title='automatic')
+        self.initialize()
+        #if self.Q is None:
+        #    self.initialize_Q(title='automatic')
+        #if self.X is None:
+        #    self.initialize_X(title='automatic')
 
         if self.verbose > 0:
             print('  MPSE.gd():')
             
-        if self.Qfixed is True:
+        if self.Q_is_fixed is True:
             if self.verbose > 0:
                 print('    mpse method : fixed projections')
                 print(f'    initial stress : {self.cost:0.2e}')
-            F = lambda X : self.FX(X,self.Q,**kwargs)
-            self.X, H = gd.single(self.X,F,step_rule=step_rule,
+            F = lambda X, xi=self.D: self.FX(X,self.Q,D=xi,**kwargs)
+            Xi = self.subsample_generator(**kwargs)
+            self.X, H = gd.single(self.X,F,Xi=Xi,step_rule=step_rule,
                                   min_step=min_step,**kwargs)
             self.update(H=H)
 
-        elif self.Xfixed is True:
+        elif self.X_is_fixed is True:
             if self.verbose > 0:
                 print('    mpse method : fixed embedding')
                 print(f'    initial stress : {self.cost:0.2e}')
@@ -304,8 +302,9 @@ class MPSE(object):
                 print(f'    initial stress : {self.cost:0.2e}')
             p = [None,self.proj.restrict]
             XQ = [self.X,np.array(self.Q)]
-            F = lambda XQ: self.F(XQ[0],XQ[1],**kwargs)
-            XQ, H = gd.multiple(XQ,F,p,step_rule=step_rule,
+            F = lambda XQ, xi=self.D: self.F(XQ[0],XQ[1],D=xi,**kwargs)
+            Xi = self.subsample_generator(**kwargs)
+            XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,step_rule=step_rule,
                                 min_step=min_step,**kwargs,**self.H)
             self.X = XQ[0]; self.Q = XQ[1]; self.update(H=H)
             
@@ -359,10 +358,10 @@ class MPSE(object):
     def figureH(self,title='computations',plot=True,ax=None):
         assert hasattr(self,'H')
         
-        if self.Xfixed is True:
+        if self.X_is_fixed is True:
             var = 1
             title = 'Q'
-        elif self.Qfixed is True:
+        elif self.Q_is_fixed is True:
             var = 1
             title = 'X'
         else:
@@ -373,7 +372,7 @@ class MPSE(object):
         ax[0].semilogy(self.H['costs'],linewidth=3)
         ax[0].set_title('cost')
         
-        if self.Xfixed is True or self.Qfixed is True:
+        if self.X_is_fixed is True or self.Q_is_fixed is True:
             ax[1].semilogy(self.H['grads'][:],label='gradient size',
                              linestyle='--')
             ax[1].semilogy(self.H['lrs'][:],label='learning rate',
@@ -412,21 +411,19 @@ class MPSE(object):
     
 ##### TESTS #####
 
-def disk(N=100,Qfixed=False,Xfixed=False,**kwargs):
+def disk(N=100,Q_is_fixed=False,X_is_fixed=False,**kwargs):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
     proj = projections.PROJ(); Q = proj.generate(number=3,method='standard')
     DD = multigraph.DISS(N,ncolor=labels)
     for i in range(3):
         DD.from_features(proj.project(Q[i],X))
-    #D = multigraph.multigraph_from_projections(proj,Q,X,**kwargs)
-    if Qfixed is True:
+    if Q_is_fixed is True:
         mv = MPSE(DD,Q=Q,verbose=1)
-    elif Xfixed is True:
+    elif X_is_fixed is True:
         mv = MPSE(DD,X=X,verbose=1)
     else:
         mv = MPSE(DD,verbose=1)
-    mv.initialize_Q()
-    mv.initialize_X()
+    mv.initialize()
     mv.figureX(title='initial embedding')
     mv.gd(verbose=2,min_step=1e-4,plot=True,**kwargs)
     mv.figureX()
@@ -434,89 +431,6 @@ def disk(N=100,Qfixed=False,Xfixed=False,**kwargs):
     mv.figureH()
     plt.show()
 
-def example_binomial(N=100,K=2):
-    for p in [0.05,0.1,0.5,1.0]:
-        D = multigraph.binomial(N,p,K=K)
-        mv = MPSE(D,verbose=1)
-        mv.gd(plot=True,verbose=1)
-        mv.figureX()
-        mv.figureHY(edges=True)
-    plt.show()
-    
-def noisy(N=100):
-    noise_levels = [0.0001,0.001,0.01,0.1,0.5]
-    stress = []
-    X = misc.disk(N,dim=3)
-    proj = perspective.Proj()
-    proj.set_params_list(special='standard')
-    Y = proj.project(X)
-    D = distances.compute(Y)
-    for noise in noise_levels:
-        D_noisy = distances.add_noise(D,noise)
-        stress_best = []
-        for i in range(3):
-            mv = Multiview(D_noisy,persp=proj,verbose=1)
-            mv.setup_visualization(visualization='mds')
-            mv.initialize_X()
-            mv.optimize_X(algorithm='agd')
-            stress_best.append(mv.normalized_cost)
-        stress.append(min(stress_best))
-    fig = plt.figure()
-    plt.loglog(noise_levels,stress,linestyle='--',marker='o')
-    plt.title('Normalized total stress')
-    plt.xlabel('noise level')
-    plt.ylabel('total stress')
-    plt.show()
-
-def noise_all(N=100):
-    noise_levels = [0.001,0.01,0.07,0.15,0.4]
-    stress = []
-    X = misc.disk(N,dim=3)
-    proj = perspective.Proj(d1=2,d2=2)
-    proj.set_params_list(special='identity',number=3)
-    Y = proj.project(X)
-    D = distances.compute(Y)
-    for noise in noise_levels:
-        D_noisy = distances.add_noise(D,noise)
-        mv = Multiview(D_noisy,persp=proj)
-        mv.setup_visualization(visualization='mds')
-        mv.initialize_X(verbose=1)
-        mv.optimize_X(algorithm='gd',learning_rate=1,max_iters=300,
-                      verbose=1)
-        stress.append(mv.cost)
-    fig = plt.figure()
-    plt.semilogx(noise_levels,stress)
-    plt.show()
-
-def example_random_graph_perspectives(N=100):
-    probs = [0.04,0.05,0.1,0.2,0.5,1.0]
-    nums = [4,5,10,20,50,100]
-    Ks = [1,2,3,4,5]
-    error = np.empty((len(Ks),len(probs)))
-    fig = plt.figure()
-    for i in range(len(probs)):
-        p = probs[i]
-        for j in range(len(Ks)):
-            K = Ks[j]
-            D = multigraph.binomial(N,p,K=K)
-            if K==1: D= [D]
-            persp = perspective.Persp()
-            persp.fix_Q(number=K)
-            vis = MPSE(D,persp=persp)
-            vis.setup_visualization()
-            vis.initialize_X()
-            vis.initialize_Q()
-            vis.optimize_all(min_step=1e-8)
-            error[j,i] = max(vis.cost,1e-6)
-    for i in range(len(Ks)):
-        plt.semilogy(error[i],label=f'K {Ks[i]}')
-    plt.ylabel('MDS stress')
-    plt.xlabel('average neighbors')
-    plt.xticks(range(len(nums)),nums)
-    plt.legend()
-    plt.tight_layout
-    plt.show()
-    
 ### Quick plots ###
 
 def xyz():
@@ -532,14 +446,6 @@ def xyz():
 
     
 if __name__=='__main__':
-    disk(1000,stochastic=128,max_iter=300,lr=1)
-    #disk(30,Xfixed=True)
-    #disk(30)
-    #example_binomial(N=30,K=3)
-    #noisy()
-    #noisy_combine()
-    #test_mds0()
-    #test_mds123()#save_data=True)
-    #example_random_graph_perspectives(N=100)
+    disk(300,average_neighbors=25,max_iter=300)
     #xyz()
 
