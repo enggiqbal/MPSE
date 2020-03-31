@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0,os.path.dirname(os.path.realpath(__file__)))
 import matplotlib.pyplot as plt
-import mds, mpse
+import projections, mds, mpse
 
 def MDS(D,dim=2,X0=None,batch_number=None,batch_size=10,lr=0.01,max_iters0=200,
         max_iters=200,verbose=0,plot=False,title='MDS solution',labels=None,
@@ -242,7 +242,7 @@ def MULTIVIEW(D,dimX=3,dimY=2,X0=None,batch_number=None,batch_size=10,
     X, Q, c, H = MPSE(D,d1=dimX,d2=dimY,X0=X0,max_iter=max_iters,**kwargs)
     return X, Q, c, H['costs']
 
-def MPSE(D,Q=None,X0=None,verbose=0,plot=False,**kwargs):
+def MPSE(D,Q=None,verbose=0,plot=False,smart_initialize=False,**kwargs):
     """\
     MPSE function, finding mpse embedding/projections (the projections can be
     specified beforehand). It uses the mpse.MPSE() methods.
@@ -255,9 +255,6 @@ def MPSE(D,Q=None,X0=None,verbose=0,plot=False,**kwargs):
     Q : None or string or list of numpy arrays
     If None, Q is not specified and optimization runs for both X and Q.
     If not None, then Q is fixed and given as specified.
-
-    X0 : None or numpy array
-    Optional initial embedding.
 
     verbose : number
     Prints verbose if > 0.
@@ -283,7 +280,19 @@ def MPSE(D,Q=None,X0=None,verbose=0,plot=False,**kwargs):
     H['grad'] = gradient size history
     H['time'] = total computation time
 
-    kwargs:
+    kwargs (all optional):
+
+    X0 : array
+    Initial embedding (does not fix the embedding). If not given, then the
+    initial is determined randomly.
+
+    Q0 : list of arrays or string
+    Initial projection parameters. Only relevant if the projection parameters
+    are not fixed. If not given, then the initial projection parameters are
+    determined randomly.
+
+    X : array
+    It is also possible to fix X (and only optimize Q).
 
     max_iter = number of maximum iterations
     min_step = minimum step size stopping criterion
@@ -296,6 +305,8 @@ def MPSE(D,Q=None,X0=None,verbose=0,plot=False,**kwargs):
     probability).
     """
     vis = mpse.MPSE(D,Q=Q,verbose=verbose,**kwargs)
+    if smart_initialize is True:
+        vis.smart_initialize(verbose=verbose)
     vis.gd(verbose=verbose,**kwargs)
     if plot is True:
         vis.figureX(title='final embedding')

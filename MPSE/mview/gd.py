@@ -198,13 +198,16 @@ def single(x0,F,Xi=None,p=None,step_rule='mm',min_cost=None,
     t0 = time.time()
 
     normalization = math.sqrt(np.size(x0))
-    if stochastic is False:
-        fx0, dfx0 = F(x0)
-    else:
-        fx0, dfx0 = F(x0,Xi())
-    dx = -lr*dfx0
-    ndx = np.linalg.norm(dx)
-    x = x0 + dx
+    x = x0
+    for i in range(5):
+        x0 = x.copy()
+        if stochastic is False:
+            fx0, dfx0 = F(x0)
+        else:
+            fx0, dfx0 = F(x0,Xi())
+        dx = -lr*dfx0
+        ndx = np.linalg.norm(dx)
+        x = x0 + dx
     success = True
     conclusion = 'maximum number of iterations reached'
     kwargs['ndx'] = ndx
@@ -410,11 +413,12 @@ def multiple(X0,F,Xi=None,p=None,step_rule='fixed',min_cost=None,
             conclusion = 'maximum step size reached (unstable)'
             break
         if verbose > 1:
-            sys.stdout.write("\033[K")
-            print(f'    {i:>4}/{max_iter} : step = {steps[i,0]:0.2e}, '+\
-                  f'grad = {grads[i,0]:0.2e}, cost = {costs[i]:0.2e}, '+\
-                  f'lr = {lrs[i,0]:0.2e}')
-            sys.stdout.write("\033[F")
+            #sys.stdout.write("\033[K")
+            print(f'    {i:>4}/{max_iter} : step = {np.max(steps[i]):0.2e}, '+\
+                  f'grad = {np.max(grads[i]):0.2e}, cost = {costs[i]:0.2e}, '+\
+                  f'lr = {np.max(lrs[i]):0.2e}',
+                  flush=True, end="\r")
+            #sys.stdout.write("\033[F")
 
     if verbose > 1:
         sys.stdout.write("\033[K")

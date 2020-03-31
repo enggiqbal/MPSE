@@ -63,23 +63,25 @@ class MPSE(object):
         self.d1 = d1; self.d2 = d2
         self.family = family; self.constraint=constraint
         proj = projections.PROJ(d1,d2,family,constraint)
+        self.proj = proj
 
+        if isinstance(Q,str):
+            Q = proj.generate(number=self.K,method=Q)
+        if isinstance(Q0,str):
+            Q0 = proj.generate(number=self.K,method=Q0)
+            
         assert X is None or Q is None
         self.X = X; self.X_is_fixed = X is not None
         self.Q = Q; self.Q_is_fixed = Q is not None
-        self.X0 = X0; self.X0_is_fixed = X0 is not None
-        self.Q0 = Q0; self.Q0_is_fixed = Q0 is not None
-        if isinstance(self.Q,str):
-            self.Q = proj.generate(number=self.K,method=self.Q)
-        if isinstance(self.Q0,str):
-            self.Q0 = proj.generate(number=self.K,method=self.Q0)        
-
-        self.proj = proj
-
-        self.X0 = X0
-        self.Q0 = Q0
 
         self.setup_visualization(visualization=visualization,**kwargs)
+
+        if self.X_is_fixed == True:
+            X0 = X
+        if self.Q_is_fixed == True:
+            Q0 = Q
+        self.initialize(X0=X0,Q0=Q0)
+    
 
         self.H = {}
         
@@ -201,42 +203,70 @@ class MPSE(object):
                 return gradient
             self.gradient_X = gradient_X
 
-    def initialize(self,X0=None,Q0=None,initialization='mds',**kwargs):
+    def initialize(self,X0=None,Q0=None,**kwargs):
         if self.verbose > 0:
             print('  MPSE.initialize():')
-            
-        if self.Q_is_fixed is False and self.Q0_is_fixed is False:
-            if Q0 is None:
-                self.Q = self.proj.generate(number=self.K,**kwargs)
-            else:
-                self.Q = Q0
-            self.Q0 = self.Q.copy()
-                
-        if self.X_is_fixed is False and self.X0_is_fixed is False:
-            if X0 is None:
-                if self.verbose > 0:
-                    print('    initialization : ',initialization)
-                if initialization == 'random':
-                    self.X = misc.initial_embedding(self.N,dim=self.proj.d1,
-                                                    radius=1)
-                                                #radius=self.D_rms,**kwargs)
-                elif initialization == 'mds':
-                    self.DD.combine_attributes() #= np.average(self.D,axis=0)
-                    D = self.DD.D0
-                    D = multigraph.attribute_sample(D,average_neighbors=64)
-                    vis = mds.MDS(D,dim=self.proj.d1,max_iters=50,min_grad=1e-4,
-                                  verbose=self.verbose)
-                    vis.gd(**kwargs)
-                    self.X = vis.X
-            else:
-                if self.verbose > 0:
-                    print('    initialization : X0 was given')
-                assert isinstance(X0,np.ndarray)
-                assert X0.shape == (self.N,self.proj.d1)
-                self.X = X0
-            self.X0 = self.X.copy()
+
+        if X0 is None:
+            if self.verbose > 0:
+                print('    X0 : random')
+            self.X0 = misc.initial_embedding(self.N,dim=self.proj.d1,
+                                            radius=1)
+        else:
+            assert isinstance(X0,np.ndarray)
+            assert X0.shape == (self.N,self.proj.d1)
+            if self.verbose > 0:
+                print('    X0 : given')
+            self.X0 = X0
+        self.X = self.X0.copy()
+        
+        if Q0 is None:
+            if self.verbose > 0:
+                print('    Q0 : random')
+            self.Q0 = self.proj.generate(number=self.K,**kwargs)
+        else:
+            if self.verbose > 0:
+                print('    Q0 : given')
+            self.Q0 = Q0
+        self.Q = self.Q0.copy()         
 
         self.update()
+
+    def smart_initialize(self,verbose=0,**kwargs):
+        """\
+        Computes an mds embedding (dimension d1) of the combined distances. Only
+        works when self.Q_is_fixed is False (as this is unnecessary otherwhise).
+
+        Parameters :
+
+        X0 : None or array
+        Optional initial embedding (used to compute mds embedding)
+        
+        Q0 : None or list of arrays
+        Optional initial projection parameters.
+        """
+        if self.Q_is_fixed is True:
+            return
+        
+        else:
+            if self.verbose > 0:
+                print('  MPSE.smart_initialize():')
+                
+            if self.X_is_fixed is False:
+                self.DD.combine_attributes()
+                D = self.DD.D0
+                vis = mds.MDS(D,dim=self.proj.d1,min_grad=1e-4,
+                              verbose=self.verbose)
+                vis.initialize(X0=self.X0)
+                vis.gd(average_neighbors=32,max_iter=30,verbose=verbose)
+                self.X = vis.X
+                
+            F = lambda Q, xi=self.D: self.FQ(self.X,Q,D=xi,**kwargs)
+            Xi = self.subsample_generator(average_neighbors=32)
+            Q0 = np.array(self.Q)
+            self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,max_iter=20,
+                                  min_step=1e-4,verbose=verbose)
+            return
 
     def update(self,H=None):
         if self.X is not None and self.Q is not None:
@@ -266,12 +296,7 @@ class MPSE(object):
                                **kwargs)
 
     def gd(self, step_rule='mm', min_step=1e-6,**kwargs):
-        self.initialize()
-        #if self.Q is None:
-        #    self.initialize_Q(title='automatic')
-        #if self.X is None:
-        #    self.initialize_X(title='automatic')
-
+        
         if self.verbose > 0:
             print('  MPSE.gd():')
             
@@ -397,23 +422,12 @@ class MPSE(object):
         if plot is True:
             plt.draw()
             plt.pause(0.2)
-
-    def figureHY(self,title='multiview computation & embedding',colors=True,
-               edges=False,plot=True):
-        assert self.proj.d2 >= 2
-        fig,axs = plt.subplots(1,self.K+1)
-        plt.suptitle(title+f', cost : {self.cost:0.2e}')
-        self.figureH(ax=axs[0])
-        self.figureY(ax=axs[1::],colors=colors,edges=edges)
-        if plot is True:
-            plt.draw()
-            plt.pause(1)
     
 ##### TESTS #####
 
 def disk(N=100,Q_is_fixed=False,X_is_fixed=False,**kwargs):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
-    proj = projections.PROJ(); Q = proj.generate(number=3,method='standard')
+    proj = projections.PROJ(); Q = proj.generate(number=3,method='random')
     DD = multigraph.DISS(N,ncolor=labels)
     for i in range(3):
         DD.from_features(proj.project(Q[i],X))
@@ -423,12 +437,13 @@ def disk(N=100,Q_is_fixed=False,X_is_fixed=False,**kwargs):
         mv = MPSE(DD,X=X,verbose=1)
     else:
         mv = MPSE(DD,verbose=1)
-    mv.initialize()
     mv.figureX(title='initial embedding')
-    mv.gd(verbose=2,min_step=1e-4,plot=True,**kwargs)
-    mv.figureX()
+    mv.smart_initialize()
+    mv.figureX(title='smart initial embedding')
+    mv.gd(verbose=2,min_step=1e-4,**kwargs)
+    mv.figureX(title='final embedding')
     mv.figureY()
-    mv.figureH()
+    mv.figureH('computation history')
     plt.show()
 
 ### Quick plots ###
@@ -446,6 +461,6 @@ def xyz():
 
     
 if __name__=='__main__':
-    disk(300,average_neighbors=25,max_iter=300)
+    disk(100,average_neighbors=30,max_iter=300)
     #xyz()
 
