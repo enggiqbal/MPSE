@@ -54,7 +54,7 @@ class MPSE(object):
             print('mpse.MPSE('+title+'):')
         self.verbose = verbose; self.title = title; self.level = level
 
-        self.DD = multigraph.multigraph_setup(dissimilarities)
+        self.DD = multigraph.multigraph_setup(dissimilarities,Q=Q,**kwargs)
         self.D = self.DD.D
 
         self.K = self.DD.attributes
@@ -82,9 +82,6 @@ class MPSE(object):
             Q0 = Q
         self.initialize(X0=X0,Q0=Q0)
     
-
-        self.H = {}
-        
         if verbose > 0:
             print('  dissimilarity stats:')
             print(f'    number of views : {self.K}')
@@ -260,12 +257,14 @@ class MPSE(object):
                 vis.initialize(X0=self.X0)
                 vis.gd(average_neighbors=32,max_iter=30,verbose=verbose)
                 self.X = vis.X
+                self.update_history(H=vis.H,Q_is_fixed=True)
                 
             F = lambda Q, xi=self.D: self.FQ(self.X,Q,D=xi,**kwargs)
             Xi = self.subsample_generator(average_neighbors=32)
             Q0 = np.array(self.Q)
             self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,max_iter=20,
                                   min_step=1e-4,verbose=verbose)
+            self.update_history(H=H,X_is_fixed=True)
             return
 
     def update(self,H=None):
@@ -275,13 +274,77 @@ class MPSE(object):
             self.cost, self.individual_cost = \
                 self.cost_function_all(self.X,self.Q,Y=self.Y)
 
-        if H is not None:
-            if 'cost' in self.H:
-                H['cost'] = np.concatenate((self.H['cost'],H['cost']))
-                H['steps'] = np.concatenate((self.H['steps'],H['steps']))
-                H['iterations'] = self.H['iterations']+H['iterations']
-            self.H = H  
+        #if H is not None:
+        #    if 'cost' in self.H:
+         #       H['cost'] = np.concatenate((self.H['cost'],H['cost']))
+          #      H['steps'] = np.concatenate((self.H['steps'],H['steps']))
+           #     H['iterations'] = self.H['iterations']+H['iterations']
+            #self.H = H
 
+    def update_history(self,H=None,X_is_fixed=None,Q_is_fixed=None):
+        
+        if hasattr(self,'H') is False:
+            self.H = {}
+            self.H['iterations'] = 0
+            self.H['markers'] = []
+            self.H['costs'] = np.array([])
+            if self.X_is_fixed is False:
+                self.H['X_iters'] = np.array([])
+                self.H['X_steps'] = np.array([])
+                self.H['X_grads'] = np.array([])
+                self.H['X_lrs'] = np.array([])
+            if self.Q_is_fixed is False:
+                self.H['Q_iters'] = np.array([])
+                self.H['Q_steps'] = np.array([])
+                self.H['Q_grads'] = np.array([])
+                self.H['Q_lrs'] = np.array([])
+
+        if X_is_fixed is None:
+            X_is_fixed = self.X_is_fixed
+        if Q_is_fixed is None:
+            Q_is_fixed = self.Q_is_fixed
+            
+
+        if H is not None:
+            T1 = self.H['iterations']; T2 = H['iterations']
+            self.H['iterations'] = T1+T2
+            self.H['markers'].append(T1)
+            self.H['costs'] = np.concatenate((self.H['costs'],H['costs']))
+            if X_is_fixed is False and Q_is_fixed is True:
+                self.H['X_iters'] = np.concatenate(
+                    (self.H['X_iters'],range(T1,T1+T2)))
+                self.H['X_steps'] = np.concatenate(
+                    (self.H['X_steps'],H['steps']))
+                self.H['X_grads'] = np.concatenate(
+                    (self.H['X_grads'],H['grads']))
+                self.H['X_lrs'] = np.concatenate((self.H['X_lrs'],H['lrs']))
+            elif X_is_fixed is True and Q_is_fixed is False:
+                self.H['Q_iters'] = np.concatenate(\
+                    (self.H['Q_iters'],range(T1,T1+T2)))
+                self.H['Q_steps'] = np.concatenate(
+                    (self.H['Q_steps'],H['steps']))
+                self.H['Q_grads'] = np.concatenate(
+                    (self.H['Q_grads'],H['grads']))
+                self.H['Q_lrs'] = np.concatenate(
+                    (self.H['Q_lrs'],H['lrs']))
+            else:
+                self.H['X_iters'] = np.concatenate(
+                    (self.H['X_iters'],range(T1,T1+T2)))
+                self.H['X_steps'] = np.concatenate(
+                    (self.H['X_steps'],H['steps'][:,0]))
+                self.H['X_grads'] = np.concatenate(
+                    (self.H['X_grads'],H['grads'][:,0]))
+                self.H['X_lrs'] = np.concatenate(
+                    (self.H['X_lrs'],H['lrs'][:,0]))
+                self.H['Q_iters'] = np.concatenate(
+                    (self.H['Q_iters'],range(T1,T1+T2)))
+                self.H['Q_steps'] = np.concatenate(
+                    (self.H['Q_steps'],H['steps'][:,1]))
+                self.H['Q_grads'] = np.concatenate(
+                    (self.H['Q_grads'],H['grads'][:,1]))
+                self.H['Q_lrs'] = np.concatenate(
+                    (self.H['Q_lrs'],H['lrs'][:,1]))
+                
     def forget(self):
         self.X = self.X0; self.H = {}; self.update()
 
@@ -294,8 +357,9 @@ class MPSE(object):
                 self.DD.sample(edge_proportion=edge_proportion,
                                average_neighbors=average_neighbors,
                                **kwargs)
+            return Xi
 
-    def gd(self, step_rule='mm', min_step=1e-6,**kwargs):
+    def gd(self, scheme='mm', **kwargs):
         
         if self.verbose > 0:
             print('  MPSE.gd():')
@@ -306,20 +370,20 @@ class MPSE(object):
                 print(f'    initial stress : {self.cost:0.2e}')
             F = lambda X, xi=self.D: self.FX(X,self.Q,D=xi,**kwargs)
             Xi = self.subsample_generator(**kwargs)
-            self.X, H = gd.single(self.X,F,Xi=Xi,step_rule=step_rule,
-                                  min_step=min_step,**kwargs)
-            self.update(H=H)
+            self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,**kwargs)
+            self.update_history(H=H,Q_is_fixed=True)
 
         elif self.X_is_fixed is True:
             if self.verbose > 0:
                 print('    mpse method : fixed embedding')
                 print(f'    initial stress : {self.cost:0.2e}')
-            F = lambda Q: self.FQ(self.X,Q,**kwargs)
+            Xi = self.subsample_generator(**kwargs)
+            F = lambda Q, xi=self.D: self.FQ(self.X,Q,D=xi,**kwargs)
             Q0 = np.array(self.Q)
-            self.Q, H = gd.single(Q0,F,p=self.proj.restrict,
-                                  step_rule=step_rule,min_step=min_step,
+            self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
+                                  scheme=scheme,
                                   **kwargs)
-            self.update(H=H)
+            self.update_history(H=H,X_is_fixed=True)
 
         else:
             if self.verbose > 0:
@@ -329,10 +393,11 @@ class MPSE(object):
             XQ = [self.X,np.array(self.Q)]
             F = lambda XQ, xi=self.D: self.F(XQ[0],XQ[1],D=xi,**kwargs)
             Xi = self.subsample_generator(**kwargs)
-            XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,step_rule=step_rule,
-                                min_step=min_step,**kwargs,**self.H)
-            self.X = XQ[0]; self.Q = XQ[1]; self.update(H=H)
-            
+            XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,scheme=scheme,**kwargs)
+            self.X = XQ[0]; self.Q = XQ[1];
+            self.update_history(H=H)
+
+        self.update()
         if self.verbose > 0:
             print(f'  Final stress : {self.cost:0.2e}')            
  
@@ -370,7 +435,7 @@ class MPSE(object):
             else:
                 edges_k = edges[k]
             if colors is True:
-                colors_k = self.DD.ncolor ####
+                colors_k = self.D[k]['ncolor'] ####
             else:
                 colors_k = None
             plots.plot2D(self.Y[k],edges=edges_k,colors=colors_k,ax=ax[k],
@@ -382,42 +447,36 @@ class MPSE(object):
     
     def figureH(self,title='computations',plot=True,ax=None):
         assert hasattr(self,'H')
-        
-        if self.X_is_fixed is True:
-            var = 1
-            title = 'Q'
-        elif self.Q_is_fixed is True:
-            var = 1
-            title = 'X'
+
+        if self.X_is_fixed is True or self.Q_is_fixed is True:
+            windows = 2
         else:
-            var = 2
-            title = ['X','Q']
-        if ax is None:
-            fig, ax = plt.subplots(1,var+1,figsize=(3*(var+1),3))
+            windows = 3
+        fig, ax = plt.subplots(1,windows,figsize=(3*windows,3))
         ax[0].semilogy(self.H['costs'],linewidth=3)
         ax[0].set_title('cost')
-        
-        if self.X_is_fixed is True or self.Q_is_fixed is True:
-            ax[1].semilogy(self.H['grads'][:],label='gradient size',
-                             linestyle='--')
-            ax[1].semilogy(self.H['lrs'][:],label='learning rate',
-                             linestyle='--')
-            ax[1].semilogy(self.H['steps'][:],label='step size',
-                             linestyle='--')
-            ax[1].set_title(title)
-            ax[1].legend()
-            ax[1].set_xlabel('iterations')
-        else:
-            for k in range(2):
-                ax[k+1].semilogy(self.H['grads'][:,k],label='gradient size',
-                                 linestyle='--')
-                ax[k+1].semilogy(self.H['lrs'][:,k],label='learning rate',
-                                 linestyle='--')
-                ax[k+1].semilogy(self.H['steps'][:,k],label='step size',
-                                 linestyle='--')
-                ax[k+1].set_title(title[k])
-                ax[k+1].legend()
-                ax[k+1].set_xlabel('iterations')
+        i = 1
+        if self.X_is_fixed is False:
+            ax[i].semilogy(self.H['X_iters'],self.H['X_grads'][:],
+                           label='gradient size', linestyle='--')
+            ax[i].semilogy(self.H['X_iters'],self.H['X_lrs'][:],
+                           label='learning rate', linestyle='--')
+            ax[i].semilogy(self.H['X_iters'],self.H['X_steps'][:],
+                           label='step size', linestyle='--')
+            ax[i].set_title(title)
+            ax[i].legend()
+            ax[i].set_xlabel('iterations')
+            i = 2
+        if self.Q_is_fixed is False:
+            ax[i].semilogy(self.H['Q_iters'],self.H['Q_grads'][:],
+                           label='gradient size',linestyle='--')
+            ax[i].semilogy(self.H['Q_iters'],self.H['Q_lrs'][:],
+                           label='learning rate', linestyle='--')
+            ax[i].semilogy(self.H['Q_iters'],self.H['Q_steps'][:],
+                           label='step size',linestyle='--')
+            ax[i].set_title(title)
+            ax[i].legend()
+            ax[i].set_xlabel('iterations')
                 
         if plot is True:
             plt.draw()
@@ -427,7 +486,7 @@ class MPSE(object):
 
 def disk(N=100,Q_is_fixed=False,X_is_fixed=False,**kwargs):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
-    proj = projections.PROJ(); Q = proj.generate(number=3,method='random')
+    proj = projections.PROJ(); Q = proj.generate(number=3,method='standard') ##
     DD = multigraph.DISS(N,ncolor=labels)
     for i in range(3):
         DD.from_features(proj.project(Q[i],X))
@@ -438,9 +497,9 @@ def disk(N=100,Q_is_fixed=False,X_is_fixed=False,**kwargs):
     else:
         mv = MPSE(DD,verbose=1)
     mv.figureX(title='initial embedding')
-    mv.smart_initialize()
+    #mv.smart_initialize(verbose=2)
     mv.figureX(title='smart initial embedding')
-    mv.gd(verbose=2,min_step=1e-4,**kwargs)
+    mv.gd(verbose=2,**kwargs)
     mv.figureX(title='final embedding')
     mv.figureY()
     mv.figureH('computation history')
@@ -461,6 +520,6 @@ def xyz():
 
     
 if __name__=='__main__':
-    disk(100,average_neighbors=30,max_iter=300)
+    disk(1000,average_neighbors=3,max_iter=200,min_grad=1e-6,scheme='mm',X_is_fixed=False)
     #xyz()
 

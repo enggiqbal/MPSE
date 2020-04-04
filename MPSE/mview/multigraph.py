@@ -2,7 +2,7 @@ import sys, numbers, copy, math
 import numpy as np
 import networkx as nx
 
-import misc
+import misc, projections
 ### Functions to set up distance graph and multigraphs ###
 
 # A (distance) graph is a dictionary containing the following attributes:
@@ -136,6 +136,12 @@ def multigraph_setup(D0,**kwargs):
     """
     if isinstance(D0,DISS):
         DD = D0
+    elif isinstance(D0,dict):
+        assert 'nodes' in D0
+        assert 'attributes' in D0
+        DD = DISS(**D0)
+        DD.from_projections(**D0,**kwargs)
+
     else:
         if isinstance(D0,np.ndarray):
             if len(D0.shape) <= 2:
@@ -173,8 +179,8 @@ class DISS(object):
         assert isinstance(attribute,int)
         assert attribute in range(self.attributes)
         D = self.D[attribute]
-        if 'ncolor' not in D or D['ncolor'] is None:
-            D['ncolor'] = self.ncolor
+        #if 'ncolor' not in D or D['ncolor'] is None:
+        #    D['ncolor'] = self.ncolor
         return D
 
     def from_matrix(self,matrix,label=None,**kwargs):
@@ -197,6 +203,7 @@ class DISS(object):
         D['edges'] = int(self.nodes*(self.nodes-1)/2)
         D['dfunction'] = lambda i,j : D['matrix'][i,j]                
         D['label'] = label
+        D['ncolor'] = self.ncolor
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
@@ -230,6 +237,7 @@ class DISS(object):
         D['dfunction'] = lambda i,j :\
             distance(D['features'][i],D['features'][j])
         D['label'] = label
+        D['ncolor'] = D['features'][:,0]
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
@@ -257,10 +265,32 @@ class DISS(object):
         D['elist'] = elist
         D['dlist'] = dlist
         D['label'] = label
+        D['ncolor'] = self.ncolor
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
         self.attributes += 1
+
+    def from_projections(self,attributes=3,X=None,d1=3,Q=None,**kwargs):
+        """\
+        Adds attributes from projections.
+        """
+        assert self.attributes == 0
+        if X is None:
+            X = misc.disk(self.nodes,dim=d1)
+        else:
+            assert isinstance(X,np.ndarray)
+            nodes,dim = X.shape; assert nodes==self.nodes; d1=dim
+        if self.ncolor is None:
+            self.ncolor = X[:,0]
+        proj = projections.PROJ(d1=d1,**kwargs)
+        if Q is None or isinstance(Q,str):
+            Q = proj.generate(number=attributes,**kwargs)
+        else:
+            assert len(Q) == attributes
+        for k in range(attributes):
+            Y = proj.project(Q[k],X)
+            self.from_features(Y,**kwargs)
 
     def compose_distances(self,attribute,function=None,**kwargs):
         if function is None:

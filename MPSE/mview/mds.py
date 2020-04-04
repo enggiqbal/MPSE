@@ -89,7 +89,7 @@ def F(X,D):
     else:
         assert D['type'] == 'graph'
         dfX = np.zeros(X.shape)
-        f0 = np.linalg.norm(D['elist'])
+        f0 = np.linalg.norm(D['dlist'])
         fX = 0
         for i in range(D['edges']):
             i1,i2 = D['elist'][i]
@@ -319,4 +319,4 @@ def disk(N=100,**kwargs):
 
 if __name__=='__main__':
 
-    disk(N=1000,step_rule='mm',edge_proportion=.01)
+    disk(N=30,step_rule='bb',edge_proportion=.9,lr=10)

@@ -11,22 +11,40 @@ import numpy as np
 # is not able to produce an update (e.g. due to a zero gradient) and other keys
 # necessary to run the algorithm in subsequence iterations.
 
-def fixed(x,dfx,lr=1.0,**kwargs):
+def fixed(x0,dfx,lr=1.0,p=None,**kwargs):
     """\
     Fixed learning rate GD scheme.
     """
-    dx = -lr*dfx
-    ndx = np.linalg.norm(dx)
-    x = x+dx
+    dx = -lr*dfx #step against gradient
+    ndx = np.linalg.norm(dx) #step size against gradient
+    y = x0+dx #position after step against gradient (before projection)
+    if p is None:
+        x = y #position after step and projecion
+        step = ndx #step size after step and projection
+    else:
+        x = p(y) #position after step and projection
+        step = np.linalg.norm(x-x0) #step size after step and projection
     out = {'lr' : lr,
            'ndx' : ndx,
+           'y' : y,
+           'step' : step,
+           'x0' : x0,
+           'df0x0' : dfx,
            'stop' : False}
     return x, out
 
-def bb(x,dfx,x0=0,dfx0=0,**kwargs):
+def bb(x,dfx,x0=0,dfx0=0,p=None,y=None,**kwargs):
     """\
     Barzilai and Borwein (1988) adaptive GD scheme.
+
+    x : current position
+    dfx : current gradient
+    x0 : previous position
+    dfx0 : gradient at previous position (using same stochastic approx)
+    p : projection function
+    y : current position before projection
     """
+    x_initial = x
     ddfx = dfx-dfx0
     nddfx = np.linalg.norm(ddfx)
     if nddfx == 0.0:
@@ -34,48 +52,79 @@ def bb(x,dfx,x0=0,dfx0=0,**kwargs):
             'stop' : True
             }
     else:
-        stop = False
-        dx = x-x0
-        ndx = np.linalg.norm(dx)
-        lr = abs(np.sum(dx*ddfx))/nddfx**2
+        if y is None:
+            y = x
+        diff = y-x0
+        ndx = np.linalg.norm(diff)
+        lr = abs(np.sum(diff*ddfx))/nddfx**2
         x0 = x
         dfx0 = dfx
         dx = -lr*dfx
-        x = x+dx
+        y = x+dx
+        if p is None:
+            step = ndx
+            x = y
+        else:
+            x = p(y)
+            step = np.linalg.norm(x-x_initial)
         out = {
             'lr' : lr,
             'ndx' : ndx,
+            'step' : step,
+            'y' : y,
             'x0' : x0,
             'dfx0' : dfx0,
             'stop' : False
         }
     return x, out
 
-def mm(x,dfx,ndx=0,dfx0=0,lr=0.1,theta=np.Inf,alpha=1.0,
-              **kwargs):
+def mm(x,dfx,df0x=None,x0=0,df0x0=0,p=None,y=0,ndx=None,lr=10,theta=np.Inf,
+       alpha=1.0,**kwargs):
     """\
-    Malitsky and Mishchenko (2019) adaptive GD scheme (algorithm 4).
+    Malitsky and Mishchenko (2019) adaptive GD scheme (algorithm 4) plus
+    option for projections.
+
+    x : current position
+    dfx : gradient at current position, using current approximation
+    df0x : gradient at current position (or pre-projection), using old 
+    approximation
     """
+    if ndx is None:
+        if p is None:
+            ndx = np.linalg.norm(x-x0)
+        else:
+            ndx = np.linalg.norm(y-x0)
     if ndx == 0:
         out = {
             'stop' : True
             }
     else:
-        nddfx = np.linalg.norm(dfx-dfx0)
+        if df0x is None:
+            df0x = dfx
+        nddfx = np.linalg.norm(df0x-df0x0)
+
+        
         L = nddfx/ndx
         lr0 = lr
         lr = min(math.sqrt(1+theta)*lr,1/(alpha*L))
         theta = lr/lr0
         dx = -lr*dfx
         ndx = np.linalg.norm(dx)
-        x = x + dx
-        dfx0 = dfx
+        y = x + dx
+        if p is None:
+            step = ndx
+            x = y
+        else:
+            x0 = x
+            x = p(y)
+            step = np.linalg.norm(x-x0)
         out = {
             'ndx' : ndx,
-            'dfx0' : dfx0,
+            'df0x0' : dfx,
             'lr' : lr,
+            'step' : step,
             'theta' : theta,
-            'alpha' : alpha,
+            'y' : y,
             'stop' : False
             }
     return x, out
@@ -112,37 +161,25 @@ def adam(x,dfx,ndx=0,dfx0=0,lr=0.1,m=0,v=0,i=0,**kwargs):
            'stop' : False}
     return x, out
 
-step_rules = {
+schemes = {
     'fixed' : fixed,
     'bb' : bb,
     'mm' : mm,
     'adam' : adam
     }
 
-def algorithms(stepping_scheme='fixed',projection=None):
-    algorithm0 = step_rules[stepping_scheme]
-    if projection is None:
-        algorithm = algorithm0
-    else:
-        def algorithm(x,dfx,**kwargs):
-            xx, out = algorithm0(x,dfx,**kwargs)
-            pxx = projection(xx)
-            out['ndx'] = np.linalg.norm(pxx-x)
-            return pxx, out
-    return algorithm
-
 ### ALGORITHMS ###
     
-def single(x0,F,Xi=None,p=None,step_rule='mm',min_cost=None,
+def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
            min_grad=None, min_step=None,max_iter=100,max_step=1e4,
-           lr=1,verbose=0,plot=False,**kwargs):
+           lr=1,verbose=0,level=0,plot=False,**kwargs):
     """\
     Gradient descent algorithm, with different options for update rule and 
     stochastic and/or projected variaties.
 
     Parameters:
 
-    x0 : array
+    x : array
     Initial point.
 
     F : callable
@@ -158,6 +195,9 @@ def single(x0,F,Xi=None,p=None,step_rule='mm',min_cost=None,
     p : None or callable
     If callable, then updates are projected (constraint optimization).
     It takes the form x -> p(x).
+
+    scheme : string
+    Algorithm stepping scheme.
     """
     if Xi is None:
         stochastic = False
@@ -167,22 +207,24 @@ def single(x0,F,Xi=None,p=None,step_rule='mm',min_cost=None,
         constraint = False
     else:
         constraint = True
-    assert step_rule in step_rules
-    algorithm = algorithms(step_rule,p)
+    assert scheme in schemes
+    algorithm = schemes[scheme]
     
     if verbose > 0:
-        print('- gd.single(): ')
-        print('  computation parameters:')
-        print(f'    constraint : {constraint}')
-        print(f'    update rule : {step_rule}')
+        print('  '*level+'gd.single(): ')
+        print('  '*level+'  computation parameters:')
+        print('  '*level+f'    stochastic : {stochastic}')
+        print('  '*level+f'    constraint : {constraint}')
+        print('  '*level+f'    update rule : {scheme}')
         if min_cost is not None:
-            print(f'    min_cost : {min_cost:0.2e}')
+            print('  '*level+f'    min_cost : {min_cost:0.2e}')
         if min_grad is not None:
-            print(f'    min_grad : {min_grad:0.2e}')
+            print('  '*level+f'    min_grad : {min_grad:0.2e}')
         if min_step is not None:
-            print(f'    min_step : {min_step:0.2e}')
-        print(f'    max_iter : {max_iter}')
-        print(f'    max_step : {max_step:0.2e}')
+            print('  '*level+f'    min_step : {min_step:0.2e}')
+        print('  '*level+f'    max_iter : {max_iter}')
+        print('  '*level+f'    max_step : {max_step:0.2e}')
+        
     if min_cost is None:
         min_cost = -np.Inf
     if min_grad is None:
@@ -195,52 +237,68 @@ def single(x0,F,Xi=None,p=None,step_rule='mm',min_cost=None,
     steps = np.empty(max_iter)
     lrs = np.empty(max_iter)
 
-    t0 = time.time()
-
-    normalization = math.sqrt(np.size(x0))
-    x = x0
-    for i in range(5):
-        x0 = x.copy()
-        if stochastic is False:
-            fx0, dfx0 = F(x0)
-        else:
-            fx0, dfx0 = F(x0,Xi())
-        dx = -lr*dfx0
-        ndx = np.linalg.norm(dx)
-        x = x0 + dx
     success = True
     conclusion = 'maximum number of iterations reached'
-    kwargs['ndx'] = ndx
-    kwargs['lr'] = lr
+    
+    t0 = time.time()
+
+    normalization = math.sqrt(np.size(x)) ###############
+
+    #initialization by running one iteration of GD w/ initial lr
+    x0 = x.copy()
+    if stochastic is False:
+        fx, dfx = F(x)
+    else:
+        xi = Xi()
+        fx, dfx = F(x,xi)
+    x, kwargs = fixed(x,dfx,lr=lr,p=p)
+    if constraint is True:
+        y = kwargs['y']
+    costs[0] = fx
+    grads[0] = np.linalg.norm(dfx)/normalization #######
+    lrs[0] = kwargs['lr']
+    steps[0] = kwargs['ndx']/normalization #rms of step size
+
     if verbose > 1:
-        print('  progress:')
-    for i in range(max_iter):
+        print('  '*level+'  progress:')
+        
+    for i in range(1,max_iter):
+
         if stochastic is False:
-            fx, dfx = F(x) #cost and gradient evaluated at x
+            if constraint is True:
+                if scheme in ['bb','mm']:
+                    fy, dfy = F(y)
+                    kwargs['df0x'] = dfy
+            fx, dfx = F(x)
         else:
+            if constraint is False:
+                if scheme in ['bb','mm']:
+                    f0x, df0x = F(x,xi)
+                    kwargs['df0x'] = df0x
+            else:
+                if scheme in ['bb','mm']:
+                    fy, dfy = F(y,xi)
+                    kwargs['df0x'] = dfy
             xi = Xi()
             fx, dfx = F(x,xi)
-        grads[i] = np.linalg.norm(dfx)/normalization #rms of gradient
         costs[i] = fx
+        grads[i] = np.linalg.norm(dfx)/normalization #rms of gradient
+        
         if fx < min_cost:
             conclusion = 'minimum cost reached'
-            costs = costs[0:i+1]
-            grads = grads[0:i+1]
-            lrs = lrs[0:i]
-            steps = steps[0:i]
+            lrs[i] = None
+            stesp[i] = None
             break
         if grads[i] < min_grad:
             conclusion = 'minimum gradient size reached'
-            costs = costs[0:i+1]
-            grads = grads[0:i+1]
-            lrs = lrs[0:i]
-            steps = steps[0:i]
+            lrs[i] = None
+            steps[i] = None
             break
-        if stochastic is True and step_rule in ['bb','mm']:
-            fx0, dfx0 = F(x0,xi)
-            kwargs['dfx0'] = dfx0
-        x0 = x
+        
         x, kwargs = algorithm(x,dfx,**kwargs)
+        
+        if constraint is True:
+            y = kwargs['y']
         if kwargs['stop'] == True:
             conclusion = 'update rule'
             break
@@ -248,24 +306,23 @@ def single(x0,F,Xi=None,p=None,step_rule='mm',min_cost=None,
         steps[i] = kwargs['ndx']/normalization #rms of step size
         if steps[i] < min_step:
             conclusion = 'minimum step reached reached'
-            costs = costs[0:i+1]
-            grads = grads[0:i+1]
-            lrs = lrs[0:i+1]
-            steps = steps[0:i+1]
             break
         elif steps[i] > max_step:
             success = False
             conclusion = 'maximum step size reached (unstable)'
-            costs = costs[0:i+1]
-            grads = grads[0:i+1]
-            lrs = lrs[0:i+1]
-            steps = steps[0:i+1]
             break
         if verbose > 1:
-            print(f'    {i:>4}/{max_iter} : step = {steps[i]:0.2e}, grad = {grads[i]:0.2e}, cost = {costs[i]:0.2e}, lr = {lrs[i]:0.2e}',
-                  flush=True, end="\r")
+            print('  '*level+f'    {i:>4}/{max_iter} : cost = {costs[i]:0.2e},'+
+                  f' grad = {grads[i]:0.2e}, lr = {lrs[i]:0.2e},'+
+                  f' step = {steps[i]:0.2e}',flush=True, end="\r")
+    print()
     
     tf = time.time()
+
+    costs = costs[0:i+1]
+    grads = grads[0:i+1]
+    lrs = lrs[0:i+1]
+    steps = steps[0:i+1]
 
     if plot is True:
         fig, ax = plt.subplots()
@@ -283,30 +340,31 @@ def single(x0,F,Xi=None,p=None,step_rule='mm',min_cost=None,
         'steps' : steps,
         'grads' : grads,
         'lrs' : lrs,
-        'iterations' : i,
+        'iterations' : i+1,
         'success' : success,
         'conclusion' : conclusion,
         'time' : tf-t0
         }
         
     if verbose > 1:
-        print('  results:')
-        print(f'    conclusion : {conclusion}')
-        print(f'    total iterations : {i}')
-        print(f'    final cost : {costs[-1]:0.2e}')
-        print(f'    final gradient size : {grads[-1]:0.2e}')        
-        print(f'    final learning rate : {lrs[-1]:0.2e}')
-        print(f'    final step size : {steps[-1]:0.2e}')
-        print(f'    time : {tf-t0:0.2e} [sec]')
+        print('  '*level+'  results:')
+        print('  '*level+f'    conclusion : {conclusion}')
+        print('  '*level+f'    total iterations : {i}')
+        print('  '*level+f'    final cost : {costs[-1]:0.2e}')
+        print('  '*level+f'    final gradient size : {grads[-1]:0.2e}')        
+        print('  '*level+f'    final learning rate : {lrs[-1]:0.2e}')
+        print('  '*level+f'    final step size : {steps[-1]:0.2e}')
+        print('  '*level+f'    time : {tf-t0:0.2e} [sec]')
+        
     return x, outputs
 
-def multiple(X0,F,Xi=None,p=None,step_rule='fixed',min_cost=None,
+def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
              min_grad=None, min_step=None,max_iter=100,max_step=1e4,
-             lr=1,verbose=0,plot=False,**kwargs):
+             lr=1,verbose=0,level=0,plot=False,**kwargs):
     """\
     Gradient descent algorithms.
     """
-    assert isinstance(X0,list); K = len(X0)
+    assert isinstance(X,list); K = len(X)
 
     if Xi is None:
         stochastic = False
@@ -317,28 +375,33 @@ def multiple(X0,F,Xi=None,p=None,step_rule='fixed',min_cost=None,
         assert len(p) == K
     else:
         p = [p]*K
-    if isinstance(step_rule,list):
-        assert len(step_rule) == K
+    projected = [pk is not None for pk in p]
+    if True in projected:
+        constraint = True
     else:
-        step_rule = [step_rule]*K
+        constraint = False
+        
+    if isinstance(scheme,list):
+        assert len(scheme) == K
+    else:
+        scheme = [scheme]*K
     if isinstance(lr,list):
         assert len(lr) == K
     else:
         lr = [lr]*K
 
-    constraint = []
     algorithm = []
     for k in range(K):
-        algorithm.append(algorithms(step_rule[k],p[k]))
-        if p[k] is None:
-            constraint.append(False)
-        else:
-            constraint.append(True)
+        algorithm.append(schemes[scheme[k]])
+
     if verbose > 0:
-        print('- gd.multiple(): ')
-        print('  computation parameters:')
-        #print(f'    constraint : {constraint}')
-        print(f'    update rule : {step_rule}')
+        print('  '*level+f'gd.multiple(): ')
+        print('  '*level+f'  computation parameters:')
+        print('  '*level+f'    stochastic : {stochastic}')
+        print('  '*level+f'    constraint : {constraint}')
+        print('  '*level+f'    projected : {projected}')
+        print(f'    scheme : {scheme}')
+        print(f'    initial lr : {lr}')
         if min_cost is not None:
             print(f'    min_cost : {min_cost:0.2e}')
         if min_grad is not None:
@@ -347,6 +410,7 @@ def multiple(X0,F,Xi=None,p=None,step_rule='fixed',min_cost=None,
             print(f'    min_step : {min_step:0.2e}')
         print(f'    max_iter : {max_iter}')
         print(f'    max_step : {max_step:0.2e}')
+        
     if min_cost is None:
         min_cost = -np.Inf
     if min_grad is None:
@@ -359,47 +423,76 @@ def multiple(X0,F,Xi=None,p=None,step_rule='fixed',min_cost=None,
     steps = np.empty((max_iter,K))
     lrs = np.empty((max_iter,K))
 
-    t0 = time.time()
-
-    normalization = [math.sqrt(np.size(a)) for a in X0]
-    if stochastic is False:
-        fX0, dfX0 = F(X0)
-    else:
-        print(Xi)
-        fX0, dfX0 = F(X0,Xi())
-    dX = [-a*b for a,b in zip(lr,dfX0)]
-    ndX = [np.linalg.norm(a) for a in dX]
-    X = [a+b for a,b in zip(X0,dX)]
     success = True
     conclusion = 'maximum number of iterations reached'
+
+    t0 = time.time()
+
+    normalization = [math.sqrt(np.size(a)) for a in X] ####
+
+    X0 = X.copy()
+    if stochastic is False:
+        fX, dfX = F(X)
+    else:
+        xi = Xi()
+        fX, dfX = F(X,xi)
     KWARGS = []
+    if constraint is True:
+        Y = []
     for k in range(K):
-        KWARGS.append(copy.deepcopy(kwargs))
-    for i in range(K):
-        KWARGS[i]['ndx'] = ndX[i]
-        KWARGS[i]['lr'] = lr[i]
+        X[k], temp = fixed(X[k],dfX[k],p=p[k],lr=lr[k])
+        #temp['df0x0'] = dfX[k]
+        KWARGS.append(temp)
+        if constraint is True:
+            Y.append(temp['y'])
+    costs[0] = fX
+    grads[0] = [np.linalg.norm(dfX[k])/normalization[k] for k in range(K)] ####
+    lrs[0] = lr
+    steps[0] = [KWARGS[k]['ndx']/normalization[k] for k in range(K)]
+        
     if verbose > 1:
         print('  progress:')
-    for i in range(max_iter):
+        
+    for i in range(1,max_iter):
+
         if stochastic is False:
+            if constraint is True:
+                fY, dfY = F(Y)
             fX, dfX = F(X)
+            #f0X, df0X = fX, dfX
         else:
+            if constraint is False:
+                f0X, df0X = F(X,xi)
+            else:
+                f0Y, df0Y = F(Y,xi)
             xi = Xi()
             fX, dfX = F(X,xi)
+            
+        costs[i] = fX     
         grads[i] = [np.linalg.norm(a)/b for a, b in zip(dfX,normalization)]
-        costs[i] = fX
+
         if fX < min_cost:
             conclusion = 'minimum cost reached'
             break
         if max(grads[i]) < min_grad:
             conclusion = 'minimum gradient size reached'
             break
-        if stochastic is True:
-            fX0, dfX0 = F(X0,xi)
+
         for k in range(K):
-            if stochastic is True:
-                KWARGS[k]['dfx0'] = dfX0[k]
-            X[k], KWARGS[k] = algorithm[k](X[k],dfX[k],**KWARGS[k])
+            if stochastic is False:
+                if projected[k] is False:
+                    KWARGS[k]['df0x'] = dfX[k]
+                else:
+                    KWARGS[k]['df0x'] = dfY[k]
+            else:
+                if constraint is False:
+                    KWARGS[k]['df0x'] = df0X[k]
+                else:
+                    KWARGS[k]['df0x'] = df0Y[k]
+                    
+            X[k], KWARGS[k] = algorithm[k](X[k],dfX[k],p=p[k],**KWARGS[k])
+            if constraint is True:
+                Y = [KWARGS[k]['y'] for k in range(K)]
             if KWARGS[k]['stop'] == True:
                 conclusion = 'update rule'
                 break
@@ -424,6 +517,7 @@ def multiple(X0,F,Xi=None,p=None,step_rule='fixed',min_cost=None,
         sys.stdout.write("\033[K")
         sys.stdout.write("\033[F")
         sys.stdout.write("\033[K")
+        
     tf = time.time()
 
     costs = costs[0:i]
