@@ -287,7 +287,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         if fx < min_cost:
             conclusion = 'minimum cost reached'
             lrs[i] = None
-            stesp[i] = None
+            steps[i] = None
             break
         if grads[i] < min_grad:
             conclusion = 'minimum gradient size reached'
