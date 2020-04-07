@@ -242,9 +242,9 @@ def MULTIVIEW(D,dimX=3,dimY=2,X0=None,batch_number=None,batch_size=10,
     X, Q, c, H = MPSE(D,d1=dimX,d2=dimY,X0=X0,max_iter=max_iters,**kwargs)
     return X, Q, c, H['costs']
 
-def MPSE(D,Q=None,verbose=0,plot=False,smart_initialize=False,**kwargs):
+def basic(D,Q=None,verbose=0,smart_initialize=False,**kwargs):
     """\
-    MPSE function, finding mpse embedding/projections (the projections can be
+    Basic function, finding mpse embedding/projections (the projections can be
     specified beforehand). It uses the mpse.MPSE() methods.
 
     Parameters:
@@ -308,9 +308,4 @@ def MPSE(D,Q=None,verbose=0,plot=False,smart_initialize=False,**kwargs):
     if smart_initialize is True:
         vis.smart_initialize(verbose=verbose)
     vis.gd(verbose=verbose,**kwargs)
-    if plot is True:
-        vis.figureX(title='final embedding')
-        vis.figureY()
-        vis.figureH()
-        plt.show()
-    return vis.X, vis.Q, vis.cost, vis.H
+    return vis

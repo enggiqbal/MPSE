@@ -65,7 +65,11 @@ class MPSE(object):
         proj = projections.PROJ(d1,d2,family,constraint)
         self.proj = proj
 
-        if isinstance(Q,str):
+        if Q is True:
+            assert hasattr(self.DD,'Q')
+            Q = self.DD.Q
+        elif isinstance(Q,str):
+            print(Q)
             Q = proj.generate(number=self.K,method=Q)
         if isinstance(Q0,str):
             Q0 = proj.generate(number=self.K,method=Q0)
@@ -105,7 +109,7 @@ class MPSE(object):
         for k in range(self.K):
             self.visualization.\
                 append(visualization_class(self.D[k],self.proj.d2,
-                                           verbose=self.verbose,
+                                           verbose=0, #self.verbose,
                                            level=self.level+1,
                                            title=f'perspective # {k+1}',
                                            **kwargs))
@@ -204,6 +208,8 @@ class MPSE(object):
         if self.verbose > 0:
             print('  MPSE.initialize():')
 
+        self.time = 0
+        
         if X0 is None:
             if self.verbose > 0:
                 print('    X0 : random')
@@ -306,6 +312,7 @@ class MPSE(object):
             
 
         if H is not None:
+            self.time += H['time']
             T1 = self.H['iterations']; T2 = H['iterations']
             self.H['iterations'] = T1+T2
             self.H['markers'].append(T1)
@@ -421,7 +428,7 @@ class MPSE(object):
         plots.plot3D(self.X,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,save=save)
 
-    def figureY(self,title='perspectives',edges=False,colors=True,plot=True,
+    def figureY(self,title='projections',edges=False,colors=True,plot=True,
                 ax=None,**kwargs):
         if ax is None:
             fig, ax = plt.subplots(1,self.K)
@@ -453,6 +460,8 @@ class MPSE(object):
         else:
             windows = 3
         fig, ax = plt.subplots(1,windows,figsize=(3*windows,3))
+        fig.suptitle('computations')
+        fig.subplots_adjust(top=0.80)
         ax[0].semilogy(self.H['costs'],linewidth=3)
         ax[0].set_title('cost')
         i = 1
@@ -463,7 +472,7 @@ class MPSE(object):
                            label='learning rate', linestyle='--')
             ax[i].semilogy(self.H['X_iters'],self.H['X_steps'][:],
                            label='step size', linestyle='--')
-            ax[i].set_title(title)
+            ax[i].set_title('X')
             ax[i].legend()
             ax[i].set_xlabel('iterations')
             i = 2
@@ -474,7 +483,7 @@ class MPSE(object):
                            label='learning rate', linestyle='--')
             ax[i].semilogy(self.H['Q_iters'],self.H['Q_steps'][:],
                            label='step size',linestyle='--')
-            ax[i].set_title(title)
+            ax[i].set_title('Q')
             ax[i].legend()
             ax[i].set_xlabel('iterations')
                 

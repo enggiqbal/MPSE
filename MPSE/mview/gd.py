@@ -315,7 +315,6 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
             print('  '*level+f'    {i:>4}/{max_iter} : cost = {costs[i]:0.2e},'+
                   f' grad = {grads[i]:0.2e}, lr = {lrs[i]:0.2e},'+
                   f' step = {steps[i]:0.2e}',flush=True, end="\r")
-    print()
     
     tf = time.time()
 
@@ -347,6 +346,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         }
         
     if verbose > 1:
+        print()
         print('  '*level+'  results:')
         print('  '*level+f'    conclusion : {conclusion}')
         print('  '*level+f'    total iterations : {i}')
@@ -512,7 +512,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
                   f'lr = {np.max(lrs[i]):0.2e}',
                   flush=True, end="\r")
             #sys.stdout.write("\033[F")
-
+    
     if verbose > 1:
         sys.stdout.write("\033[K")
         sys.stdout.write("\033[F")
@@ -551,6 +551,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         }
         
     if verbose > 1:
+        print()
         print('  results:')
         print(f'    conclusion : {conclusion}')
         print(f'    total iterations : {i}')

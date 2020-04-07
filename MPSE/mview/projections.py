@@ -78,7 +78,7 @@ class PROJ(object):
                     theta = math.pi/number * k
                     Q.append(np.array([[math.cos(theta),math.sin(theta),0],
                                    [0,0,1]]))
-            return Q
+                return Q
         self.special = special
             
         assert self.constraint in [None,'orthogonal','similar']
@@ -207,6 +207,8 @@ class PROJ(object):
         projection/perspective families are ['identity','random']. Other choices
         are dependent on the family and constraints.
         """
+        if method is None:
+            method = 'random'
         if method == 'random':
             Q = []
             for i in range(number):

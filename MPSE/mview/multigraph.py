@@ -136,26 +136,70 @@ def multigraph_setup(D0,**kwargs):
     """
     if isinstance(D0,DISS):
         DD = D0
-    elif isinstance(D0,dict):
-        assert 'nodes' in D0
-        assert 'attributes' in D0
-        DD = DISS(**D0)
-        DD.from_projections(**D0,**kwargs)
-
     else:
-        if isinstance(D0,np.ndarray):
-            if len(D0.shape) <= 2:
-                D0 = [D0]
+        if isinstance(D0,dict) is False:
+            if isinstance(D0,np.ndarray):
+                assert len(D0.shape) >= 2
+            else:
+                assert isinstance(D0,list)
+                N = len(D0[0])
+                for k in range(1,len(D0)):
+                    assert len(D0[k]) == N
+            N = len(D0[0])
+            DD0 = {}
+            if len(D0[0].shape)==2 and D0[0].shape[1]==N:
+                DD0['dtype'] = 'matrix'
+                DD0['matrix'] = D0
+            else:
+                DD0['dtype'] = 'features'
+                DD0['features'] = D0
+        else:
+            DD0 = D0
 
-        K = len(D0)
-        D = []
-        for k in range(K):
-            D.append(attribute_setup(D0[k]))
+        if 'dtype' not in DD0:
+            if 'matrix' in DD0:
+                DD0['dtype'] = 'matrix'
+            elif 'features' in DD0:
+                DD0['dtype'] = 'features'
+            else:
+                DD0['dtype'] = 'projections'
+                
+        if DD0['dtype'] == 'matrix':
+            K = len(DD0['matrix']); N = len(DD0['matrix'][0])
+        elif DD0['dtype'] == 'features':
+            K = len(DD0['features']); N = len(DD0['features'][0])
+        else:
+            N = DD0.pop('nodes'); K = DD0.pop('attributes')
+        DD = DISS(N,**DD0)
 
-        nodes = max([D[k]['nodes'] for k in range(K)])
-        DD = DISS(nodes,**kwargs)
-        DD.D = D
-        DD.attributes = K
+        if 'ncolors' in DD0:
+            ncolors = DD0.pop('ncolors')
+            if ncolors is None:
+                ncolors = [None]*K
+            elif isinstance(ncolors,np.ndarray) and len(ncolors.shape)==1:
+                ncolors = [ncolors]*K
+            else:
+                assert isinstance(ncolors,list) or \
+                    isinstance(ncolors,np.ndarray)
+                for k in range(K):
+                    assert ncolors[k] is None or len(ncolors[k])==N
+        else:
+            ncolors = [None]*K
+
+        if DD0['dtype'] == 'projections':
+            DD.from_projections(K,**DD0)
+        else:
+            for k in range(K):
+                if DD0['dtype'] == 'matrix':
+                    DD.from_matrix(DD0['matrix'][k],ncolor=ncolors[k])
+                elif DD0['dtype'] == 'features':
+                    DD.from_features(DD0['features'][k],ncolor=ncolors[k])
+
+    #elif isinstance(D0,dict):
+     #   assert 'nodes' in D0
+      #  assert 'attributes' in D0
+       # DD = DISS(**D0)
+        #DD.from_projections(**D0,**kwargs)
 
     return DD
 
@@ -183,7 +227,7 @@ class DISS(object):
         #    D['ncolor'] = self.ncolor
         return D
 
-    def from_matrix(self,matrix,label=None,**kwargs):
+    def from_matrix(self,matrix,label=None,ncolor=None,**kwargs):
         """\
         Adds a perspective to self using a pairwise dissimilarity matrix.
         
@@ -203,7 +247,9 @@ class DISS(object):
         D['edges'] = int(self.nodes*(self.nodes-1)/2)
         D['dfunction'] = lambda i,j : D['matrix'][i,j]                
         D['label'] = label
-        D['ncolor'] = self.ncolor
+        if ncolor is None:
+            ncolor = D['matrix'][0]
+        D['ncolor'] = ncolor
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
@@ -271,7 +317,7 @@ class DISS(object):
         self.D.append(D)
         self.attributes += 1
 
-    def from_projections(self,attributes=3,X=None,d1=3,Q=None,**kwargs):
+    def from_projections(self,attributes=3,d1=3,X=None,Q=None,**kwargs):
         """\
         Adds attributes from projections.
         """
@@ -285,9 +331,10 @@ class DISS(object):
             self.ncolor = X[:,0]
         proj = projections.PROJ(d1=d1,**kwargs)
         if Q is None or isinstance(Q,str):
-            Q = proj.generate(number=attributes,**kwargs)
+            Q = proj.generate(number=attributes,method=Q,**kwargs)
         else:
             assert len(Q) == attributes
+        self.Q = Q
         for k in range(attributes):
             Y = proj.project(Q[k],X)
             self.from_features(Y,**kwargs)
