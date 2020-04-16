@@ -6,7 +6,7 @@ import scipy as sp
 
 import misc, multigraph, gd, plots
 
-def stress_function(X,D,estimate=True):
+def stress_function(X,D,estimate=False):
     """\
 
     Normalized MDS stress function.
@@ -55,7 +55,8 @@ def stress_function(X,D,estimate=True):
                 import scipy.spatial
                 dX = scipy.spatial.distance_matrix(X,X)
                 stress = np.linalg.norm(D['matrix']-dX)
-                stress /= D['normalization']
+                stress /= math.sqrt(D['node_number']*(D['node_number']-1))*\
+                    D['normalization']
         elif D['complete'] is True:
             if D['weighted'] is False:
                 stress = 0
@@ -63,6 +64,7 @@ def stress_function(X,D,estimate=True):
                     for j in range(D['node_number']):
                         dXij = np.linalg.norm(X[i]-X[j])
                         stress += (D['dfunction'](i,j)-dXij)**2
+                stress /= D['node_number']*(D['node_number']-1)
                 stress = math.sqrt(stress) / D['normalization']
         else:
             if D['weighted'] is False:
@@ -169,7 +171,7 @@ class MDS(object):
 
         self.D = multigraph.attribute_setup(D,**kwargs)
         self.D['rms'] = multigraph.attribute_rms(self.D,**kwargs)
-        self.D['normalization'] = self.D['rms']*self.D['edge_number']
+        self.D['normalization'] = self.D['rms']
         self.N = self.D['node_number']; self.NN = self.D['edge_number']
         
         assert isinstance(dim,int); assert dim > 0

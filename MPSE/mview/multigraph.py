@@ -62,7 +62,7 @@ def attribute_setup(D,**kwargs):
         D = diss.D[0]
     return D
 
-def attribute_rms(D,estimate=True,**kwargs):
+def attribute_rms(D,estimate=False,**kwargs):
     if D['complete'] is True:
         rms = 0
         if estimate is True and D['node_number'] > 64:
