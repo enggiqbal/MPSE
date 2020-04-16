@@ -103,10 +103,10 @@ def mm(x,dfx,df0x=None,x0=0,df0x0=0,p=None,y=0,ndx=None,lr=10,theta=np.Inf,
             df0x = dfx
         nddfx = np.linalg.norm(df0x-df0x0)
 
-        
         L = nddfx/ndx
         lr0 = lr
-        lr = min(math.sqrt(1+theta)*lr,1/(alpha*L))
+        #lr = min(math.sqrt(1+theta)*lr,1/(alpha*L))
+        lr = max(min(math.sqrt(1+theta)*lr,1/(alpha*L)),3*lr/4)
         theta = lr/lr0
         dx = -lr*dfx
         ndx = np.linalg.norm(dx)
@@ -246,23 +246,25 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
 
     #initialization by running one iteration of GD w/ initial lr
     x0 = x.copy()
-    if stochastic is False:
-        fx, dfx = F(x)
-    else:
-        xi = Xi()
-        fx, dfx = F(x,xi)
-    x, kwargs = fixed(x,dfx,lr=lr,p=p)
+    it0 = 1
+    for i in range(it0):
+        if stochastic is False:
+            fx, dfx = F(x)
+        else:
+            xi = Xi()
+            fx, dfx = F(x,xi)
+        x, kwargs = fixed(x,dfx,lr=lr,p=p)
+        costs[i] = fx
+        grads[i] = np.linalg.norm(dfx)/normalization #######
+        lrs[i] = kwargs['lr']
+        steps[i] = kwargs['ndx']/normalization #rms of step size
     if constraint is True:
         y = kwargs['y']
-    costs[0] = fx
-    grads[0] = np.linalg.norm(dfx)/normalization #######
-    lrs[0] = kwargs['lr']
-    steps[0] = kwargs['ndx']/normalization #rms of step size
 
     if verbose > 1:
         print('  '*level+'  progress:')
         
-    for i in range(1,max_iter):
+    for i in range(it0,max_iter):
 
         if stochastic is False:
             if constraint is True:
@@ -431,29 +433,31 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
     normalization = [math.sqrt(np.size(a)) for a in X] ####
 
     X0 = X.copy()
-    if stochastic is False:
-        fX, dfX = F(X)
-    else:
-        xi = Xi()
-        fX, dfX = F(X,xi)
-    KWARGS = []
-    if constraint is True:
-        Y = []
-    for k in range(K):
-        X[k], temp = fixed(X[k],dfX[k],p=p[k],lr=lr[k])
-        #temp['df0x0'] = dfX[k]
-        KWARGS.append(temp)
+    it0 = 1
+    for i in range(it0):
+        if stochastic is False:
+            fX, dfX = F(X)
+        else:
+            xi = Xi()
+            fX, dfX = F(X,xi)
+        KWARGS = []
         if constraint is True:
-            Y.append(temp['y'])
-    costs[0] = fX
-    grads[0] = [np.linalg.norm(dfX[k])/normalization[k] for k in range(K)] ####
-    lrs[0] = lr
-    steps[0] = [KWARGS[k]['ndx']/normalization[k] for k in range(K)]
+            Y = []
+        for k in range(K):
+            X[k], temp = fixed(X[k],dfX[k],p=p[k],lr=lr[k])
+            #temp['df0x0'] = dfX[k]
+            KWARGS.append(temp)
+            if constraint is True:
+                Y.append(temp['y'])
+        costs[i] = fX
+        grads[i] = [np.linalg.norm(dfX[k])/normalization[k] for k in range(K)] ####
+        lrs[i] = lr
+        steps[i] = [KWARGS[k]['ndx']/normalization[k] for k in range(K)]
         
-    if verbose > 1:
+    if verbose > 0:
         print('  progress:')
         
-    for i in range(1,max_iter):
+    for i in range(it0,max_iter):
 
         if stochastic is False:
             if constraint is True:
@@ -505,7 +509,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
             success = False
             conclusion = 'maximum step size reached (unstable)'
             break
-        if verbose > 1:
+        if verbose > 0:
             #sys.stdout.write("\033[K")
             print(f'    {i:>4}/{max_iter} : step = {np.max(steps[i]):0.2e}, '+\
                   f'grad = {np.max(grads[i]):0.2e}, cost = {costs[i]:0.2e}, '+\
@@ -513,7 +517,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
                   flush=True, end="\r")
             #sys.stdout.write("\033[F")
     
-    if verbose > 1:
+    if verbose > 0:
         sys.stdout.write("\033[K")
         sys.stdout.write("\033[F")
         sys.stdout.write("\033[K")
@@ -550,7 +554,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         'time' : tf-t0
         }
         
-    if verbose > 1:
+    if verbose > 0:
         print()
         print('  results:')
         print(f'    conclusion : {conclusion}')

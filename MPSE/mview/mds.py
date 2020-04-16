@@ -235,7 +235,7 @@ class MDS(object):
                                  average_neighbors=average_neighbors,**kwargs)
             return Xi
 
-    def gd(self, step_rule='mm', min_step=1e-4,**kwargs):
+    def gd(self, scheme='mm',**kwargs):
         if hasattr(self,'X') is False:
             self.initialize(title='automatic')
         if self.verbose > 0:
@@ -246,15 +246,14 @@ class MDS(object):
 
         Xi = self.subsample_generator(**kwargs)
         F = lambda X, xi=self.D : self.F(X,D=xi)
-        self.X, H = gd.single(self.X,F,Xi=Xi,step_rule=step_rule,
-                              min_step=min_step,**kwargs)
+        self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,**kwargs)
         self.update(H=H)
         if self.verbose > 0:
             print(f'    final stress : {self.cost:0.2e}')
 
     ### Plotting methods ###
 
-    def figureX(self,title='',edges=False,colors=False,axis=True,plot=True,
+    def figureX(self,title='',edges=False,node_color=None,axis=True,plot=True,
                 ax=None):
         assert self.dim >= 2
         if ax is None:
@@ -265,11 +264,9 @@ class MDS(object):
             edges = self.D['edges']
         elif edges is False:
             edges = None
-        if colors is True:
-            colors = self.D['ncolor']
-        elif colors is False:
-            colors = None
-        plots.plot2D(self.X,edges=edges,colors=colors,axis=axis,ax=ax,
+        if node_color is None:
+            node_color = self.D['node_colors']
+        plots.plot2D(self.X,edges=edges,colors=node_color,axis=axis,ax=ax,
                      title=title)
         if plot is True:
             plt.draw()
@@ -279,22 +276,17 @@ class MDS(object):
         assert hasattr(self,'H')
         if ax is None:
             fig, ax = plt.subplots()
-        plots.plot_cost(self.H['costs'],self.H['steps'],title=title,ax=ax)
+        else:
+            plot = False
+        ax.semilogy(self.H['costs'],label='stress',linewidth=3)
+        ax.semilogy(self.H['grads'],label='grad size')
+        ax.semilogy(self.H['lrs'],label='lr')
+        ax.semilogy(self.H['steps'],label='step size')
+        ax.legend()
+        ax.set_title(title)
         if plot is True:
             plt.draw()
             plt.pause(1.0)
-
-    def figure(self,title='mds computation & embedding',labels=None,
-               plot=True):
-        assert self.dim >= 2
-        fig,axs = plt.subplots(1,2)
-        plt.suptitle(title+f' - stress = {self.cost:0.2e}')
-        self.figureH(ax=axs[0])
-        self.figureX(edges=True,ax=axs[1])
-        if plot is True:
-            plt.draw()
-            plt.pause(1.0)
-        return fig
                                    
 ### TESTS ###
 
@@ -302,21 +294,23 @@ def disk(N=100,**kwargs):
     print('\n***mds.disk()***')
     
     X = misc.disk(N,2); colors = misc.labels(X)
-    DD = multigraph.DISS(N,ncolor=colors)
-    DD.from_features(X)
-    D = DD.return_attribute()
+    diss = multigraph.DISS(N)
+    diss.add_feature(X,node_colors=colors)
+    D = diss.return_attribute()
     
     title = 'basic disk example'
     mds = MDS(D,dim=2,verbose=1,title=title)
-    mds.initialize(X0=X)
-    mds.figureX(title='original data',colors=True)
     mds.initialize()
-    mds.figureX(title='initial embedding',colors=True)
-    mds.gd(max_iter=200,min_grad=1e-10,min_step=1e-10,verbose=2,plot=True,
-           **kwargs)
-    mds.figureX(title='final embedding',colors=True)
+    fig, ax = plt.subplots(1,3,figsize=(9,3))
+    fig.suptitle('MDS - disk data')
+    fig.subplots_adjust(top=0.80)
+    mds.figureX(title='initial embedding',ax=ax[0])
+    mds.gd(max_iter=100,verbose=2,**kwargs)
+    mds.figureH(ax=ax[1])
+    mds.figureX(title='final embedding',ax=ax[2])
     plt.show()
 
 if __name__=='__main__':
 
-    disk(N=30,step_rule='bb',edge_proportion=.9,lr=10)
+    print('mview.mds : running tests')
+    disk(N=100,scheme='mm',average_neighbors=2,lr=1)

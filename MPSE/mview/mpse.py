@@ -379,7 +379,8 @@ class MPSE(object):
                 print(f'    initial stress : {self.cost:0.2e}')
             F = lambda X, xi=self.D: self.FX(X,self.Q,D=xi,**kwargs)
             Xi = self.subsample_generator(**kwargs)
-            self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,**kwargs)
+            self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,
+                                  verbose=self.verbose,**kwargs)
             self.update_history(H=H,Q_is_fixed=True)
 
         elif self.X_is_fixed is True:
@@ -411,7 +412,7 @@ class MPSE(object):
             print(f'  Final stress : {self.cost:0.2e}')            
  
     def figureX(self,title=None,perspectives=True,
-                labels=None,edges=None,colors=True,plot=True,save=False):
+                labels=None,edges=None,colors=True,plot=True,ax=None):
 
         if perspectives is True:
             perspectives = []
@@ -428,7 +429,7 @@ class MPSE(object):
         if colors is True:
             colors = self.DD.node_colors
         plots.plot3D(self.X,perspectives=perspectives,edges=edges,
-                     colors=colors,title=title,save=save)
+                     colors=colors,title=title,ax=ax)
 
     def figureY(self,title='projections',include_edges=False,
                 include_colors=True,plot=True,
@@ -470,9 +471,9 @@ class MPSE(object):
         i = 1
         if self.X_is_fixed is False:
             ax[i].semilogy(self.H['X_iters'],self.H['X_grads'][:],
-                           label='gradient size', linestyle='--')
+                           label='grad size', linestyle='--')
             ax[i].semilogy(self.H['X_iters'],self.H['X_lrs'][:],
-                           label='learning rate', linestyle='--')
+                           label='lr', linestyle='--')
             ax[i].semilogy(self.H['X_iters'],self.H['X_steps'][:],
                            label='step size', linestyle='--')
             ax[i].set_title('X')
@@ -496,22 +497,51 @@ class MPSE(object):
     
 ##### TESTS #####
 
-def disk(N=100,Q_is_fixed=False,X_is_fixed=False,**kwargs):
+def disk_fixed_perspectives(N=100,**kwargs):
+    fig, ax = plt.subplots(1,5,figsize=(15,3))
+    fig.suptitle('MPSE - disk data w/ fixed perspectives')
+    fig.subplots_adjust(top=0.8)
     X = misc.disk(N,dim=3); labels=misc.labels(X)
     proj = projections.PROJ(); Q = proj.generate(number=3,method='standard') ##
     DD = multigraph.DISS(N,ncolor=labels)
     for i in range(3):
-        DD.from_features(proj.project(Q[i],X))
-    if Q_is_fixed is True:
-        mv = MPSE(DD,Q=Q,verbose=1)
-    elif X_is_fixed is True:
-        mv = MPSE(DD,X=X,verbose=1)
-    else:
-        mv = MPSE(DD,verbose=1)
+        DD.add_feature(proj.project(Q[i],X))
+    mv = MPSE(DD,Q=Q,verbose=2)
+    ax0 = fig.add_subplot(1,5,1,projection='3d')
+    mv.figureX(title='initial embedding',ax=ax0)
+    mv.gd(**kwargs)
+    mv.figureX(title='final embedding')
+    mv.figureY()
+    mv.figureH('computation history')
+    plt.draw()
+    plt.pause(0.2)
+
+def disk_fixed_embedding(N=100,**kwargs):
+    X = misc.disk(N,dim=3); labels=misc.labels(X)
+    proj = projections.PROJ(); Q = proj.generate(number=3,method='standard') ##
+    DD = multigraph.DISS(N,ncolor=labels)
+    for i in range(3):
+        DD.add_feature(proj.project(Q[i],X))
+    mv = MPSE(DD,X=X,verbose=1)
+    mv.gd(verbose=2,**kwargs)
+    mv.figureX(title='final embedding')
+    mv.figureY()
+    mv.figureH('computation history')
+    plt.draw()
+    plt.pause(0.2)
+
+def disk(N=100,**kwargs):
+    X = misc.disk(N,dim=3); labels=misc.labels(X)
+    proj = projections.PROJ(); Q = proj.generate(number=3)#,method='standard') ##
+    DD = multigraph.DISS(N,ncolor=labels)
+    for i in range(3):
+        DD.add_feature(proj.project(Q[i],X))
+    mv = MPSE(DD,verbose=1)
     mv.figureX(title='initial embedding')
     #mv.smart_initialize(verbose=2)
-    mv.figureX(title='smart initial embedding')
+    #mv.figureX(title='smart initial embedding')
     mv.gd(verbose=2,**kwargs)
+    #mv.gd(verbose=2,average_neighbors=64,max_iter=15)
     mv.figureX(title='final embedding')
     mv.figureY()
     mv.figureH('computation history')
@@ -532,6 +562,8 @@ def xyz():
 
     
 if __name__=='__main__':
-    disk(1000,average_neighbors=3,max_iter=200,min_grad=1e-6,scheme='mm',X_is_fixed=False)
-    #xyz()
-
+    print('mview.mpse : running tests')
+    #disk_fixed_perspectives(100,average_neighbors=2,max_iter=100,lr=1)
+    #disk_fixed_embedding(100,average_neighbors=2,max_iter=100,lr=1)
+    disk(100,average_neighbors=20,max_iter=100,lr=1)
+    plt.show()
