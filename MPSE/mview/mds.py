@@ -6,7 +6,7 @@ import scipy as sp
 
 import misc, multigraph, gd, plots
 
-def f(X,D,estimate=True):
+def stress_function(X,D,estimate=True):
     """\
 
     Normalized MDS stress function.
@@ -14,16 +14,27 @@ def f(X,D,estimate=True):
     Parameters:
 
     X : numpy array
-    Position/coordinate/embedding array for nodes 0,1,...,N-1
+    Position/coordinate/embedding array.
 
-    D : dictionary
-    Dissimilarity graph, containing edges, distances, and weights.
+    D : numpy array or dictionary
+    Either a dissimilarity matrix or a dissimilarity dictionary as specified
+    in mview.multigraph.
+
+    estimate : boolean
+    If set to True, it estimates stress to reduce computation time.
 
     Returns:
 
     stress : float
     MDS stress at X.
     """
+    if isinstance(D,np.ndarray):
+        if estimate is False:
+            dX = sp.spatial.distance_matrix(X,X)
+            stress = np.linalg.norm(D-dX)
+            stress /= np.linalg.norm(D)
+        return stress
+            
     if estimate is True and D['edge_number']>64*63/2:
         stress = 0
         if D['complete'] is True:
@@ -159,12 +170,12 @@ class MDS(object):
         self.D = multigraph.attribute_setup(D,**kwargs)
         self.D['rms'] = multigraph.attribute_rms(self.D,**kwargs)
         self.D['normalization'] = self.D['rms']*self.D['edge_number']
-        self.N = D['node_number']; self.NN = D['edge_number']
+        self.N = self.D['node_number']; self.NN = self.D['edge_number']
         
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
         
-        self.f = lambda X, D=self.D, **kwargs : f(X,D,**kwargs)
+        self.f = lambda X, D=self.D, **kwargs : stress_function(X,D,**kwargs)
         self.F = lambda X, D=self.D, **kwargs : F(X,D,**kwargs)
 
         self.H = {}

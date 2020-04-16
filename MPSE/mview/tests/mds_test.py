@@ -4,9 +4,28 @@ import matplotlib.pyplot as plt
 import numpy as np
 import seaborn as sn
 import pandas as pd
+from scipy.spatial import distance_matrix
 
 sys.path.insert(1, '../')
 import misc, multigraph, mds
+
+### Tests to quantify what a good normalized stress score is ###
+
+def stress_vs_noise(N=128,dim=2):
+    X = misc.disk(N,dim=dim)
+    D = distance_matrix(X,X)
+    vis = mds.MDS(D,dim=dim)
+
+    noise = 10**np.arange(-2,3,0.5)
+    its = len(noise)
+    stress = np.empty(its)
+    for i in range(its):
+        X_noisy = X+np.random.randn(N,dim)*noise[i]
+        stress[i] = mds.stress_function(X_noisy,D,estimate=False)
+        vis.initialize(X0=X_noisy)
+        vis.figureX(title=f'noise: {noise[i]:0.2e}, stress: {stress[i]:0.2e}')
+    plt.show()
+    return
 
 def reliability0(N=100,trials=3,repeats=5,**kwargs):
     """\
@@ -318,7 +337,7 @@ def embeddability_noise(ax=None):
     print('\n**mds.embeddability_noise()')
     N=50
     ncost = []
-    noise_list = [0]+10**np.arange(-4,0,0.5)
+    noise_list = [0]+10**np.arange(-2,1,0.5)
     X = misc.disk(N,4)
     DD = distances.compute(X)
     for noise in noise_list:
@@ -337,6 +356,10 @@ def embeddability_noise(ax=None):
         plt.show()
         
 if __name__=='__main__':
-    N = [int(10**a) for a in [1,1.5,2,2.5,3]]
-    E = [1.0,.9,.8,.7]
-    reliability(N,E,trials=10)
+
+    ### Quantification of normalized stress ###
+    stress_vs_noise(N=1024,dim=2)
+    
+    #N = [int(10**a) for a in [1,1.5,2,2.5,3]]
+    #E = [1.0,.9,.8,.7]
+    #reliability(N,E,trials=10)

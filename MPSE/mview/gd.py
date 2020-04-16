@@ -463,7 +463,6 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
             if constraint is True:
                 fY, dfY = F(Y)
             fX, dfX = F(X)
-            #f0X, df0X = fX, dfX
         else:
             if constraint is False:
                 f0X, df0X = F(X,xi)
@@ -477,9 +476,13 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
 
         if fX < min_cost:
             conclusion = 'minimum cost reached'
+            lrs[i] = [None]*K
+            steps[i] = [None]*K
             break
         if max(grads[i]) < min_grad:
             conclusion = 'minimum gradient size reached'
+            lrs[i] = [None]*K
+            steps[i] = [None]*K
             break
 
         for k in range(K):
@@ -524,10 +527,10 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         
     tf = time.time()
 
-    costs = costs[0:i]
-    grads = grads[0:i]
-    lrs = lrs[0:i]
-    steps = steps[0:i]
+    costs = costs[0:i+1]
+    grads = grads[0:i+1]
+    lrs = lrs[0:i+1]
+    steps = steps[0:i+1]
 
     if plot is True:
         fig, axes = plt.subplots(1,1+K,figsize=(15,5))
@@ -548,7 +551,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         'steps' : steps,
         'grads' : grads,
         'lrs' : lrs,
-        'iterations' : i,
+        'iterations' : i+1,
         'success' : success,
         'conclusion' : conclusion,
         'time' : tf-t0

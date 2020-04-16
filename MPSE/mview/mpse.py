@@ -125,21 +125,15 @@ class MPSE(object):
             return math.sqrt(cost/self.K)
         self.cost_function = cost_function
 
-        def cost_function_k(X,q,k,y=None):
-            if y is None:
-                y = self.proj.project(X,q=q)
-            cost_k = self.visualization[k].cost_function(y)
-            return cost_k
-        self.cost_function_k = cost_function_k
-
         def cost_function_all(X,Q,Y=None):
             if Y is None:
-                Y = self.proj.project(X,Q=Q)
+                Y = self.proj.project(Q,X)
             cost = 0; individual_cost = np.zeros(self.K)
             for k in range(self.K):
                 cost_k = self.visualization[k].f(Y[k])
-                cost += cost_k
+                cost += cost_k**2
                 individual_cost[k] = cost_k
+            cost = math.sqrt(cost/self.K)
             return cost, individual_cost
         self.cost_function_all = cost_function_all
         
@@ -176,7 +170,8 @@ class MPSE(object):
                     costk, dYk = self.visualization[k].F(Y[k],D=D[k])
                     cost += costk**2
                     dX += dYk @ Q[k]
-                return (math.sqrt(cost/self.K),dX)
+                cost = math.sqrt(cost/self.K)
+                return (cost,dX)
             self.FX = FX
 
             def FQ(X,Q,D=None,**kwargs):
@@ -187,8 +182,9 @@ class MPSE(object):
                 Y = self.proj.project(Q,X)
                 for k in range(self.K):
                     costk, dYk = self.visualization[k].F(Y[k],D=D[k])
-                    cost += costk
+                    cost += costk**2
                     dQ.append(dYk.T @ X)
+                cost = math.sqrt(cost/self.K)
                 return (cost,np.array(dQ))
             self.FQ = FQ
             
@@ -532,7 +528,7 @@ def disk_fixed_embedding(N=100,**kwargs):
 
 def disk(N=100,**kwargs):
     X = misc.disk(N,dim=3); labels=misc.labels(X)
-    proj = projections.PROJ(); Q = proj.generate(number=3)#,method='standard') ##
+    proj = projections.PROJ(); Q = proj.generate(number=3)
     DD = multigraph.DISS(N,ncolor=labels)
     for i in range(3):
         DD.add_feature(proj.project(Q[i],X))
@@ -541,29 +537,15 @@ def disk(N=100,**kwargs):
     #mv.smart_initialize(verbose=2)
     #mv.figureX(title='smart initial embedding')
     mv.gd(verbose=2,**kwargs)
-    #mv.gd(verbose=2,average_neighbors=64,max_iter=15)
+    #mv.gd(verbose=2,average_neighbors=64,max_iter=15,lr=.2)
     mv.figureX(title='final embedding')
     mv.figureY()
     mv.figureH('computation history')
     plt.show()
-
-### Quick plots ###
-
-def xyz():
-    X = np.load('raw/xyz.npy')
-    persp = perspective.Persp()
-    persp.fix_Q(number=3,special='standard')
-    D = multigraph.binomial(N=1000,p=.01,K=3)
-    mv = MPSE(D,persp=persp,verbose=1)
-    mv.setup_visualization()
-    mv.initialize_X(X)
-    mv.figureY(plot=True,title='',axis=False)
-    plt.show()
-
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
     #disk_fixed_perspectives(100,average_neighbors=2,max_iter=100,lr=1)
     #disk_fixed_embedding(100,average_neighbors=2,max_iter=100,lr=1)
-    disk(100,average_neighbors=20,max_iter=100,lr=1)
+    disk(100,average_neighbors=2,max_iter=200,lr=1)
     plt.show()
