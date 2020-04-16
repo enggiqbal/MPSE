@@ -54,11 +54,13 @@ class MPSE(object):
             print('mpse.MPSE('+title+'):')
         self.verbose = verbose; self.title = title; self.level = level
 
-        self.DD = multigraph.multigraph_setup(dissimilarities,Q=Q,**kwargs)
+        self.DD = multigraph.multigraph_setup(dissimilarities,Q=Q,
+                                              verbose=verbose,
+                                              **kwargs)
         self.D = self.DD.D
 
         self.K = self.DD.attributes
-        self.N = self.DD.nodes
+        self.N = self.DD.node_number
 
         self.d1 = d1; self.d2 = d2
         self.family = family; self.constraint=constraint
@@ -424,25 +426,26 @@ class MPSE(object):
             if isinstance(edges,numbers.Number):
                 edges = edges-self.D
         if colors is True:
-            colors = self.DD.ncolor
+            colors = self.DD.node_colors
         plots.plot3D(self.X,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,save=save)
 
-    def figureY(self,title='projections',edges=False,colors=True,plot=True,
+    def figureY(self,title='projections',include_edges=False,
+                include_colors=True,plot=True,
                 ax=None,**kwargs):
         if ax is None:
             fig, ax = plt.subplots(1,self.K)
         else:
             plot = False
         for k in range(self.K):
-            if edges is True:
-                edges_k = self.D[k]['edges']
-            elif edges is False:
+            if include_edges is True:
+                edges_k = self.D[k]['edge_list']
+            elif include_edges is False:
                 edges_k = None
             else:
-                edges_k = edges[k]
-            if colors is True:
-                colors_k = self.D[k]['ncolor'] ####
+                edges_k = include_edges[k]
+            if include_colors is True:
+                colors_k = self.D[k]['node_colors'] ####
             else:
                 colors_k = None
             plots.plot2D(self.Y[k],edges=edges_k,colors=colors_k,ax=ax[k],

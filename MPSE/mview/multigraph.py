@@ -6,7 +6,7 @@ import misc, projections
 ### Functions to set up distance graph and multigraphs ###
 
 # A (distance) graph is a dictionary containing the following attributes:
-# 'node_number' : number of nodes
+# 'node_number' : number of nodesdef count_occurrences(attribute,allowed_families=None):
 # 'edge_number' : number of edges
 # 'edges' : a list or array containing the edges of the graph
 # 'distances' : a list or array containing the edge distances of the given edges
@@ -18,12 +18,12 @@ import misc, projections
 
 def attribute_check(D):
     assert isinstance(D,dict)
-    for key in ['nodes','edges','type','complete']:
+    for key in ['node_number','edge_number','type','complete']:
         assert key in D
     if D['complete'] is True:
         assert 'dfunction' in D
     else:
-        assert 'elist' in D
+        assert 'edge_list' in D
     if D['type'] == 'matrix':
         assert 'matrix' in D
     elif D['type'] == 'features':
@@ -47,40 +47,40 @@ def attribute_setup(D,**kwargs):
         N = len(D)
         diss = DISS(N,**kwargs)
         if len(D.shape)==2 and D.shape[0]==D.shape[1]:
-            diss.from_matrix(D,**kwargs)
+            diss.add_matrix(D,**kwargs)
         else:
-            diss.from_features(D,**kwargs)
+            diss.add_feature(D,**kwargs)
         D = diss.D[0]
     elif isinstance(D,dict):
-        if 'nodes' in D:
-            N = D['nodes']
+        if 'node_number' in D:
+            N = D['node_number']
         else:
-            assert 'elist' in D
-            N = np.max(D['elist'])
+            assert 'edge_list' in D
+            N = np.max(D['edge_list'])
         diss = DISS(N,**kwargs)
-        diss.from_graph(**D,**kwargs)
+        diss.add_graph(**D,**kwargs)
         D = diss.D[0]
     return D
 
 def attribute_rms(D,estimate=True,**kwargs):
     if D['complete'] is True:
         rms = 0
-        if estimate is True and D['nodes'] > 64:
-            edges = misc.random_triangular(D['nodes'],int(64*63/2))
-            for i1,i2 in edges:
+        if estimate is True and D['node_number'] > 64:
+            edge_list = misc.random_triangular(D['node_number'],int(64*63/2))
+            for i1,i2 in edge_list:
                 rms += D['dfunction'](i1,i2)**2
             rms = math.sqrt(rms/(64*63/2))
         else:
-            for i in range(D['nodes']):
-                for j in range(D['nodes']):
+            for i in range(D['node_number']):
+                for j in range(D['node_number']):
                     rms += D['dfunction'](i,j)**2
-            rms = math.sqrt(rms/(D['nodes']*(D['nodes']-1)/2))
+            rms = math.sqrt(rms/(D['node_number']*(D['node_number']-1)/2))
     else:
-        if estimate is True and D['edges'] > 64*63/2:
-            inds = np.random.choice(D['edges'],int(64*63/2))
-            rms = np.linalg.norm(D['dlist'][inds])/math.sqrt(64*63/2)
+        if estimate is True and D['edge_number'] > 64*63/2:
+            inds = np.random.choice(D['edge_number'],int(64*63/2))
+            rms = np.linalg.norm(D['dissimilarity_list'][inds])/math.sqrt(64*63/2)
         else:
-            rms = np.linalg.norm(D['dlist'])/math.sqrt(D['edges'])
+            rms = np.linalg.norm(D['dissimilarity_list'])/math.sqrt(D['edge_number'])
     return rms
 
 def attribute_sample(D,edge_proportion=None,average_neighbors=None,
@@ -88,45 +88,53 @@ def attribute_sample(D,edge_proportion=None,average_neighbors=None,
     if edge_proportion is None and average_neighbors is None:
         return D
     else:
-        N = D['nodes']; NN0 = D['edges']
+        N = D['node_number']; NN0 = D['edge_number']
         if edge_proportion is not None:
             NN = round(edge_proportion*NN0)
         elif average_neighbors is not None:
             NN = min(round(average_neighbors*N/2),NN0)
         
         if D['complete'] is True:
-            edges = misc.random_triangular(N,NN,replace=replace)
-            dlist = np.empty(NN)
+            edge_list = misc.random_triangular(N,NN,replace=replace)
+            dissimilarity_list = np.empty(NN)
             for i in range(NN):
-                edge = edges[i]
-                dlist[i] = D['dfunction'](int(edge[0]),int(edge[1]))
+                edge = edge_list[i]
+                dissimilarity_list[i] = D['dfunction'](int(edge[0]),int(edge[1]))
         else:
             inds = np.random.choice(NN0,NN)
-            edges = D['elist'][inds]
-            dlist = D['dlist'][inds]
+            edge_list = D['edge_list'][inds]
+            dissimilarity_list= D['dissimilarity_list'][inds]
 
         Ds = {}
-        Ds['nodes'] = N
+        Ds['node_number'] = N
         Ds['type'] = 'graph'
         Ds['complete'] = False
-        Ds['edges'] = NN
-        Ds['elist'] = edges
-        Ds['dlist'] = dlist
+        Ds['edge_number'] = NN
+        Ds['edge_list'] = edge_list
+        Ds['dissimilarity_list'] = dissimilarity_list
         Ds['label'] = 'sample'
         Ds['weighted'] = False
 
         return Ds
-    
 
-def multigraph_check(DD):
+def attribute_color(D,index=0):
     """\
-    Checks/complete multigraph dictionary DD.
+    Returns list of distances from node of given index.
     """
-    assert isinstance(DD,DISS)
+    node_number = D['node_number']
+    assert 0 <= index < node_number
+    if D['type'] == 'matrix':
+        d = D['matrix'][index]
+    elif D['type'] == 'features':
+        d = np.empty(node_number)
+        for i in range(node_number):
+            d[i] = D['dfunction'](index,i)
+    return d
 
-def multigraph_setup(D0,**kwargs):
+def multigraph_setup(dissimilarity_list,verbose=0,**kwargs):
     """\
-    Sets up distance multigraph from array or list or dictionary.
+    If the DISS object is not set up yet, it sets it up from a list of
+    dissimilarity relations.
 
     If D0 is a an array or list of arrays, then it is assumed that it consists 
     of square matrices containing pairwise distances.
@@ -134,74 +142,40 @@ def multigraph_setup(D0,**kwargs):
     If D0 is a dictionary, it is assumed that it already contains the distance
     graphs.
     """
-    if isinstance(D0,DISS):
-        DD = D0
-    else:
-        if isinstance(D0,dict) is False:
-            if isinstance(D0,np.ndarray):
-                assert len(D0.shape) >= 2
-            else:
-                assert isinstance(D0,list)
-                N = len(D0[0])
-                for k in range(1,len(D0)):
-                    assert len(D0[k]) == N
-            N = len(D0[0])
-            DD0 = {}
-            if len(D0[0].shape)==2 and D0[0].shape[1]==N:
-                DD0['dtype'] = 'matrix'
-                DD0['matrix'] = D0
-            else:
-                DD0['dtype'] = 'features'
-                DD0['features'] = D0
+    if isinstance(dissimilarity_list,DISS):
+        return dissimilarity_list
+
+    if isinstance(dissimilarity_list,list):
+        K = len(dissimilarity_list)
+        D0 = dissimilarity_list[0]
+        if isinstance(D0,np.ndarray):
+            node_number = len(D0)
+        elif isinstance(D0,dict) and 'node_number' in D0:
+            node_number = D0['node_number']
         else:
-            DD0 = D0
+            sys.abort('number of nodes not found')
 
-        if 'dtype' not in DD0:
-            if 'matrix' in DD0:
-                DD0['dtype'] = 'matrix'
-            elif 'features' in DD0:
-                DD0['dtype'] = 'features'
-            else:
-                DD0['dtype'] = 'projections'
-                
-        if DD0['dtype'] == 'matrix':
-            K = len(DD0['matrix']); N = len(DD0['matrix'][0])
-        elif DD0['dtype'] == 'features':
-            K = len(DD0['features']); N = len(DD0['features'][0])
+        diss = DISS(node_number,verbose=verbose)
+        for D in dissimilarity_list:
+            if isinstance(D,np.ndarray):
+                if len(D.shape)==2 and D.shape[0]==D.shape[1]:
+                    diss.add_matrix(D,verbose=verbose)
+                else:
+                    diss.add_feature(D,verbose=verbose)
+            elif isinstance(D,dict):
+                diss.add_graph(verbose=verbose,**D)
+
+        return diss
+
+    if isinstance(dissimilarity_list,dict):
+        if 'node_number' in dissimilarity_list:
+            node_number = dissimilarity_list['node_number']
         else:
-            N = DD0.pop('nodes'); K = DD0.pop('attributes')
-        DD = DISS(N,**DD0)
+            node_number = dissimilarity_list['nodes']
+        diss = DISS(node_number)
+        diss.add_projections(**dissimilarity_list)
 
-        if 'ncolors' in DD0:
-            ncolors = DD0.pop('ncolors')
-            if ncolors is None:
-                ncolors = [None]*K
-            elif isinstance(ncolors,np.ndarray) and len(ncolors.shape)==1:
-                ncolors = [ncolors]*K
-            else:
-                assert isinstance(ncolors,list) or \
-                    isinstance(ncolors,np.ndarray)
-                for k in range(K):
-                    assert ncolors[k] is None or len(ncolors[k])==N
-        else:
-            ncolors = [None]*K
-
-        if DD0['dtype'] == 'projections':
-            DD.from_projections(K,**DD0)
-        else:
-            for k in range(K):
-                if DD0['dtype'] == 'matrix':
-                    DD.from_matrix(DD0['matrix'][k],ncolor=ncolors[k])
-                elif DD0['dtype'] == 'features':
-                    DD.from_features(DD0['features'][k],ncolor=ncolors[k])
-
-    #elif isinstance(D0,dict):
-     #   assert 'nodes' in D0
-      #  assert 'attributes' in D0
-       # DD = DISS(**D0)
-        #DD.from_projections(**D0,**kwargs)
-
-    return DD
+        return diss
 
 ### CLASS ###
 
@@ -209,12 +183,48 @@ class DISS(object):
     """\
     Class with methods to compute dissimilarity relations
     """
-    def __init__(self, nodes, nlabel=None, ncolor=None,**kwargs):
-        self.nodes = nodes
-        self.nlabel = nlabel
-        self.ncolor = ncolor
+    def __init__(self, node_number, node_labels=None, node_colors=None,
+                 verbose=0,**kwargs):
+        """\
+        Initializes DISS object, which contains methods to add and work with
+        multiple pairwise dissimilarities sets on a set of nodes.
+
+        Paramters:
+        node_number : int
+        Number of nodes. Must be included if list_of_dissimilarities is None.
+
+        node_labels : None or list of strings
+        Labels for the set of nodes. Must have length equal to node_number.
+
+        node_colors : None or list of numbers
+        List of values to color nodes in plots by default. Must have length 
+        equal to node_number.
+        """
+        if node_labels is not None:
+            assert len(node_labels) == node_number
+        if node_colors is not None:
+            assert len(node_colors) == node_number
+        self.node_number = node_number
+        self.node_labels = node_labels
+        self.node_colors = node_colors
         self.attributes = 0
         self.D = []
+
+        self.verbose = verbose
+        if verbose > 0:
+            print('multigraph.DISS():')
+            print(f'  nodes : {self.node_number}')
+
+    def attribute_information(self,attribute=0):
+        """\
+        Prints attribute information.
+        """
+        assert isinstance(attribute,int)
+        assert attribute in range(self.attributes)
+        D = self.D[attribute]
+        
+        print(f'    type : {D["type"]}')
+        print(f'    complete : {D["complete"]}')
 
     def return_attribute(self,attribute=0,**kwargs):
         """\
@@ -223,11 +233,12 @@ class DISS(object):
         assert isinstance(attribute,int)
         assert attribute in range(self.attributes)
         D = self.D[attribute]
-        #if 'ncolor' not in D or D['ncolor'] is None:
-        #    D['ncolor'] = self.ncolor
+        #if 'node_colors' not in D or D['node_colors'] is None:
+        #    D['node_colors'] = self.node_colors
         return D
 
-    def from_matrix(self,matrix,label=None,ncolor=None,**kwargs):
+    def add_matrix(self,matrix,label=None,node_colors=None,
+                   **kwargs):
         """\
         Adds a perspective to self using a pairwise dissimilarity matrix.
         
@@ -237,25 +248,29 @@ class DISS(object):
         """
         assert isinstance(matrix,np.ndarray)
         shape = matrix.shape; assert len(shape)==2;
-        assert shape[0]==self.nodes; assert shape[1]==self.nodes
+        assert shape[0]==self.node_number; assert shape[1]==self.node_number
 
         D = {}
-        D['nodes'] = self.nodes
+        D['node_number'] = self.node_number
         D['type'] = 'matrix'
         D['matrix'] = matrix
         D['complete'] = True
-        D['edges'] = int(self.nodes*(self.nodes-1)/2)
+        D['edge_number'] = int(self.node_number*(self.node_number-1)/2)
         D['dfunction'] = lambda i,j : D['matrix'][i,j]                
         D['label'] = label
-        if ncolor is None:
-            ncolor = D['matrix'][0]
-        D['ncolor'] = ncolor
+        if node_colors is None:
+            node_colors = D['matrix'][0]
+        D['node_colors'] = node_colors
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
         self.attributes += 1
 
-    def from_features(self,features,distance=None,label=None,**kwargs):
+        if self.verbose > 0:
+            print('  added attribute:')
+            self.attribute_information(self.attributes-1)
+
+    def add_feature(self,features,metric=None,label=None,**kwargs):
         """\
         Adds a perspective to self node features and a distance function.
         
@@ -268,67 +283,83 @@ class DISS(object):
         If None, uses Euclidean distance (each feature must be np.ndarray).
         If callable, uses distance as pairwise distance function.
         """
-        assert len(features) == self.nodes
-        if distance is None:
-            distance = lambda x,y : np.linalg.norm(x-y)
+        assert len(features) == self.node_number
+        if metric is None:
+            metric = lambda x,y : np.linalg.norm(x-y)
         else:
-            assert callable(distance)
+            assert callable(metric)
 
         D = {}
-        D['nodes'] = self.nodes
+        D['node_number'] = self.node_number
         D['type'] = 'features'
         D['complete'] = True
-        D['edges'] = int(self.nodes*(self.nodes-1)/2)
+        D['edge_number'] = int(self.node_number*(self.node_number-1)/2)
         D['features'] = features
         D['dfunction'] = lambda i,j :\
-            distance(D['features'][i],D['features'][j])
+            metric(D['features'][i],D['features'][j])
         D['label'] = label
-        D['ncolor'] = D['features'][:,0]
+        D['node_colors'] = D['features'][:,0]
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
         self.attributes += 1
-
-    def from_graph(self,elist,dlist,nodes=None,label=None,**kwargs):
+        
+        if self.verbose > 0:
+            print('  added attribute:')
+            self.attribute_information(self.attributes-1)
+        
+    def add_graph(self,edge_list,dissimilarity_list=None,label=None,
+                  node_colors=None,**kwargs):
         """\
-        Adds an attribute to self using lists of edges and distances.
+        Adds an attribute to self using lists of edge_list and distances.
         
         Parameters:
         
-        elist : (NN x 2) array-like
-        List of edges in the graph.
+        edge_list : (NN x 2) array-like
+        List of edge_list in the graph.
 
-        dlist : (lenght NN) array-like
-        Distances/dissimilarities corresponding to elist.
+        dissimilarity_list : (lenght NN) array-like
+        Distances/dissimilarities corresponding to edges.
         """
-        assert len(elist) == len(dlist)
-
         D = {}
-        D['nodes'] = self.nodes
+        D['node_number'] = self.node_number
         D['type'] = 'graph'
-        d['complete'] = False
-        D['edges'] = len(elist)
-        D['elist'] = elist
-        D['dlist'] = dlist
+        D['complete'] = False
+        D['edge_number'] = len(edge_list)
+        D['edge_list'] = np.array(edge_list)
+        if dissimilarity_list is None:
+            dissimilarity_list = np.ones(len(edge_list))
+        else:
+            assert len(edge_list) == len(dissimilarity_list)
+        D['dissimilarity_list'] = np.array(dissimilarity_list)
         D['label'] = label
-        D['ncolor'] = self.ncolor
-        
+        if node_colors is None:
+            D['node_colors'] = self.node_colors
+        else:
+            D['node_colors'] = node_colors
+
+        self.complete_graph(D,**kwargs)
         self.add_weights(D,**kwargs)
         self.D.append(D)
         self.attributes += 1
 
-    def from_projections(self,attributes=3,d1=3,X=None,Q=None,**kwargs):
+        if self.verbose > 0:
+            print('  added attribute:')
+            self.attribute_information(self.attributes-1)
+
+    def add_projections(self,attributes=3,d1=3,X=None,Q=None,**kwargs):
         """\
         Adds attributes from projections.
         """
         assert self.attributes == 0
         if X is None:
-            X = misc.disk(self.nodes,dim=d1)
+            X = misc.disk(self.node_number,dim=d1)
         else:
             assert isinstance(X,np.ndarray)
-            nodes,dim = X.shape; assert nodes==self.nodes; d1=dim
-        if self.ncolor is None:
-            self.ncolor = X[:,0]
+            node_number,dim = X.shape; assert node_number==self.node_number
+            d1=dim
+        if self.node_colors is None:
+            self.node_colors = X[:,0]
         proj = projections.PROJ(d1=d1,**kwargs)
         if Q is None or isinstance(Q,str):
             Q = proj.generate(number=attributes,method=Q,**kwargs)
@@ -337,7 +368,9 @@ class DISS(object):
         self.Q = Q
         for k in range(attributes):
             Y = proj.project(Q[k],X)
-            self.from_features(Y,**kwargs)
+            self.add_feature(Y,**kwargs)
+
+    ### Special functions to alter attributes ###
 
     def compose_distances(self,attribute,function=None,**kwargs):
         if function is None:
@@ -347,28 +380,49 @@ class DISS(object):
         if function == 'ones':
             if 'dfunction' in self.D[attribute]:
                 self.D[attribute]['dfunction'] = lambda i,j : 1
-            if 'dlist' in self.D[attribute]:
-                NN = self.D[attribute]['edges']
-                self.D[attribute]['dlist'] = np.ones(NN)
+            if 'edge_distances' in self.D[attribute]:
+                NN = self.D[attribute]['edge_number']
+                self.D[attribute]['edge_distances'] = np.ones(NN)
         elif function == 'reciprocal':
             if 'dfunction' in self.D[attribute]:
                 return None ####
-            if 'dlist' in self.D[attribute]:
-                dlist = self.D[attribute]['dlist']
-                self.D[attribute]['dlist'] = 1.0/dlist
+            if 'edge_distances' in self.D[attribute]:
+                edge_distances = self.D[attribute]['edge_distances']
+                self.D[attribute]['edge_distances'] = 1.0/edge_distances
         else:   
             if 'dfunction' in self.D[attribute]:
                 return None ####
-            if 'dlist' in self.D[attribute]:
-                dlist = self.D[attribute]['dlist']
-                NN = self.D[attribute]['edges']
-                new_dlist = np.empty(NN)
+            if 'edge_distances' in self.D[attribute]:
+                edge_distances = self.D[attribute]['edge_distances']
+                NN = self.D[attribute]['edge_number']
+                new_edge_distances = np.empty(NN)
                 for i in range(NN):
-                    new_dlist[i] = function(dlist[i])
-                self.D[attribute]['dlist'] = new_list
+                    new_edge_distances[i] = function(edge_distances[i])
+                self.D[attribute]['edge_distances'] = new_list
                 
     def reduce_to_subgraph(self,attribute,**kwargs):
         return None
+
+    def complete_graph(self,dissimilarity_dictionary,shortest_path=False,
+                       connect_components=False,**kwargs):
+        dd = dissimilarity_dictionary
+        assert dd['complete'] is False
+
+        if shortest_path is True:
+            G = nx.Graph()
+            for edge, dissimilarity in zip(dd['edge_list'],
+                                           dd['dissimilarity_list']):
+                G.add_edge(edge[0], edge[1], weight=dissimilarity)
+            paths = dict(nx.shortest_path_length(G,weight='weight'))
+            edge_list = []; dissimilarity_list = []
+            for i in paths.keys():
+                for j in paths[i].keys():
+                    if j > i:
+                        edge_list.append([i,j])
+                        dissimilarity_list.append(paths[i][j])
+            dd['edge_number'] = len(edge_list)
+            dd['edge_list'] = edge_list
+            dd['dissimilarity_list'] = dissimilarity_list
 
     ### Sample multigraph ###
 
@@ -385,11 +439,11 @@ class DISS(object):
         Produces a single attribute that best represents all of the data.
         """
         D0 = {}
-        D0['nodes'] = self.nodes
+        D0['node_number'] = self.node_number
         if complete is True:
             D0['type'] = 'features'
             D0['complete'] = True
-            D0['edges'] = int(self.nodes*(self.nodes-1)/2)               
+            D0['edge_number'] = int(self.node_number*(self.node_number-1)/2)               
             D0['label'] = 'combined'
             def dfunction(i,j):
                 Dij = 0
@@ -416,6 +470,9 @@ class DISS(object):
                     D['weight_function'](D['weight_matrix'][i,j])
             else:
                 sys.error('Incorrect weights type')
+
+    def add_color(self,dissimilarity_dictionary,distance_from=0):
+        return
 
 ### Edit graph ###
 
@@ -446,7 +503,7 @@ def remove_edges(D, edge_min_distance=None, edge_max_distance=None,
         print('hi')
         return D
     
-    edges = D['edges']; distances = D['distances']; weights = D['weights']
+    edge_number = D['edge_number']; distances = D['distances']; weights = D['weights']
     
     if edge_min_distance is not None:
         keep_indices = []
@@ -562,7 +619,7 @@ def graph_from_coordinates(X,norm=2,edges=None,weights=None,colors=None,
             colors = misc.labels(Y,axis=colors)
     DD = {
         'node_number' : N,
-        'node_labels' : range(N),
+        'node_labelss' : range(N),
         'edge_number' : len(e),
         'edges' : e,
         'distances' : d,
@@ -571,7 +628,7 @@ def graph_from_coordinates(X,norm=2,edges=None,weights=None,colors=None,
         }
     return DD
 
-def graph_from_matrix(D,remove_zeros=True,transformation=None,weights=None):
+def graph_add_matrix(D,remove_zeros=True,transformation=None,weights=None):
     """\
     Returns diccionary with dissimilarity relations from dissimilarity matrix.
     
@@ -638,8 +695,8 @@ def graph_from_matrix(D,remove_zeros=True,transformation=None,weights=None):
     
     DD = {
         'node_number' : N,
-        'node_label' : range(N),
-        'nodes' : range(N),
+        'node_labels' : range(N),
+        'node_number' : range(N),
         'edges' : e,
         'distances' : d,
         'weights' : w
@@ -648,7 +705,7 @@ def graph_from_matrix(D,remove_zeros=True,transformation=None,weights=None):
 
 ### Generate multigraph ###
 
-def multigraph_from_projections(proj,Q,X,**kwargs):
+def multigraph_add_projections(proj,Q,X,**kwargs):
     """\
     Generates list of graphs generated from objects X using projection rule proj
     with parameters Q.
@@ -663,7 +720,7 @@ def multigraph_from_projections(proj,Q,X,**kwargs):
     DD['attribute_number'] = len(Q)
     DD['attribute_labels'] = range(len(Q))
     DD['node_number'] = len(X)
-    DD['node_labels'] = range(len(X))
+    DD['node_labelss'] = range(len(X))
     Y = proj.project(Q,X)
     for k in range(len(Q)):
         D = graph_from_coordinates(Y[k],**kwargs)
@@ -724,13 +781,13 @@ def combine(DD,method='maximum'):
     """\
     Combine dissimilarity matrices.
     """
-    N = len(DD['nodes'])
+    N = len(DD['node_number'])
     K = len(DD['attributes'])
     D = np.zeros((N,N))
     for k in range(K):
         for edge,distance in zip(DD[k]['edges'],DD[k]['distances']):
             D[edge] = max(D[edge[0],edge[1]],distance)
-    D = from_matrix(D)
+    D = add_matrix(D)
     return D
 
 ### GENERATORS ###
@@ -776,13 +833,13 @@ def binomial(N,p,distances=None,K=1):
         elif distances == 'random':
             dist = np.random.rand(len(edges))
         d = {
-            'nodes' : range(N),
+            'node_number' : range(N),
             'edges' : edges,
             'distances' : dist
         }
         D[k] = d
     D['attributes'] = range(K)
-    D['nodes'] = range(N)
+    D['node_number'] = range(N)
     return D
 
 
@@ -931,21 +988,21 @@ class MultiGraph(object):
     Class of multigraphs to be used in MPSE.
     """
 
-    def __init__(self,N,node_labels=None,dissimilarities=None):
+    def __init__(self,N,node_labelss=None,dissimilarities=None):
         self.N = N
         
-        if node_labels is None:
-            node_labels = range(N)
-        self.set_node_labels(node_labels)
+        if node_labelss is None:
+            node_labelss = range(N)
+        self.set_node_labelss(node_labelss)
 
         if dissimilarities is not None:
             K = len(dissimilarities)
             self.D = dissimilarities
             self.K = K
 
-    def set_node_labels(self,node_labels):
-        assert len(node_labels) == self.N
-        self.node_labels = node_labels
+    def set_node_labelss(self,node_labelss):
+        assert len(node_labelss) == self.N
+        self.node_labelss = node_labelss
 
     def from_perspectives(self,X,persp,**kwargs):
         Y = persp.compute_Y(X)

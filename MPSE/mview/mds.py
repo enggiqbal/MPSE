@@ -24,19 +24,19 @@ def f(X,D,estimate=True):
     stress : float
     MDS stress at X.
     """
-    if estimate is True and D['edges']>64*63/2:
+    if estimate is True and D['edge_number']>64*63/2:
         stress = 0
         if D['complete'] is True:
-            edges = misc.random_triangular(D['nodes'],int(64*63/2))
+            edges = misc.random_triangular(D['node_number'],int(64*63/2))
             for i1,i2 in edges:
                 dX = np.linalg.norm(X[i1]-X[i2])
                 stress += (dX-D['dfunction'](i1,i2))**2
         else:
-            inds = np.random.choice(D['edges'],int(64*63/2),replace=False)
+            inds = np.random.choice(D['edge_number'],int(64*63/2),replace=False)
             for i in range(int(64*63/2)):
-                i1,i2 = D['elist'][inds[i]]
+                i1,i2 = D['edge_list'][inds[i]]
                 dX = np.linalg.norm(X[i1]-X[i2])
-                stress += (dX-D['dlist'][i])**2
+                stress += (dX-D['dissimilarity_list'][i])**2
         stress = math.sqrt(stress/(64*63*2))
     else:
         if D['type'] == 'matrix':
@@ -48,19 +48,19 @@ def f(X,D,estimate=True):
         elif D['complete'] is True:
             if D['weighted'] is False:
                 stress = 0
-                for i in range(D['nodes']):
-                    for j in range(D['nodes']):
+                for i in range(D['node_number']):
+                    for j in range(D['node_number']):
                         dXij = np.linalg.norm(X[i]-X[j])
                         stress += (D['dfunction'](i,j)-dXij)**2
                 stress = math.sqrt(stress) / D['normalization']
         else:
             if D['weighted'] is False:
                 stress = 0
-                for i in range(D['edges']):
-                    i1,i2 = D['elist'][i]
+                for i in range(D['edge_number']):
+                    i1,i2 = D['edge_list'][i]
                     dXij = np.linalg.norm(X[i1]-X[i2])
-                    stress += (D['dlist'][i]-dXij)**2
-                stress = math.sqrt(stress)/np.linalg.norm(D['elist'])
+                    stress += (D['dissimilarity_list'][i]-dXij)**2
+                stress = math.sqrt(stress)/np.linalg.norm(D['dissimilarity_list'])
     return stress
 
 def F(X,D):
@@ -89,13 +89,13 @@ def F(X,D):
     else:
         assert D['type'] == 'graph'
         dfX = np.zeros(X.shape)
-        f0 = np.linalg.norm(D['dlist'])
+        f0 = np.linalg.norm(D['dissimilarity_list'])
         fX = 0
-        for i in range(D['edges']):
-            i1,i2 = D['elist'][i]
+        for i in range(D['edge_number']):
+            i1,i2 = D['edge_list'][i]
             Xij = X[i1]-X[i2]
             dij = np.linalg.norm(Xij)
-            diffij = dij-D['dlist'][i]
+            diffij = dij-D['dissimilarity_list'][i]
             fX += diffij**2
             dXij = 2*diffij/dij*Xij
             dfX[i1] += dXij
@@ -158,8 +158,8 @@ class MDS(object):
 
         self.D = multigraph.attribute_setup(D,**kwargs)
         self.D['rms'] = multigraph.attribute_rms(self.D,**kwargs)
-        self.D['normalization'] = self.D['rms']*self.D['edges']
-        self.N = D['nodes']; self.NN = D['edges']
+        self.D['normalization'] = self.D['rms']*self.D['edge_number']
+        self.N = D['node_number']; self.NN = D['edge_number']
         
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
