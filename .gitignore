@@ -3,3 +3,4 @@ node_modules
 MPSE/outputs/exp/*
 __pycache__
 mpserecords.sqlite
+*checkpoint.ipynb
