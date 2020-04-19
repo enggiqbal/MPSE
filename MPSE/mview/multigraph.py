@@ -365,6 +365,7 @@ class DISS(object):
             assert isinstance(X,np.ndarray)
             node_number,dim = X.shape; assert node_number==self.node_number
             d1=dim
+        self.X = X
         if self.node_colors is None:
             self.node_colors = X[:,0]
         proj = projections.PROJ(d1=d1,**kwargs)

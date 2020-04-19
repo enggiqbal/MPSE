@@ -50,7 +50,6 @@ class MPSE(object):
             assert hasattr(self.DD,'Q')
             Q = self.DD.Q
         elif isinstance(Q,str):
-            print(Q)
             Q = proj.generate(number=self.K,method=Q)
         if isinstance(Q0,str):
             Q0 = proj.generate(number=self.K,method=Q0)
@@ -65,14 +64,15 @@ class MPSE(object):
             X0 = X
         if self.Q_is_fixed == True:
             Q0 = Q
+
+        self.initial_cost = None
+        self.initial_individual_cost = None
         self.initialize(X0=X0,Q0=Q0)
     
         if verbose > 0:
             print('  dissimilarity stats:')
             print(f'    number of views : {self.K}')
             print(f'    number of points : {self.N}')
-            #print(f'    dissimilarity rms : {self.D["rms"]:0.2e}')
-            #print(f'    normalization factor : {self.D["normalization"]:0.2e}')
             print('  embedding stats:')
             print(f'    embedding dimension : {self.proj.d1}')
             print(f'    projection dimension : {self.proj.d2}')
@@ -256,6 +256,10 @@ class MPSE(object):
 
             self.cost, self.individual_cost = \
                 self.cost_function_all(self.X,self.Q,Y=self.Y,**kwargs)
+
+            if self.initial_cost is None:
+                self.initial_cost = self.cost
+                self.initial_individual_cost = self.individual_cost
 
         #if H is not None:
         #    if 'cost' in self.H:

@@ -1,7 +1,7 @@
 import sys, os
 sys.path.insert(0,os.path.dirname(os.path.realpath(__file__)))
 import matplotlib.pyplot as plt
-import projections, mds, mpse
+import projections, mds, mpse, misc
 from multigraph import DISS
 
 def MDS(D,dim=2,X0=None,batch_number=None,batch_size=10,lr=0.01,max_iters0=200,
