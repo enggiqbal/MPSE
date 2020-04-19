@@ -6,27 +6,6 @@ from mpl_toolkits.mplot3d import Axes3D
 
 import misc, multigraph, gd, projections, mds, tsne, plots
 
-def maybe():
-    DD['normalization'] = 0
-    DD['rms'] = 0
-    for k in range(K):
-        D = DD[k]
-        assert 'edges' in D
-        assert 'distances' in D
-        if 'weights' not in D:
-            D['weights'] = np.ones(len(D['edges']))
-        D['distances'] = np.maximum(D['distances'],1e-4)
-        d = D['distances']; w = D['weights']
-        D['normalization'] = np.dot(w,d**2)
-        D['rms'] = math.sqrt(D['normalization']/len(d))
-        DD[k] = D
-        DD['normalization'] += D['normalization']**2
-        DD['rms'] += D['rms']**2
-    DD['normalization'] **= 0.5
-    DD['rms'] **= 0.5
-    
-    return DD
-
 class MPSE(object):
     """\
     Class with methods for multi-perspective simultaneous embedding.
@@ -121,7 +100,7 @@ class MPSE(object):
                 Y = self.proj.project(X,Q=Q)
             cost = 0
             for k in range(self.K):
-                cost += self.visualization[k].cost_function(Y[k])**2
+                cost += self.visualization[k].cost_function(Y[k],**kwargs)**2
             return math.sqrt(cost/self.K)
         self.cost_function = cost_function
 
@@ -130,7 +109,7 @@ class MPSE(object):
                 Y = self.proj.project(Q,X)
             cost = 0; individual_cost = np.zeros(self.K)
             for k in range(self.K):
-                cost_k = self.visualization[k].f(Y[k])
+                cost_k = self.visualization[k].f(Y[k],**kwargs)
                 cost += cost_k**2
                 individual_cost[k] = cost_k
             cost = math.sqrt(cost/self.K)
@@ -231,7 +210,7 @@ class MPSE(object):
             self.Q0 = Q0
         self.Q = self.Q0.copy()         
 
-        self.update()
+        self.update(**kwargs)
 
     def smart_initialize(self,verbose=0,**kwargs):
         """\
@@ -271,12 +250,12 @@ class MPSE(object):
             self.update_history(H=H,X_is_fixed=True)
             return
 
-    def update(self,H=None):
+    def update(self,H=None,**kwargs):
         if self.X is not None and self.Q is not None:
             self.Y = self.proj.project(self.Q,self.X)
 
             self.cost, self.individual_cost = \
-                self.cost_function_all(self.X,self.Q,Y=self.Y)
+                self.cost_function_all(self.X,self.Q,Y=self.Y,**kwargs)
 
         #if H is not None:
         #    if 'cost' in self.H:
@@ -285,7 +264,7 @@ class MPSE(object):
            #     H['iterations'] = self.H['iterations']+H['iterations']
             #self.H = H
 
-    def update_history(self,H=None,X_is_fixed=None,Q_is_fixed=None):
+    def update_history(self,H=None,X_is_fixed=None,Q_is_fixed=None,**kwargs):
         
         if hasattr(self,'H') is False:
             self.H = {}
@@ -376,8 +355,8 @@ class MPSE(object):
             F = lambda X, xi=self.D: self.FX(X,self.Q,D=xi,**kwargs)
             Xi = self.subsample_generator(**kwargs)
             self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,
-                                  verbose=self.verbose,**kwargs)
-            self.update_history(H=H,Q_is_fixed=True)
+                                  **kwargs)
+            self.update_history(H=H,Q_is_fixed=True,**kwargs)
 
         elif self.X_is_fixed is True:
             if self.verbose > 0:
@@ -389,7 +368,7 @@ class MPSE(object):
             self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
                                   scheme=scheme,
                                   **kwargs)
-            self.update_history(H=H,X_is_fixed=True)
+            self.update_history(H=H,X_is_fixed=True,**kwargs)
 
         else:
             if self.verbose > 0:
@@ -401,7 +380,7 @@ class MPSE(object):
             Xi = self.subsample_generator(**kwargs)
             XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,scheme=scheme,**kwargs)
             self.X = XQ[0]; self.Q = XQ[1];
-            self.update_history(H=H)
+            self.update_history(H=H,**kwargs)
 
         self.update()
         if self.verbose > 0:
@@ -532,7 +511,7 @@ def disk(N=100,**kwargs):
     DD = multigraph.DISS(N,ncolor=labels)
     for i in range(3):
         DD.add_feature(proj.project(Q[i],X))
-    mv = MPSE(DD,verbose=1)
+    mv = MPSE(DD,verbose=1,**kwargs)
     mv.figureX(title='initial embedding')
     #mv.smart_initialize(verbose=2)
     #mv.figureX(title='smart initial embedding')
@@ -547,5 +526,5 @@ if __name__=='__main__':
     print('mview.mpse : running tests')
     #disk_fixed_perspectives(100,average_neighbors=2,max_iter=100,lr=1)
     #disk_fixed_embedding(100,average_neighbors=2,max_iter=100,lr=1)
-    disk(100,average_neighbors=2,max_iter=200,lr=1)
+    disk(1000,average_neighbors=2,max_iter=200,estimate=True)
     plt.show()

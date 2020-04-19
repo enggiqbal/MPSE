@@ -171,7 +171,7 @@ schemes = {
 ### ALGORITHMS ###
     
 def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
-           min_grad=None, min_step=None,max_iter=100,max_step=1e4,
+           min_grad=None, min_step=None,max_iter=100,max_step=1e10,
            lr=1,verbose=0,level=0,plot=False,**kwargs):
     """\
     Gradient descent algorithm, with different options for update rule and 
@@ -361,7 +361,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
     return x, outputs
 
 def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
-             min_grad=None, min_step=None,max_iter=100,max_step=1e4,
+             min_grad=None, min_step=None,max_iter=100,max_step=1e10,
              lr=1,verbose=0,level=0,plot=False,**kwargs):
     """\
     Gradient descent algorithms.

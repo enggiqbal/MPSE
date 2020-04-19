@@ -5,11 +5,11 @@ import numpy as np
 
 ### Functions to produce random initial embeddings ###
 
-def box(number,dim=2,center=0,radius=1.0):
+def box(number,dim=2,center=0,radius=1.0,**kwargs):
     X = 2*(np.random.rand(number,dim)-0.5)*radius+center
     return X
 
-def disk(number,dim=2,center=0,radius=1.0):
+def disk(number,dim=2,center=0,radius=1.0,**kwargs):
     r = np.random.rand(number)
     X0 = np.random.randn(number,dim)
     X = (X0.T / np.linalg.norm(X0,axis=1)*r**(1.0/dim)).T*radius+center

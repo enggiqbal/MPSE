@@ -62,7 +62,7 @@ def attribute_setup(D,**kwargs):
         D = diss.D[0]
     return D
 
-def attribute_rms(D,estimate=False,**kwargs):
+def attribute_rms(D,estimate=True,**kwargs):
     if D['complete'] is True:
         rms = 0
         if estimate is True and D['node_number'] > 64:
@@ -78,9 +78,11 @@ def attribute_rms(D,estimate=False,**kwargs):
     else:
         if estimate is True and D['edge_number'] > 64*63/2:
             inds = np.random.choice(D['edge_number'],int(64*63/2))
-            rms = np.linalg.norm(D['dissimilarity_list'][inds])/math.sqrt(64*63/2)
+            rms = np.linalg.norm(D['dissimilarity_list'][inds])/ \
+                math.sqrt(64*63/2)
         else:
-            rms = np.linalg.norm(D['dissimilarity_list'])/math.sqrt(D['edge_number'])
+            rms = np.linalg.norm(D['dissimilarity_list'])/ \
+                math.sqrt(D['edge_number'])
     return rms
 
 def attribute_sample(D,edge_proportion=None,average_neighbors=None,
@@ -114,6 +116,8 @@ def attribute_sample(D,edge_proportion=None,average_neighbors=None,
         Ds['dissimilarity_list'] = dissimilarity_list
         Ds['label'] = 'sample'
         Ds['weighted'] = False
+
+        Ds['rms'] = attribute_rms(Ds)
 
         return Ds
 
@@ -261,6 +265,7 @@ class DISS(object):
         if node_colors is None:
             node_colors = D['matrix'][0]
         D['node_colors'] = node_colors
+        D['rms'] = attribute_rms(D,**kwargs)
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
@@ -299,6 +304,7 @@ class DISS(object):
             metric(D['features'][i],D['features'][j])
         D['label'] = label
         D['node_colors'] = D['features'][:,0]
+        D['rms'] = attribute_rms(D,**kwargs)
         
         self.add_weights(D,**kwargs)
         self.D.append(D)
@@ -337,8 +343,9 @@ class DISS(object):
             D['node_colors'] = self.node_colors
         else:
             D['node_colors'] = node_colors
-
+            
         self.complete_graph(D,**kwargs)
+        D['rms'] = attribute_rms(D,**kwargs)
         self.add_weights(D,**kwargs)
         self.D.append(D)
         self.attributes += 1

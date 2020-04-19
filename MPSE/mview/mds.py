@@ -6,7 +6,7 @@ import scipy as sp
 
 import misc, multigraph, gd, plots
 
-def stress_function(X,D,estimate=False):
+def stress_function(X,D,normalize=True,estimate=True,**kwargs):
     """\
 
     Normalized MDS stress function.
@@ -20,6 +20,9 @@ def stress_function(X,D,estimate=False):
     Either a dissimilarity matrix or a dissimilarity dictionary as specified
     in mview.multigraph.
 
+    normalize : boolean
+    If set to True, returns normalized stress.
+
     estimate : boolean
     If set to True, it estimates stress to reduce computation time.
 
@@ -32,57 +35,92 @@ def stress_function(X,D,estimate=False):
         if estimate is False:
             dX = sp.spatial.distance_matrix(X,X)
             stress = np.linalg.norm(D-dX)
-            stress /= np.linalg.norm(D)
-        return stress
-            
-    if estimate is True and D['edge_number']>64*63/2:
-        stress = 0
-        if D['complete'] is True:
-            edges = misc.random_triangular(D['node_number'],int(64*63/2))
+            if normalize is True:
+                stress /= np.linalg.norm(D)
+            else:
+                stress = (stress/2)**2
+        else:
+            N = len(D)
+            if estimate is True:
+                estimate = min(64,N)
+            edges = misc.random_triangular(N,int(estimate*(estimate-1)/2))
+            stress = 0
             for i1,i2 in edges:
                 dX = np.linalg.norm(X[i1]-X[i2])
-                stress += (dX-D['dfunction'](i1,i2))**2
-        else:
-            inds = np.random.choice(D['edge_number'],int(64*63/2),replace=False)
-            for i in range(int(64*63/2)):
-                i1,i2 = D['edge_list'][inds[i]]
-                dX = np.linalg.norm(X[i1]-X[i2])
-                stress += (dX-D['dissimilarity_list'][i])**2
-        stress = math.sqrt(stress/(64*63*2))
+                stress += (dX-D[i1,i2])**2
+            if normalize is True:
+                normalization_factor = 0
+                for i1,i2 in edges:
+                    normalization_factor += D[i1,i2]**2
+                stress = math.sqrt(stress/normalization_factor)
     else:
-        if D['type'] == 'matrix':
-            if D['weighted'] is False:
+        assert isinstance(D,dict)
+        if estimate is False:
+            if D['type'] == 'matrix':
                 import scipy.spatial
                 dX = scipy.spatial.distance_matrix(X,X)
                 stress = np.linalg.norm(D['matrix']-dX)
-                stress /= math.sqrt(D['node_number']*(D['node_number']-1))*\
-                    D['normalization']
-        elif D['complete'] is True:
-            if D['weighted'] is False:
+                stress /= math.sqrt(D['node_number']*(D['node_number']-1)/2)* \
+                    D['rms']
+            elif D['complete'] is True:
                 stress = 0
                 for i in range(D['node_number']):
                     for j in range(D['node_number']):
                         dXij = np.linalg.norm(X[i]-X[j])
                         stress += (D['dfunction'](i,j)-dXij)**2
-                stress /= D['node_number']*(D['node_number']-1)
-                stress = math.sqrt(stress) / D['normalization']
-        else:
-            if D['weighted'] is False:
+                stress /= D['node_number']*(D['node_number']-1)/2
+                stress = math.sqrt(stress)/D['rms']
+            else:
                 stress = 0
                 for i in range(D['edge_number']):
                     i1,i2 = D['edge_list'][i]
                     dXij = np.linalg.norm(X[i1]-X[i2])
                     stress += (D['dissimilarity_list'][i]-dXij)**2
-                stress = math.sqrt(stress)/np.linalg.norm(D['dissimilarity_list'])
+                stress = math.sqrt(stress/D['edge-number'])/D['rms']
+        else:
+            if estimate is True:
+                estimate = 64
+            edge_number = min(int(estimate*(estimate-1)/2),D['edge_number'])
+            stress = 0
+            if D['complete'] is True:
+                edges = misc.random_triangular(D['node_number'],edge_number)
+                for i1,i2 in edges:
+                    dX = np.linalg.norm(X[i1]-X[i2])
+                    stress += (dX-D['dfunction'](i1,i2))**2
+            else:
+                inds = np.random.choice(D['edge_number'],edge_number,
+                                        replace=False)
+                for i in range(edge_number):
+                    i1,i2 = D['edge_list'][inds[i]]
+                    dX = np.linalg.norm(X[i1]-X[i2])
+                    stress += (dX-D['dissimilarity_list'][i])**2
+            stress = math.sqrt(stress/edge_number)/D['rms']
     return stress
 
-def F(X,D):
+def F(X,D,normalize=True):
     """\
     Returns exact stress and gradient for embedding X with target distances D.
-    """
-    #if D['normalization'] is None:
-    #    D['normalization'] = f(np.zeros(X.shape),D)
-    
+
+    Parameters:
+
+    X : numpy array
+    Position/coordinate/embedding array.
+
+    D : numpy array or dictionary
+    Either a dissimilarity matrix or a dissimilarity dictionary as specified
+    in mview.multigraph.
+
+    normalize : boolean
+    If set to True, returns normalized stress and gradient.
+
+    Returns:
+
+    stress : float
+    MDS stress at X.
+
+    gradient : numpy array
+    MDS stress gradient at X. 
+    """    
     N, dim = X.shape
     if D['complete'] is True:
         fX = 0
@@ -96,13 +134,12 @@ def F(X,D):
                 dXij = 2*diffij/dij*Xij
                 dfX[i] += dXij
                 dfX[j] -= dXij
-
-        fX = math.sqrt(fX) / D['normalization']
-        dfX /= D['normalization']
+        if normalize is True:
+            fX = math.sqrt(fX/((N*(N-1)/2)*D['rms']**2))
+            dfX /= math.sqrt(N*(N-1))*D['rms']
     else:
         assert D['type'] == 'graph'
         dfX = np.zeros(X.shape)
-        f0 = np.linalg.norm(D['dissimilarity_list'])
         fX = 0
         for i in range(D['edge_number']):
             i1,i2 = D['edge_list'][i]
@@ -113,32 +150,9 @@ def F(X,D):
             dXij = 2*diffij/dij*Xij
             dfX[i1] += dXij
             dfX[i2] -= dXij
-        fX = math.sqrt(fX)/f0
-        dfX /= f0
-        
-    return fX, dfX
-
-def old():
-
-    #Compute differences in positions for node pairs of edges:
-    Xij = np.empty((NN,dim))
-    for i in range(NN):
-        edge = edges[i]
-        Xij[i] = X[edge[0]]-X[edge[1]]
-        
-    dfX = np.zeros(X.shape)
-    d = np.linalg.norm(Xij,axis=1)
-    diff = d-dlist
-    fX = np.linalg.norm(diff)
-    dX = (2*diff/d)[:, np.newaxis]*Xij
-    
-    for i in range(NN):
-        edge = edges[i]
-        dfX[edge[0]] += dX[i]
-        dfX[edge[1]] -= dX[i]
-    fX /= normalization
-    dfX /= normalization
-
+        if normalize is True:
+            fX = math.sqrt(fX/(D['edge_number']*D['rms']**2))
+            dfX /= math.sqrt(2*D['edge_number'])*D['rms']
     return fX, dfX
 
 class MDS(object):
@@ -170,8 +184,6 @@ class MDS(object):
         self.verbose = verbose; self.title = title; self.level = level
 
         self.D = multigraph.attribute_setup(D,**kwargs)
-        self.D['rms'] = multigraph.attribute_rms(self.D,**kwargs)
-        self.D['normalization'] = self.D['rms']
         self.N = self.D['node_number']; self.NN = self.D['edge_number']
         
         assert isinstance(dim,int); assert dim > 0
@@ -187,7 +199,6 @@ class MDS(object):
             print('  '*level+f'    number of points : {self.N}')
             print('  '*level+f'    number of edges : {self.NN}')
             print('  '*level+f'    dissimilarity rms : {self.D["rms"]:0.2e}')
-            print('  '*level+f'    normalization factor : {self.D["normalization"]:0.2e}')
             print('  '*level+'  embedding stats:')
             print('  '*level+f'    dimension : {self.dim}')
             
@@ -216,15 +227,16 @@ class MDS(object):
                 print('    method : initialization given')
             
         self.X = X0
-        self.update()
-        
+        print('hi')
+        self.update(**kwargs)
+        print('hi12')
         self.X0 = self.X.copy()
         
         if self.verbose > 0:
             print(f'    initial stress : {self.cost:0.2e}')
 
-    def update(self,H=None):
-        self.cost = self.f(self.X)
+    def update(self,H=None,**kwargs):
+        self.cost = self.f(self.X,**kwargs)
         if H is not None:
             if bool(self.H) is True:
                 H['costs'] = np.concatenate((self.H['costs'],H['costs']))
@@ -250,7 +262,7 @@ class MDS(object):
 
     def gd(self, scheme='mm',**kwargs):
         if hasattr(self,'X') is False:
-            self.initialize(title='automatic')
+            self.initialize(title='automatic',**kwargs)
         if self.verbose > 0:
             print(f'  MDS.gd({self.title}):')
             #print(f'    step rule : {step_rule}')
@@ -260,7 +272,7 @@ class MDS(object):
         Xi = self.subsample_generator(**kwargs)
         F = lambda X, xi=self.D : self.F(X,D=xi)
         self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,**kwargs)
-        self.update(H=H)
+        self.update(H=H,**kwargs)
         if self.verbose > 0:
             print(f'    final stress : {self.cost:0.2e}')
 
@@ -310,10 +322,11 @@ def disk(N=100,**kwargs):
     diss = multigraph.DISS(N)
     diss.add_feature(X,node_colors=colors)
     D = diss.return_attribute()
-    
+
     title = 'basic disk example'
     mds = MDS(D,dim=2,verbose=1,title=title)
-    mds.initialize()
+    mds.initialize(**kwargs)
+
     fig, ax = plt.subplots(1,3,figsize=(9,3))
     fig.suptitle('MDS - disk data')
     fig.subplots_adjust(top=0.80)
@@ -321,9 +334,12 @@ def disk(N=100,**kwargs):
     mds.gd(max_iter=100,verbose=2,**kwargs)
     mds.figureH(ax=ax[1])
     mds.figureX(title='final embedding',ax=ax[2])
-    plt.show()
+    plt.draw()
+    plt.pause(1.0)
 
 if __name__=='__main__':
 
     print('mview.mds : running tests')
-    disk(N=100,scheme='mm',average_neighbors=2,lr=1)
+    disk(N=10,scheme='mm',average_neighbors=2,lr=.1)
+    disk(N=10,scheme='mm',average_neighbors=2,lr=1)
+    plt.show()
