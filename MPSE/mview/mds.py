@@ -227,9 +227,7 @@ class MDS(object):
                 print('    method : initialization given')
             
         self.X = X0
-        print('hi')
         self.update(**kwargs)
-        print('hi12')
         self.X0 = self.X.copy()
         
         if self.verbose > 0:
