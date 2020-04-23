@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>multiview3d</title>
+	<meta charset="utf-8">
+	<style>
+		body {
+			background-color: #000000;
+			margin: 0px;
+			overflow: hidden;
+			font-family: Monospace;
+			font-size: 13px;
+			text-align: center;
+			font-weight: bold;
+			text-align: center;
+		}
+	</style>
+
+ 
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.js"></script>
+	<script src="vis_param.js"></script>
+	<script src="coordinates.js"></script>
+	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+	<script src="https://code.jquery.com/jquery-3.4.1.js"></script>
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/tween.js/16.3.5/Tween.min.js"></script>
+</head>
+
+<body> 
+	<script>
+		for (var i = 0; i < numberofprojection; i++) {
+			document.write('<img src="eye.png" width="64px" onclick=viz(view[' + i + '])>')
+		}
+	</script>
+ 
+
+ 
+
+	 
+
+	<script type="text/javascript">
+	var zoomfactor = 20; 
+	var view = Array(); 
+	view[0] = [0, 0, 35]; 
+	view[1] = [0, 35, 0]; 
+	view[2] = [35, 0, 0]; 
+ 
+
+		var scene = new THREE.Scene();
+		var camera = new THREE.PerspectiveCamera(1, window.innerWidth / window.innerHeight, 1, 100000);
+		camera.position.set(0, 0, 35);
+		camera.lookAt(scene.position);
+		var renderer = new THREE.WebGLRenderer({
+			antialias: true
+		});
+		renderer.setSize(window.innerWidth, window.innerHeight-100);
+
+		document.body.appendChild(renderer.domElement);
+		//scene.background = new THREE.Color( 0xffffff );
+		var controls = new THREE.OrbitControls(camera, renderer.domElement);
+		var color = ["red", "green", "blue",   'yellow', 'orange']
+
+
+		var loader = new THREE.FontLoader();
+
+ 
+
+		function viz(point) {
+			var a=point[0] * zoomfactor;
+			var b=point[1] * zoomfactor;
+			var c= point[2] * zoomfactor;
+			camera.position.set(a,b ,c);
+			camera.lookAt(scene.position);
+
+/*
+
+var startRotation = new THREE.Euler().copy( camera.rotation );
+camera.lookAt( scene.position );
+
+var endRotation = new THREE.Euler().copy( camera.rotation );
+camera.rotation.copy( startRotation );
+camera.lookAt(scene.position);
+var t=new TWEEN.Tween( camera ).to( { rotation: endRotation }, 1600 )
+ .easing(TWEEN.Easing.Quadratic.Out)
+ .onUpdate(() => { 
+	 console.log("updating")
+		})
+.start();
+
+*/
+		}
+
+		function point3Ddrawing()
+		{
+			for (var i = 0; i < points.length; i++) {
+				var c = color[0];
+				var x = points[i][0];
+				var y = points[i][1];
+				var z = points[i][2];
+				var s = 5;
+				var dotGeometry = new THREE.Geometry();
+				dotGeometry.vertices.push(new THREE.Vector3(points[i][0], points[i][1], points[i][2]));
+				var dotMaterial = new THREE.PointsMaterial({ color: c, size: s, sizeAttenuation: false });
+				var dot = new THREE.Points(dotGeometry, dotMaterial);
+				scene.add(dot)
+
+			}
+		} 
+		point3Ddrawing();
+		viz(view[0]);
+		var worldAxis = new THREE.AxesHelper(40);
+		scene.add(worldAxis);
+		render();
+		function render() {
+			requestAnimationFrame(render);
+			TWEEN.update(2*1000);
+			renderer.render(scene, camera);
+			
+		}
+
+ 
+
+
+	</script>
+
+</body>
+
+</html>

@@ -4,3 +4,5 @@ MPSE/outputs/exp/*
 __pycache__
 mpserecords.sqlite
 *checkpoint.ipynb
+MPSE/outputs/*
+old/*

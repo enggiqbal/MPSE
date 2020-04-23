@@ -68,7 +68,7 @@ python3 mpse.py -d d1.csv d2.csv d3.csv -o testout -e face -p 3 -lr 0.001 -n 100
 ```
 ## example 2: example with projection set
 ```console
-python3 mpse.py -d datasets/dataset_tabluar/data/dissimple1000_1.csv  datasets/dataset_tabluar/data/dissimple1000_2.csv  datasets/dataset_tabluar/data/dissimple1000_3.csv -n 10 -max_iters 20 -ps resources/fixed_projection_2.txt 
+python3.6 mpse.py -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv -n 10 -max_iters 20 -ps resources/fixed_projection_2.txt 
 ```
 
 # output

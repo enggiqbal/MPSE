@@ -66,11 +66,11 @@ def neighbor_exp(points,max_neigbors, expname):
     rc=','.join([f'r%dc'%c for c in s ])
     rit=','.join([f'it%d'%c for c in s ])
     rt=','.join([f'r%dt'%c for c in s ])
-    f.write("neigbors,avgtime,avgcost,success,failed,"+rc+","+rit+"," + rt+"\n" )
+    f.write("points,neighbors,avgtime,avgcost,success,failed,"+rc+","+rit+"," + rt+"\n" )
     f.close()
     max_iter=1000
     for ne in range(1, max_neigbors):
-        average_neighbors=2**ne
+        average_neighbors=ne#2**ne
         costs=[]
         cost_success=[]
         timeRec=[]
@@ -79,7 +79,7 @@ def neighbor_exp(points,max_neigbors, expname):
         for i in range(0,10):
             #DD = {'nodes' : points,  'attributes' : projections}
             D=get_D_3projections(points)
-            mv = mview.basic(D, Q="standard", average_neighbors=average_neighbors, max_iter=max_iter, min_cost=0.001 )
+            mv = mview.basic(D, Q="standard", average_neighbors=average_neighbors, max_iter=max_iter, min_cost=0.001, estimate=False )
             costs.append(mv.cost)
             timeRec.append( mv.time)
             iterations.append(mv.H['iterations'])
@@ -91,7 +91,7 @@ def neighbor_exp(points,max_neigbors, expname):
         iterations=','.join([f'%d' % c for c in iterations ])
         timehistory=','.join([f'%0.2f' % c for c in timeRec ])
         f = open(expname+".csv", "a")
-        f.write(f'%d,%.2f,%.2f,%d,%d,%s,%s,%s\n' %(2**ne,sum(timeRec)/len(timeRec),sum(costs)/len(costs),successcount[0],successcount[1], h, iterations,timehistory) )
+        f.write(f'%d,%d,%.2f,%.2f,%d,%d,%s,%s,%s\n' %(points,average_neighbors,sum(timeRec)/len(timeRec),sum(costs)/len(costs),successcount[0],successcount[1], h, iterations,timehistory) )
         f.close()
   
 
@@ -143,10 +143,10 @@ def points_exp(max_points, expname,fixed, average_neighbors = 0):
         f.close()
   
  
-points_exp(2000, "fixed_19", 1)
-points_exp(2000, "veriable_19", 0)
-points_exp(2000, "fixed_average_neighbors_19", 1, average_neighbors=4)
-points_exp(2000, "veriable_average_neighbors_19", 0, average_neighbors=4)
-project_exp(100,20, "project_exp_19",  average_neighbors = 4)
-neighbor_exp(100,10, "neighbor_exp_19")
+#points_exp(2000, "fixed_19", 1)
+#points_exp(2000, "veriable_19", 0)
+#points_exp(2000, "fixed_average_neighbors_19", 1, average_neighbors=4)
+#points_exp(2000, "veriable_average_neighbors_19", 0, average_neighbors=4)
+#project_exp(100,20, "project_exp_19",  average_neighbors = 4)
+neighbor_exp(500,10, "neighbor_exp_21_estimatefalse")
  

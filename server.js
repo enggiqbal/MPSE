@@ -14,10 +14,10 @@ var multipartMiddleware = multipart();
 
 
 
-const sqlite3 = require('sqlite3').verbose();
+//const sqlite3 = require('sqlite3').verbose();
 
 // open the database
-let db = new sqlite3.Database('mpserecords.sqlite');
+//let db = new sqlite3.Database('mpserecords.sqlite');
 
 
 
@@ -42,6 +42,9 @@ function uploader(tmp_path, target_path, res) {
 }
 
 app.post('/run', multipartMiddleware, function (req, res) {
+
+
+
     res.header('Content-Type', 'text/html;charset=utf-8');
     if (req.body.data == "uploaded") {
         var f1 = './uploaded/dist1.csv'
@@ -65,9 +68,11 @@ app.post('/run', multipartMiddleware, function (req, res) {
 
 
 
+    console.log(req.body);
+    sample_size = req.body.sample_size;
+    preloadeddata = req.body.preloadeddata;
+    projection_type = req.body.projection_type;
 
-    sample_size = req.body.sample_size
-    preloadeddata = req.body.preloadeddata
     if (req.body.data == "preloaded") {
         var datapath = ""
         if (preloadeddata == 'credit')
@@ -84,15 +89,7 @@ app.post('/run', multipartMiddleware, function (req, res) {
         }
     }
 
-    if (req.body.data == "uploaded")
-        projections_type = "fixed";
-    if (req.body.projection_set != "variable")
-        projections_type = "fixed";
-    else
-        projections_type = "variable";
-
-
-    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', req.body.projection_set, '-t', projections_type, '-p', req.body.projections, '-max_iters', req.body.max_iters];
+    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization];
     parameters = parameters.concat(datapath)
     console.log("python3.6 " + parameters.join(" "))
     mpse_process = spawn('python3.6', parameters)
@@ -102,19 +99,20 @@ app.post('/run', multipartMiddleware, function (req, res) {
     });
     mpse_process.stderr.on('data', function (data) {
         console.log('stderr: ' + data);
-        db.run("insert into history values('"+req.body.EXPERIMENT_NAME+"')");
-        db.close();
+        //db.run("insert into history values('" + req.body.EXPERIMENT_NAME + "')");
+        //db.close();
         res.write(data, 'utf-8');
 
     });
     mpse_process.on('exit', function (code) {
         console.log('child process exited with code ' + code);
-        res.end(code);
+        res.end("" + code);
     });
+
 });
 
 
-
+/* 
 
 app.get('/history', function (req, res) {
 
@@ -128,11 +126,8 @@ app.get('/history', function (req, res) {
             console.log(row.name);
         });
     });
-
-
-
     res.send("list")
-});
+}); */
 // close the database connection
 //db.close();
 

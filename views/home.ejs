@@ -26,17 +26,17 @@
             <hr>
 
             <h1> Experiment Settings</h1>
-
+<!--
             select algorithm: <select>
                 <option selected value="agd">adaptive gradient descent</option>
                 <option value="gd">gradient descent</option>
                 <option value="classic">classic implementation</option>
             </select><br>
-
+-->
 
             experiment name : <input type="text" value="exp" name="EXPERIMENT_NAME"><br>
-            number of projections: <input type="text" value="3" name="projections"><br>
-            projections Type: <select name="projection_set">
+            <!-- number of projections: <input type="text" value="3" name="projections"><br> -->
+            projections Type: <select name="projection_type">
                 <optgroup label="fixed">
                     <option value="same">same</option>
                     <option selected="selected" value="standard">standard</option>
@@ -48,19 +48,20 @@
                 <option value="variable">variable</option>
             </select><br>
 
-            learning_rate: <input type="text" value="0.001" name="learning_rate"><br>
+            <!-- learning_rate: <input type="text" value="0.001" name="learning_rate"><br> -->
             max iterations: <input type="text" value="100" name="max_iters"><br>
+            average neighbors: <input type="text" value="16" name="average_neighbors"><br>
             sample_size: <input type="text" value="100" name="sample_size"><br>
 
 
-            initialization: <select>
+           Smart initialization: <select name="smart_initialization">
                 <option value="mds">mds based</option>
-                <option value="random">random</option>
+                <option value="random" selected>random</option>
             </select><br>
 
-            
-            verbose <input type="checkbox" name="verbose" checked><br>
-            <hr>
+<!--             
+            verbose <input type="checkbox" name="verbose" checked><br>-->
+            <hr> 
 
 
             <h1>3D Visualization Settings</h1>
