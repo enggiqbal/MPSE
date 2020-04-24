@@ -10,7 +10,7 @@ import matplotlib.pyplot as plt
 import shutil
 from sklearn.metrics import euclidean_distances, pairwise_distances 
 from scipy.spatial import distance_matrix
-
+from tqdm import tqdm
 import time
 totalRun=10
 max_iter=1000
@@ -27,7 +27,7 @@ def get_D_3projections(N):
     return D
 
 def write_header(expname):
-    f = open(expname+".csv", "a")
+    f = open('expdata/'+expname+".csv", "a")
     global totalRun 
     s=np.arange(1,totalRun+1)
     rc=','.join([f'r%dc'%c for c in s ])
@@ -37,7 +37,7 @@ def write_header(expname):
     f.close()
 
 def write_row(expname,row):
-    f = open(expname+".csv", "a")
+    f = open('expdata/'+expname+".csv", "a")
     f.write( row )
     f.close()
 
@@ -48,7 +48,7 @@ def project_exp(points,max_projection, expname, average_neighbors,ptype):
     global max_iter 
     global min_cost 
     global totalRun 
-    for projections in range(1, max_projection):
+    for projections in tqdm(range(1, max_projection)):
         costs=[]
         cost_success=[]
         timeRec=[]
@@ -158,8 +158,7 @@ def points_exp(max_points, expname,  average_neighbors,projection  ):
 
 # points_exp(2000,'1a',1,'standard') 
 # points_exp(2000,'1b',1,None) 
-# project_exp(200,20,'2b',1,'standard') 
-# project_exp(200,20,'2b',1,None) 
-
+#project_exp(200,20,'2a',1,'random') 
+project_exp(200,20,'2b',1,None) 
 # neighbor_exp(200,200,'3a','standard')
-neighbor_exp(200,200,'3b',None)
+# neighbor_exp(200,200,'3b',None)
