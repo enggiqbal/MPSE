@@ -68,6 +68,8 @@ class MPSE(object):
         self.initial_cost = None
         self.initial_individual_cost = None
         self.initialize(X0=X0,Q0=Q0)
+
+        self.update_history(**kwargs)
     
         if verbose > 0:
             print('  dissimilarity stats:')
@@ -135,6 +137,7 @@ class MPSE(object):
                     cost += costk**2
                     dX += dYk @ Q[k]
                     dQ.append(dYk.T @ X)
+                dX /= self.K
                 cost = math.sqrt(cost/self.K)
                 return (cost,[dX,np.array(dQ)])
             self.F = F
@@ -149,6 +152,7 @@ class MPSE(object):
                     costk, dYk = self.visualization[k].F(Y[k],D=D[k])
                     cost += costk**2
                     dX += dYk @ Q[k]
+                dX /= self.K
                 cost = math.sqrt(cost/self.K)
                 return (cost,dX)
             self.FX = FX
@@ -231,22 +235,32 @@ class MPSE(object):
         else:
             if self.verbose > 0:
                 print('  MPSE.smart_initialize():')
-                
+
+            if 'max_iter' in kwargs:
+                max_iter = kwargs.pop('max_iter')
+                if isinstance(max_iter,int):
+                    max_iter = [max_iter,max_iter]
+            else:
+                max_iter = [100,50]
             if self.X_is_fixed is False:
                 self.DD.combine_attributes()
                 D = self.DD.D0
                 vis = mds.MDS(D,dim=self.proj.d1,min_grad=1e-4,
                               verbose=self.verbose)
                 vis.initialize(X0=self.X0)
-                vis.gd(average_neighbors=32,max_iter=30,verbose=verbose)
+                vis.gd(average_neighbors=2,verbose=verbose,
+                       max_iter=max_iter[0],**kwargs)
                 self.X = vis.X
                 self.update_history(H=vis.H,Q_is_fixed=True)
                 
             F = lambda Q, xi=self.D: self.FQ(self.X,Q,D=xi,**kwargs)
-            Xi = self.subsample_generator(average_neighbors=32)
+            Xi = self.subsample_generator(average_neighbors=2)
             Q0 = np.array(self.Q)
-            self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,max_iter=20,
-                                  min_step=1e-4,verbose=verbose)
+            if 'lr' not in kwargs:
+                kwargs['lr'] = 0.1
+            self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
+                                  max_iter=max_iter[1],
+                                  verbose=verbose,**kwargs)
             self.update_history(H=H,X_is_fixed=True)
             return
 
@@ -268,13 +282,15 @@ class MPSE(object):
            #     H['iterations'] = self.H['iterations']+H['iterations']
             #self.H = H
 
-    def update_history(self,H=None,X_is_fixed=None,Q_is_fixed=None,**kwargs):
+    def update_history(self,H=None,X_is_fixed=None,Q_is_fixed=None,
+                       lr=None,**kwargs):
         
         if hasattr(self,'H') is False:
             self.H = {}
             self.H['iterations'] = 0
             self.H['markers'] = []
             self.H['costs'] = np.array([])
+            self.H['time'] = 0
             if self.X_is_fixed is False:
                 self.H['X_iters'] = np.array([])
                 self.H['X_steps'] = np.array([])
@@ -293,6 +309,7 @@ class MPSE(object):
             
 
         if H is not None:
+            self.H['time'] += H['time']
             self.time += H['time']
             T1 = self.H['iterations']; T2 = H['iterations']
             self.H['iterations'] = T1+T2
@@ -306,6 +323,7 @@ class MPSE(object):
                 self.H['X_grads'] = np.concatenate(
                     (self.H['X_grads'],H['grads']))
                 self.H['X_lrs'] = np.concatenate((self.H['X_lrs'],H['lrs']))
+                self.H['X_lr'] = H['lr']
             elif X_is_fixed is True and Q_is_fixed is False:
                 self.H['Q_iters'] = np.concatenate(\
                     (self.H['Q_iters'],range(T1,T1+T2)))
@@ -315,6 +333,7 @@ class MPSE(object):
                     (self.H['Q_grads'],H['grads']))
                 self.H['Q_lrs'] = np.concatenate(
                     (self.H['Q_lrs'],H['lrs']))
+                self.H['Q_lr'] = H['lr']
             else:
                 self.H['X_iters'] = np.concatenate(
                     (self.H['X_iters'],range(T1,T1+T2)))
@@ -332,6 +351,7 @@ class MPSE(object):
                     (self.H['Q_grads'],H['grads'][:,1]))
                 self.H['Q_lrs'] = np.concatenate(
                     (self.H['Q_lrs'],H['lrs'][:,1]))
+                self.H['X_lr'],self.H['Q_lr'] = H['lr']
                 
     def forget(self):
         self.X = self.X0; self.H = {}; self.update()
@@ -358,6 +378,8 @@ class MPSE(object):
                 print(f'    initial stress : {self.cost:0.2e}')
             F = lambda X, xi=self.D: self.FX(X,self.Q,D=xi,**kwargs)
             Xi = self.subsample_generator(**kwargs)
+            if 'lr' not in kwargs and 'X_lr' in self.H:
+                kwargs['lr'] = self.H['X_lr']
             self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,
                                   **kwargs)
             self.update_history(H=H,Q_is_fixed=True,**kwargs)
@@ -369,6 +391,10 @@ class MPSE(object):
             Xi = self.subsample_generator(**kwargs)
             F = lambda Q, xi=self.D: self.FQ(self.X,Q,D=xi,**kwargs)
             Q0 = np.array(self.Q)
+            if 'lr' not in kwargs and 'Q_lr' in self.H:
+                kwargs['lr'] = self.H['Q_lr']
+            else:
+                kwargs['lr'] = 0.1
             self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
                                   scheme=scheme,
                                   **kwargs)
@@ -382,6 +408,16 @@ class MPSE(object):
             XQ = [self.X,np.array(self.Q)]
             F = lambda XQ, xi=self.D: self.F(XQ[0],XQ[1],D=xi,**kwargs)
             Xi = self.subsample_generator(**kwargs)
+            if 'lr' not in kwargs:
+                kwargs['lr'] = [None,None]
+                if 'X_lr' in self.H:
+                    kwargs['lr'][0] = self.H['X_lr']
+                else:
+                    kwargs['lr'][0] = 1.0
+                if 'Q_lr' in self.H:
+                    kwargs['lr'][1] = self.H['Q_lr']
+                else:
+                    kwargs['lr'][1] = 1.0
             XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,scheme=scheme,**kwargs)
             self.X = XQ[0]; self.Q = XQ[1];
             self.update_history(H=H,**kwargs)
@@ -480,15 +516,23 @@ def disk_fixed_perspectives(N=100,**kwargs):
     fig, ax = plt.subplots(1,5,figsize=(15,3))
     fig.suptitle('MPSE - disk data w/ fixed perspectives')
     fig.subplots_adjust(top=0.8)
-    X = misc.disk(N,dim=3); labels=misc.labels(X)
-    proj = projections.PROJ(); Q = proj.generate(number=3,method='standard') ##
-    DD = multigraph.DISS(N,ncolor=labels)
-    for i in range(3):
-        DD.add_feature(proj.project(Q[i],X))
-    mv = MPSE(DD,Q=Q,verbose=2)
+    
+    #X = misc.disk(N,dim=3); labels=misc.labels(X)
+    #proj = projections.PROJ(); Q = proj.generate(number=3,method='standard') ##
+    #DD = multigraph.DISS(N,ncolor=labels)
+    #for i in range(3):
+    #    DD.add_feature(proj.project(Q[i],X))
+    #mv = MPSE(DD,Q=Q,verbose=2)
+
+    diss = multigraph.DISS(N)
+    diss.add_projections(attributes=10,Q='random')
+    Q = diss.Q
+    mv = MPSE(diss,Q=Q,verbose=2)
+    
     ax0 = fig.add_subplot(1,5,1,projection='3d')
     mv.figureX(title='initial embedding',ax=ax0)
-    mv.gd(**kwargs)
+    mv.gd(verbose=2,**kwargs)
+    #mv.gd(verbose=2,lr=1,average_neighbors=30,max_iter=50)
     mv.figureX(title='final embedding')
     mv.figureY()
     mv.figureH('computation history')
@@ -510,17 +554,18 @@ def disk_fixed_embedding(N=100,**kwargs):
     plt.pause(0.2)
 
 def disk(N=100,**kwargs):
+    dim=3
     X = misc.disk(N,dim=3); labels=misc.labels(X)
-    proj = projections.PROJ(); Q = proj.generate(number=3)
+    proj = projections.PROJ(); Q = proj.generate(number=dim)
     DD = multigraph.DISS(N,ncolor=labels)
-    for i in range(3):
+    for i in range(dim):
         DD.add_feature(proj.project(Q[i],X))
     mv = MPSE(DD,verbose=1,**kwargs)
     mv.figureX(title='initial embedding')
-    #mv.smart_initialize(verbose=2)
-    #mv.figureX(title='smart initial embedding')
+    mv.smart_initialize(verbose=2)
+    mv.figureX(title='smart initial embedding')
     mv.gd(verbose=2,**kwargs)
-    #mv.gd(verbose=2,average_neighbors=64,max_iter=15,lr=.2)
+    mv.gd(verbose=2,average_neighbors=64,max_iter=15)
     mv.figureX(title='final embedding')
     mv.figureY()
     mv.figureH('computation history')
@@ -528,7 +573,7 @@ def disk(N=100,**kwargs):
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
-    #disk_fixed_perspectives(100,average_neighbors=2,max_iter=100,lr=1)
+    #disk_fixed_perspectives(100,average_neighbors=1,max_iter=200,lr=1)
     #disk_fixed_embedding(100,average_neighbors=2,max_iter=100,lr=1)
-    disk(1000,average_neighbors=2,max_iter=200,estimate=True)
+    disk(100,average_neighbors=2,max_iter=100,estimate=True)
     plt.show()

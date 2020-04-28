@@ -3,8 +3,9 @@ sys.path.insert(0,os.path.dirname(os.path.realpath(__file__)))
 import matplotlib.pyplot as plt
 import projections, mds, mpse, misc
 from multigraph import DISS
+from mds import MDS
 
-def MDS(D,dim=2,X0=None,batch_number=None,batch_size=10,lr=0.01,max_iters0=200,
+def MDS_old(D,dim=2,X0=None,batch_number=None,batch_size=10,lr=0.01,max_iters0=200,
         max_iters=200,verbose=0,plot=False,title='MDS solution',labels=None,
         **kwargs):
     """\
@@ -308,5 +309,7 @@ def basic(D,Q=None,verbose=0,smart_initialize=False,**kwargs):
     vis = mpse.MPSE(D,Q=Q,verbose=verbose,**kwargs)
     if smart_initialize is True:
         vis.smart_initialize(verbose=verbose)
+    if 'lr' in kwargs:
+        kwargs.pop('lr')
     vis.gd(verbose=verbose,**kwargs)
     return vis

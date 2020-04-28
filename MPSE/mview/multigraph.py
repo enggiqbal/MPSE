@@ -63,6 +63,7 @@ def attribute_setup(D,**kwargs):
     return D
 
 def attribute_rms(D,estimate=True,**kwargs):
+    estimate_default = 128
     if D['complete'] is True:
         rms = 0
         if estimate is True and D['node_number'] > 64:
@@ -456,9 +457,11 @@ class DISS(object):
             def dfunction(i,j):
                 Dij = 0
                 for k in range(self.attributes):
-                    Dij += self.D[k]['dfunction'](i,j)
-                return Dij
+                    Dij += self.D[k]['dfunction'](i,j)**2
+                return math.sqrt(Dij)
             D0['dfunction'] = dfunction
+        D0['rms'] = attribute_rms(D0,**kwargs)
+        D0['node_colors'] = None
         self.add_weights(D0)
         self.D0 = D0
                 
