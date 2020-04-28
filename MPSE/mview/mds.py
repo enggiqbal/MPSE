@@ -31,6 +31,7 @@ def stress_function(X,D,normalize=True,estimate=True,**kwargs):
     stress : float
     MDS stress at X.
     """
+    estimate_default = 128 #default average number of edges used in estimation
     if isinstance(D,np.ndarray):
         if estimate is False:
             dX = sp.spatial.distance_matrix(X,X)
@@ -42,7 +43,7 @@ def stress_function(X,D,normalize=True,estimate=True,**kwargs):
         else:
             N = len(D)
             if estimate is True:
-                estimate = min(64,N)
+                estimate = min(estimate_default,N)
             edges = misc.random_triangular(N,int(estimate*(estimate-1)/2))
             stress = 0
             for i1,i2 in edges:
@@ -79,7 +80,7 @@ def stress_function(X,D,normalize=True,estimate=True,**kwargs):
                 stress = math.sqrt(stress/D['edge-number'])/D['rms']
         else:
             if estimate is True:
-                estimate = 64
+                estimate = estimate_default
             edge_number = min(int(estimate*(estimate-1)/2),D['edge_number'])
             stress = 0
             if D['complete'] is True:
@@ -192,6 +193,7 @@ class MDS(object):
         self.f = lambda X, D=self.D, **kwargs : stress_function(X,D,**kwargs)
         self.F = lambda X, D=self.D, **kwargs : F(X,D,**kwargs)
 
+        self.initial_cost = None
         self.H = {}
         
         if verbose > 0:
@@ -235,10 +237,14 @@ class MDS(object):
 
     def update(self,H=None,**kwargs):
         self.cost = self.f(self.X,**kwargs)
+        if self.initial_cost is None:
+            self.initial_cost = self.cost
         if H is not None:
             if bool(self.H) is True:
                 H['costs'] = np.concatenate((self.H['costs'],H['costs']))
                 H['steps'] = np.concatenate((self.H['steps'],H['steps']))
+                H['lrs'] = np.concatenate((self.H['lrs'],H['lrs']))
+                H['grads'] = np.concatenate((self.H['grads'],H['grads']))
                 H['iterations'] = self.H['iterations']+H['iterations']
             self.H = H        
 
@@ -284,7 +290,7 @@ class MDS(object):
         else:
             plot = False
         if edges is True:
-            edges = self.D['edges']
+            edges = self.D['edge_list']
         elif edges is False:
             edges = None
         if node_color is None:
@@ -313,7 +319,7 @@ class MDS(object):
                                    
 ### TESTS ###
 
-def disk(N=100,**kwargs):
+def disk(N=128,**kwargs):
     print('\n***mds.disk()***')
     
     X = misc.disk(N,2); colors = misc.labels(X)
@@ -329,7 +335,9 @@ def disk(N=100,**kwargs):
     fig.suptitle('MDS - disk data')
     fig.subplots_adjust(top=0.80)
     mds.figureX(title='initial embedding',ax=ax[0])
-    mds.gd(max_iter=100,verbose=2,**kwargs)
+    mds.gd(verbose=2,max_iter=30,**kwargs)
+    mds.gd(verbose=2,max_iter=30,average_neighbors=6)
+    mds.gd(verbose=2,average_neighbors=None)
     mds.figureH(ax=ax[1])
     mds.figureX(title='final embedding',ax=ax[2])
     plt.draw()
@@ -338,6 +346,5 @@ def disk(N=100,**kwargs):
 if __name__=='__main__':
 
     print('mview.mds : running tests')
-    disk(N=10,scheme='mm',average_neighbors=2,lr=.1)
-    disk(N=10,scheme='mm',average_neighbors=2,lr=1)
+    disk(N=100,scheme='mm',average_neighbors=1)
     plt.show()

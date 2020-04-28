@@ -11,24 +11,24 @@ import numpy as np
 # is not able to produce an update (e.g. due to a zero gradient) and other keys
 # necessary to run the algorithm in subsequence iterations.
 
-def fixed(x0,dfx,lr=1.0,p=None,**kwargs):
+def fixed(x,dfx,lr=1.0,p=None,**kwargs):
     """\
     Fixed learning rate GD scheme.
     """
     dx = -lr*dfx #step against gradient
     ndx = np.linalg.norm(dx) #step size against gradient
-    y = x0+dx #position after step against gradient (before projection)
+    y = x+dx #position after step against gradient (before projection)
     if p is None:
         x = y #position after step and projecion
         step = ndx #step size after step and projection
     else:
-        x = p(y) #position after step and projection
-        step = np.linalg.norm(x-x0) #step size after step and projection
+        x_new = p(y) #position after step and projection
+        step = np.linalg.norm(x_new-x) #step size after step and projection
+        x = x_new
     out = {'lr' : lr,
            'ndx' : ndx,
            'y' : y,
            'step' : step,
-           'x0' : x0,
            'df0x0' : dfx,
            'stop' : False}
     return x, out
@@ -215,7 +215,8 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         print('  '*level+'  computation parameters:')
         print('  '*level+f'    stochastic : {stochastic}')
         print('  '*level+f'    constraint : {constraint}')
-        print('  '*level+f'    update rule : {scheme}')
+        print('  '*level+f'    scheme : {scheme}')
+        print('  '*level+f'    initial lr : {lr}')
         if min_cost is not None:
             print('  '*level+f'    min_cost : {min_cost:0.2e}')
         if min_grad is not None:
@@ -305,6 +306,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
             conclusion = 'update rule'
             break
         lrs[i] = kwargs['lr']
+        lr = lrs[i]
         steps[i] = kwargs['ndx']/normalization #rms of step size
         if steps[i] < min_step:
             conclusion = 'minimum step reached reached'
@@ -344,7 +346,8 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         'iterations' : i+1,
         'success' : success,
         'conclusion' : conclusion,
-        'time' : tf-t0
+        'time' : tf-t0,
+        'lr' : lr
         }
         
     if verbose > 1:
@@ -504,6 +507,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
                 conclusion = 'update rule'
                 break
             lrs[i,k] = KWARGS[k]['lr']
+            lr[k] = lrs[i,k]
             steps[i,k] = KWARGS[k]['ndx']/normalization[k]
         if max(steps[i]) < min_step:
             conclusion = 'minimum step reached reached'
@@ -554,7 +558,8 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         'iterations' : i+1,
         'success' : success,
         'conclusion' : conclusion,
-        'time' : tf-t0
+        'time' : tf-t0,
+        'lr' : lr
         }
         
     if verbose > 0:
