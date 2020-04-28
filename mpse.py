@@ -56,9 +56,9 @@ if args.X0=='mds':
 else:
     args.X0=False
     
-print("args.projection_type="+args.projection_type)
-
-mv = mview.basic(D,  Q=args.projection_type, verbose=2, smart_initialize=args.X0, max_iters=args.max_iters, average_neighbors=args.average_neighbors)
+#print("args.projection_type="+args.projection_type)
+#print(f"max_iters=%d" % (args.max_iters))
+mv = mview.basic(D,  Q=args.projection_type, verbose=2, smart_initialize=args.X0, max_iter=args.max_iters, average_neighbors=args.average_neighbors)
 
 projections = mv.Q
 costs = mv.H["costs"]

@@ -57,10 +57,14 @@ def project_exp(points,max_projection, expname, average_neighbors,ptype):
         successtimeandcost=[]
         successtimeandcost.append([])
         successtimeandcost.append([])
+        diss = mview.DISS(points) #start method to generate dissimilarities
+        diss.add_projections(attributes=projections,Q=ptype) #specify that you want attribute_number attributes generated from physical 3D-2D example, using cylinder projections
+        Q = diss.Q #recover projection parameters to use along mview.basic (if using fixed projections, otherwise unnecessary)
+
 
         for i in range(0,totalRun):
-            DD = {'nodes' : points,  'attributes' : projections}
-            mv = mview.basic(DD, Q=ptype, average_neighbors=average_neighbors, max_iter=max_iter, min_cost=min_cost )
+            #DD = {'nodes' : points,  'attributes' : projections}
+            mv = mview.basic(diss, Q=Q, average_neighbors=average_neighbors, max_iter=max_iter, min_cost=min_cost )
             costs.append(mv.cost)
             timeRec.append( mv.time)
             iterations.append(mv.H['iterations'])
@@ -139,9 +143,9 @@ def points_exp(max_points, expname,  average_neighbors,projection  ):
         successtimeandcost=[]
         successtimeandcost.append([])
         successtimeandcost.append([])
-
+        D=get_D_3projections(points)
         for i in range(0,10):
-            D=get_D_3projections(points)
+            
             mv = mview.basic(D, Q=projection, average_neighbors=average_neighbors, max_iter=max_iter, min_cost=min_cost)
             costs.append(mv.cost)
             timeRec.append( mv.time)
@@ -158,7 +162,7 @@ def points_exp(max_points, expname,  average_neighbors,projection  ):
 
 # points_exp(2000,'1a',1,'standard') 
 # points_exp(2000,'1b',1,None) 
-#project_exp(200,20,'2a',1,'random') 
-project_exp(200,20,'2b',1,None) 
+project_exp(200,21,'2a',1,'cylinder') 
+#project_exp(200,20,'2b',1,None) 
 # neighbor_exp(200,200,'3a','standard')
 # neighbor_exp(200,200,'3b',None)
