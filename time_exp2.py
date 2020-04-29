@@ -43,7 +43,7 @@ def write_row(expname,row):
 
 
 
-def project_exp(points,max_projection, expname, average_neighbors,ptype):
+def project_exp(points,max_projection, expname, average_neighbors,ptype,exptype):
     write_header(expname)
     global max_iter 
     global min_cost 
@@ -62,9 +62,13 @@ def project_exp(points,max_projection, expname, average_neighbors,ptype):
         diss.add_projections(attributes=projections,Q=ptype) #specify that you want attribute_number attributes generated from physical 3D-2D example, using cylinder projections
         Q = diss.Q #recover projection parameters to use along mview.basic (if using fixed projections, otherwise unnecessary)
 
-
+        if exptype=='fixed':
+            Q=Q 
+        else:
+            Q=None
         for i in range(0,totalRun):
             #DD = {'nodes' : points,  'attributes' : projections}
+             
             mv = mview.basic(diss, Q=Q, average_neighbors=average_neighbors, max_iter=max_iter )
             costs.append(mv.cost)
             timeRec.append( mv.time)
@@ -164,7 +168,7 @@ def points_exp(max_points, expname,  average_neighbors,projection  ):
 
 #points_exp(2000,'1a_revised',1,'standard') 
 #points_exp(2000,'1b_revised',1,None) 
-project_exp(200,21,'2a_revised',1,'cylinder') 
-project_exp(200,21,'2b_revised',1,None) 
+project_exp(200,21,'2a_revised',1,'cylinder','fixed') 
+project_exp(200,21,'2b_revised',1,'cylinder','variable') 
 # neighbor_exp(200,200,'3a','standard')
 # neighbor_exp(200,200,'3b',None)
