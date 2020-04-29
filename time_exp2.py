@@ -33,7 +33,7 @@ def write_header(expname):
     rc=','.join([f'r%dc'%c for c in s ])
     rit=','.join([f'it%d'%c for c in s ])
     rt=','.join([f'r%dt'%c for c in s ])
-    f.write("points,neighbors,projection,projectioncount,avgtime,avgcost,avgsucctime, avgsucccost,success,failed,"+rc+","+rit+"," + rt+"\n" )
+    f.write("points,neighbors,projection,projectioncount,avgtime,avgcost,avgsucctime,avgsucccost,success,failed,"+rc+","+rit+"," + rt+"\n" )
     f.close()
 
 def write_row(expname,row):
