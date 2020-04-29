@@ -62,7 +62,7 @@ def draw(f1,f2,filename,title, x, y, lloc="lower right", factor=1):
     df2=pd.read_csv(f2)
  
     plt.figure()
-    plt.plot(df1[x],factor* df1[y],  linestyle='dotted', marker='o', label="variable")
+    plt.plot(df1[x],factor* df1[y], marker='x', linestyle='dotted', label="variable")
     plt.plot(df2[x],factor* df2[y],  marker='o', label="fixed")
     plt.xlabel(x)
     plt.ylabel(y)
@@ -75,7 +75,7 @@ def projection_time(f1,f2,filename):
     df2=pd.read_csv(f2)
  
     plt.figure()
-    plt.plot(df1.points, df1.avgsucccost,  linestyle='dotted', marker='o', label="variable")
+    plt.plot(df1.points, df1.avgsucccost,  marker='x', linestyle='dotted',   label="variable")
     plt.plot(df2.points, df2.avgsucccost,  marker='o', label="fixed")
 
     plt.xlabel('points')
@@ -100,11 +100,11 @@ def fixVsVar_success(f1,f2,filename):
     plt.savefig('expdata/drawings/'+filename+'.png')
 
  
-draw('expdata/1a.csv', 'expdata/1b.csv','1a_1b_points_cost', 'avg cost (global minima) for variable points','points','avgsucccost')
-draw('expdata/1a.csv', 'expdata/1b.csv','1a_1b_points_time', 'avg time for variable points','points','avgtime')
-draw('expdata/1a.csv', 'expdata/1b.csv','1a_1b_points_gm', ' percentage of global minima for variable points','points','success', factor=10)
+draw('expdata/1a_revised.csv', 'expdata/1b_revised.csv','1a_1b_points_cost_revised', 'avg cost for variable points','points','avgcost')
+draw('expdata/1a_revised.csv', 'expdata/1b_revised.csv','1a_1b_points_time_revised', 'avg time for variable points','points','avgtime')
+#draw('expdata/1a_revised.csv', 'expdata/1b_revised.csv','1a_1b_points_gm_revised', ' percentage of global minima for variable points','points','success', factor=10)
 
-draw('expdata/2a.csv', 'expdata/2b.csv','2a_2b_projection_time', 'average time for variable projection','projectioncount','avgtime')
-draw('expdata/2a.csv', 'expdata/2b.csv','2a_2b_projection_gm', 'percentage of global minima for variable projection','projectioncount','success', factor=10)
-draw('expdata/2a.csv', 'expdata/2b.csv','2a_2b_projection_cost', 'avg cost (global minima) for variable projection','projectioncount','avgsucccost', lloc="upper right" )
+draw('expdata/2a_revised.csv', 'expdata/2b_revised.csv','2a_2b_projection_time_revised', 'average time for variable projection for fixed iterations','projectioncount','avgtime')
+ #draw('expdata/2a_revised.csv', 'expdata/2b_revised.csv','2a_2b_projection_gm_revised', 'percentage of global minima for variable projection','projectioncount','success', factor=10)
+draw('expdata/2a_revised.csv', 'expdata/2b_revised.csv','2a_2b_projection_cost_revised', 'avg cost for variable projections','projectioncount','avgcost', lloc="upper right" )
  

@@ -48,7 +48,8 @@ def project_exp(points,max_projection, expname, average_neighbors,ptype):
     global max_iter 
     global min_cost 
     global totalRun 
-    for projections in tqdm(range(20, max_projection)):
+    max_iter=100
+    for projections in tqdm(range(1, max_projection)):
         costs=[]
         cost_success=[]
         timeRec=[]
@@ -64,7 +65,7 @@ def project_exp(points,max_projection, expname, average_neighbors,ptype):
 
         for i in range(0,totalRun):
             #DD = {'nodes' : points,  'attributes' : projections}
-            mv = mview.basic(diss, Q=Q, average_neighbors=average_neighbors, max_iter=max_iter, min_cost=min_cost )
+            mv = mview.basic(diss, Q=Q, average_neighbors=average_neighbors, max_iter=max_iter )
             costs.append(mv.cost)
             timeRec.append( mv.time)
             iterations.append(mv.H['iterations'])
@@ -161,11 +162,9 @@ def points_exp(max_points, expname,  average_neighbors,projection  ):
         process_runs(expname,points,average_neighbors, projection, successcount, timeRec,costs,iterations, successtimeandcost, len(mv.Q))
  
 
-points_exp(2000,'1a_revised',1,'standard') 
-points_exp(2000,'1b_revised',1,None) 
-
-
-#project_exp(200,21,'2a',1,'cylinder') 
-#project_exp(200,21,'2b',1,None) 
+#points_exp(2000,'1a_revised',1,'standard') 
+#points_exp(2000,'1b_revised',1,None) 
+project_exp(200,21,'2a_revised',1,'cylinder') 
+project_exp(200,21,'2b_revised',1,None) 
 # neighbor_exp(200,200,'3a','standard')
 # neighbor_exp(200,200,'3b',None)
