@@ -65,13 +65,12 @@ run circlesquire example with 150 points, maximum iteration 100 then save output
 ``` console
 python3.6 mpse.py -ds circlesquire -n 150 -max_iters 100 -e mytest
 
-
-iqbal@on-campus-10-138-77-23 MPSE-web % python3.6 mpse.py -ds circlesquire -n 10 -max_iters 100 -e mytest
+iqbal@on-campus-10-138-77-23 MPSE-web % python3.6 mpse.py -ds circlesquire -n 150 -max_iters 100 -e mytest
 <h1>Please keep the window running</h1>
 Total Samples found:100<br>
 mpse.MPSE():
 multigraph.DISS():
-  nodes : 10
+  nodes : 100
   added attribute:
     type : matrix
     complete : True
@@ -83,13 +82,13 @@ multigraph.DISS():
     Q0 : given
   dissimilarity stats:
     number of views : 2
-    number of points : 10
+    number of points : 100
   embedding stats:
     embedding dimension : 3
     projection dimension : 2
   MPSE.gd():
     mpse method : fixed projections
-    initial stress : 1.89e+00
+    initial stress : 5.89e-01
 gd.single(): 
   computation parameters:
     stochastic : True
@@ -100,26 +99,24 @@ gd.single():
     max_iter : 100
     max_step : 1.00e+10
   progress:
-      99/100 : cost = 3.91e-03, grad = 1.38e-03, lr = 1.74e-01, step = 2.40e-04
+      99/100 : cost = 4.31e-02, grad = 4.97e-03, lr = 2.20e+00, step = 1.09e-02
   results:
     conclusion : maximum number of iterations reached
     total iterations : 99
-    final cost : 3.91e-03
-    final gradient size : 1.38e-03
-    final learning rate : 1.74e-01
-    final step size : 2.40e-04
-    time : 1.33e+00 [sec]
-  Final stress : 2.68e-03
+    final cost : 4.31e-02
+    final gradient size : 4.97e-03
+    final learning rate : 2.20e+00
+    final step size : 1.09e-02
+    time : 1.37e+01 [sec]
+  Final stress : 4.27e-02
 Saving js data in: MPSE/outputs/mytest/coordinates.js
 JS file was saved in:  MPSE/outputs/mytest/coordinates.js
 DEPRECATION WARNING: The system version of Tk is deprecated and may be removed in a future release. Please don't rely on it. Set TK_SILENCE_DEPRECATION=1 to suppress this warning.
-<br> output path: MPSE/outputs/mytest/index.html
+**<br> output path: MPSE/outputs/mytest/index.html**
 <br><h1> <a target='_blank'  href ='static/mytest/index.html'>Interactive visualization</a></h1><br>
 <br><h2> <a target='_blank'  href ='static/mytest/mytest_pos.csv'>Output 3D position was saved here</a></h2><br>
 <br><h2> <a target='_blank'  href ='static/mytest/coordinates.js'>Output details (history, projections, position) was saved here</a></h2><br>
 <br>cost history saved as  MPSE/outputs/mytest/cost.png
 <br><img src=/static/mytest/cost.png>
-iqbal@on-campus-10-138-77-23 MPSE-web % 
-
 ```
 
