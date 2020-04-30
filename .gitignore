@@ -1,4 +1,4 @@
-node_modules/*
+node_modules
 *.pyc
 MPSE/outputs/exp/*
 __pycache__
@@ -6,3 +6,4 @@ mpserecords.sqlite
 *checkpoint.ipynb
 MPSE/outputs/*
 old/*
+.vscode
