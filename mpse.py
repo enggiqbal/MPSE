@@ -10,7 +10,7 @@ import sys
 import MPSE.mview as mview
 import matplotlib.pyplot as plt
 import shutil
-
+import random
 parser = argparse.ArgumentParser(description='MPSE')
 parser.add_argument('-d', '--d', type=argparse.FileType('r'), nargs='+',
                     help='List of input files with distace matices', required=True)
@@ -39,14 +39,39 @@ parser.add_argument('-vt', '--visualization_template',  default='pointbased', ch
 parser.add_argument('-an', '--average_neighbors', type=int,
                     default=32, help="average  neighbors", required=False)
 
+parser.add_argument('-ex', '--example_name', default=None ,  help="example_name", required=False)
+                    
 args = parser.parse_args()
-print("<h1>Please keep the window running</h1>")
-D = [data.get_matrix(f) for f in args.d]
-print(f"Total Samples found:%d<br>" % len(D[0]))
 
-args.sample_size = min(len(D[0]), args.sample_size)
-sub = range(args.sample_size)
-D = [(a[sub])[:, sub] for a in D]
+ 
+def load123data(sample_size):
+    path = 'MPSE/mview_examples/data/123/input/'
+    #X_true = np.genfromtxt(path+'spicy_rice_10000_123.csv', delimiter=',')
+    Y1 = np.genfromtxt(path+'spicy_rice_10000_1.csv', delimiter=',')
+    Y2 = np.genfromtxt(path+'spicy_rice_10000_2.csv', delimiter=',')
+    Y3 = np.genfromtxt(path+'spicy_rice_10000_3.csv', delimiter=',')
+    sample_size = min(len(Y1),  sample_size)
+    sub = np.array(random.sample(range(len(Y1)), sample_size))
+    #X=X_true[sub]
+    #Y1 = X[:,[0,1]] 
+    #Y2 = X[:,[2,0]]
+    #Y3 = X[:,[1,2]]
+    return [Y1[sub],Y2[sub],Y3[sub]]
+
+
+print("<h1>Please keep the window running</h1>")
+
+
+
+if args.example_name=='123':
+    D=load123data(args.sample_size)
+else:
+    D = [data.get_matrix(f) for f in args.d]
+    print(f"Total Samples found:%d<br>" % len(D[0]))
+    args.sample_size = min(len(D[0]), args.sample_size)
+    sub = range(args.sample_size)
+    D = [(a[sub])[:, sub] for a in D]
+
 
 
 if args.projection_type == 'variable':
@@ -91,6 +116,10 @@ costfile = os.path.join(args.output_dir, args.experiment_name + "_costs.csv")
 np.savetxt(costfile, costs, delimiter=",")
 
 
+#posfile = os.path.join(args.output_dir, args.experiment_name + "_projections.csv")
+#np.savetxt(posfile, projections, delimiter=",")
+
+
 x = np.arange(len(costs))
 fig = plt.figure()
 ax = plt.axes()
@@ -99,8 +128,15 @@ costfile = os.path.join(args.output_dir, "cost.png")
 plt.savefig(costfile)
 sys.stdout.flush()
 print("<br><h1> <a target='_blank'  href ='static/" + args.experiment_name +
-      "/index.html'>interactive visualization</a></h1><br>", flush=True) 
-print("Output 3D position was saved in: ", posfile)
-print("cost history saved as ", costfile)
-print("<img src=/static/"+args.experiment_name + "/cost.png" + ">")
+      "/index.html'>Interactive visualization</a></h1><br>", flush=True) 
+#print("<br>Output 3D position was saved in: ", posfile)
+
+print("<br><h2> <a target='_blank'  href ='static/" + args.experiment_name + "/"+ args.experiment_name + "_pos.csv"
+      "'>Output 3D position was saved here</a></h2><br>", flush=True) 
+
+print("<br><h2> <a target='_blank'  href ='static/" + args.experiment_name + "/coordinates.js'>Output details (history, projections, position) was saved here</a></h2><br>", flush=True) 
+
+
+print("<br>cost history saved as ", costfile)
+print("<br><img src=/static/"+args.experiment_name + "/cost.png" + ">")
 # TODO: to be continued python3 mpse.py -d datasets/dataset_3D/circle_square_new/dist_circle.csv datasets/dataset_3D/circle_square_new/dist_circle.csv datasets/dataset_3D/circle_square_new/dist_circle.csv -p 2 -lr 0.001 -n 10 -alg classic
