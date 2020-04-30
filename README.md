@@ -12,8 +12,9 @@ python3.6
 ```
 
 # MPSE: Jupyter Notebook examples 
-
+``` console
 MPSE/mview_examples
+```
 
 # MPSE: python command line
 
@@ -52,5 +53,10 @@ optional arguments:
 
 
 ```
+## examples of command
+``` console
+python3 mpse.py -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv
 
+
+```
 

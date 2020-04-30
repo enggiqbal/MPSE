@@ -19,7 +19,7 @@ parser.add_argument('-o', '--output_dir', default='outputs',
 parser.add_argument('-e', '--experiment_name', default='exp',
                     help='Experiment name', required=False)
 parser.add_argument('-max_iters', '--max_iters', type=int,
-                    default=10000, help='Max iterations', required=False)
+                    default=1000, help='Max iterations', required=False)
 parser.add_argument('-n', '--sample_size', type=int,
                     default=math.inf, help='Number of samples', required=False)
 parser.add_argument( '-X0','--X0', default=False, type=bool, choices=[True, False], help='Smart initialization',required=False)
@@ -48,7 +48,7 @@ print("<h1>Please keep the window running</h1>")
 
 
 
-if args.preladed_dataset=='123':
+if args.preloaded_dataset=='123':
     D=load123data(args.sample_size)
 else:
     D = [data.get_matrix(f) for f in args.d]
