@@ -1,4 +1,4 @@
-# MPSE
+# MPSE: with webserver
 
 1. Install NodeJS 10.16.0. (download from nodejs website)
 2. Run `npm install` in this directory to install the dependencies.
@@ -11,11 +11,12 @@
 python3.6 
 ```
 
-# Jupyter Notebook examples 
+# MPSE: Jupyter Notebook examples 
 
 MPSE/mview_examples
 
-# Without nodejs server 
+# MPSE: python command line
+
 ``` console
  usage: mpse.py [-h] -d D [D ...] [-o OUTPUT_DIR] [-e EXPERIMENT_NAME]
                [-max_iters MAX_ITERS] [-n SAMPLE_SIZE] [-X0 {True,False}]
@@ -47,6 +48,8 @@ optional arguments:
                         average neighbors
   -ds PRELADED_DATASET, --preladed_dataset PRELADED_DATASET
                         Preladed Dataset
-                        
+
                         
 ```
+
+

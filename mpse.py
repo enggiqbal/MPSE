@@ -29,23 +29,18 @@ parser.add_argument('-vt', '--visualization_template',  default='pointbased', ch
                     'pointbased', 'attributebased'], help="Visualization template", required=False)
 parser.add_argument('-an', '--average_neighbors', type=int,
                     default=32, help="average  neighbors", required=False)
-parser.add_argument('-ds', '--preladed_dataset', default=None,  help="Preladed Dataset", required=False)
+parser.add_argument('-ds', '--preloaded_dataset', default=None,  help="Preloaded Dataset", required=False)
                     
 args = parser.parse_args()
 
  
 def load123data(sample_size):
     path = 'MPSE/mview_examples/data/123/input/'
-    #X_true = np.genfromtxt(path+'spicy_rice_10000_123.csv', delimiter=',')
     Y1 = np.genfromtxt(path+'spicy_rice_10000_1.csv', delimiter=',')
     Y2 = np.genfromtxt(path+'spicy_rice_10000_2.csv', delimiter=',')
     Y3 = np.genfromtxt(path+'spicy_rice_10000_3.csv', delimiter=',')
     sample_size = min(len(Y1),  sample_size)
     sub = np.array(random.sample(range(len(Y1)), sample_size))
-    #X=X_true[sub]
-    #Y1 = X[:,[0,1]] 
-    #Y2 = X[:,[2,0]]
-    #Y3 = X[:,[1,2]]
     return [Y1[sub],Y2[sub],Y3[sub]]
 
 
@@ -71,8 +66,7 @@ if args.X0=='mds':
 else:
     args.X0=False
     
-#print("args.projection_type="+args.projection_type)
-#print(f"max_iters=%d" % (args.max_iters))
+ 
 mv = mview.basic(D,  Q=args.projection_type, verbose=2, smart_initialize=args.X0, max_iter=args.max_iters, average_neighbors=args.average_neighbors)
 
 projections = mv.Q
