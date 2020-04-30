@@ -18,11 +18,12 @@ MPSE/mview_examples
 # MPSE: python command line
 
 ``` console
- usage: mpse.py [-h] -d D [D ...] [-o OUTPUT_DIR] [-e EXPERIMENT_NAME]
+
+usage: mpse.py [-h] -d D [D ...] [-o OUTPUT_DIR] [-e EXPERIMENT_NAME]
                [-max_iters MAX_ITERS] [-n SAMPLE_SIZE] [-X0 {True,False}]
                [-ps {fixed,same,standard,cylinder,orthogonal,normal,uniform,variable}]
                [-vt {pointbased,attributebased}] [-an AVERAGE_NEIGHBORS]
-               [-ds PRELADED_DATASET]
+               [-ds PRELOADED_DATASET]
 
 MPSE
 
@@ -46,10 +47,10 @@ optional arguments:
                         Visualization template
   -an AVERAGE_NEIGHBORS, --average_neighbors AVERAGE_NEIGHBORS
                         average neighbors
-  -ds PRELADED_DATASET, --preladed_dataset PRELADED_DATASET
-                        Preladed Dataset
+  -ds PRELOADED_DATASET, --preloaded_dataset PRELOADED_DATASET
+                        Preloaded Dataset
 
-                        
+
 ```
 
 
