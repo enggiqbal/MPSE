@@ -89,7 +89,7 @@ app.post('/run', multipartMiddleware, function (req, res) {
         }
     }
 
-    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization];
+    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ex',preloadeddata ];
     parameters = parameters.concat(datapath)
     console.log("python3.6 " + parameters.join(" "))
     mpse_process = spawn('python3.6', parameters)
