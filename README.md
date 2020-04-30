@@ -1,24 +1,37 @@
-# MPSE: with webserver
+# MPSE: with webserver (optional)
 
 1. Install NodeJS 10.16.0. (download from nodejs website)
 2. Run `npm install` in this directory to install the dependencies.
 3. Run `npm run build` to build the static files.
-4. Run `nodemon server.js ` to start the server
+4. Run `nodemon server.js` to start the server
 
+## list of dependencies at python3.6
 
-# Requirements 
-``` console
-python3.6 
+```
+matplotlib==2.2.2
+networkx==2.1
+pandas==0.23.3
+numpy==1.14.5
+scipy==1.1.0
+autograd==1.2
+torch==1.0.1.post2
+scikit_learn==0.21.3
+
 ```
 
-# MPSE: Jupyter Notebook examples 
-``` console
+```console
+pip3.6 install -r requirements.txt
+```
+
+# MPSE: Jupyter Notebook examples
+
+```console
 MPSE/mview_examples
 ```
 
 # MPSE: python command line
 
-``` console
+```console
 
 usage: mpse.py [-h] -d D [D ...] [-o OUTPUT_DIR] [-e EXPERIMENT_NAME]
                [-max_iters MAX_ITERS] [-n SAMPLE_SIZE] [-X0 {True,False}]
@@ -53,16 +66,18 @@ optional arguments:
 
 
 ```
+
 ## examples of command
 
 pass distance matrices
-``` console
+
+```console
 python3 mpse.py -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv
 ```
 
-run circlesquire example with 150 points, maximum iteration 100 then save output to mytest directory. 
+run circlesquire example with 150 points, maximum iteration 100 then save output to mytest directory.
 
-``` console
+```console
 python3.6 mpse.py -ds circlesquire -n 150 -max_iters 100 -e mytest
 
 iqbal@on-campus-10-138-77-23 MPSE-web % python3.6 mpse.py -ds circlesquire -n 150 -max_iters 100 -e mytest
@@ -89,7 +104,7 @@ multigraph.DISS():
   MPSE.gd():
     mpse method : fixed projections
     initial stress : 5.89e-01
-gd.single(): 
+gd.single():
   computation parameters:
     stochastic : True
     constraint : False
@@ -120,3 +135,15 @@ DEPRECATION WARNING: The system version of Tk is deprecated and may be removed i
 <br><img src=/static/mytest/cost.png>
 ```
 
+# Citation (draft version )
+
+```console
+@misc{hossain2019multiperspective,
+    title={Multi-Perspective, Simultaneous Embedding},
+    author={Md Iqbal Hossain and Vahan Huroyan and Stephen Kobourov and Raymundo Navarrete},
+    year={2019},
+    eprint={1909.06485},
+    archivePrefix={arXiv},
+    primaryClass={cs.DS}
+}
+```
