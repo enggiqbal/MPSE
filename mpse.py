@@ -28,7 +28,7 @@ parser.add_argument('-max_iters', '--max_iters', type=int,
                     default=10000, help='Max iterations', required=False)
 parser.add_argument('-n', '--sample_size', type=int,
                     default=math.inf, help='Number of samples', required=False)
-parser.add_argument( '-X0','--X0', default=None, help='Initial initialization, a csv file with 3D co-ordinates',required=False)
+parser.add_argument( '-X0','--X0', default=None, help='Initial initialization',required=False)
 #parser.add_argument( '-sp','--save_progress',type=int,  default=0, help='save progress',required=False)
 #parser.add_argument( '-v','--verbose',type=int,  default=2, help='verbose',required=False)
 #parser.add_argument( '-alg','--algorithm',  default='MULTIVIEW', choices=['classic','gd','gdm','agd','MULTIVIEW0','MULTIVIEW'], help="algorithms: 'classic' for autograd implementation,\n  'gd' for gradient descent,\n 'gdm' for GD with momentum, \n 'agd' for adaptive GD",required=False)

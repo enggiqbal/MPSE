@@ -16,11 +16,12 @@ def js_data_writer(A,file_path,costs,P):
     localtime = time.asctime( time.localtime(time.time()) )
     pos_tmp=A
     jsdata ="var points="+ str(  pos_tmp.tolist()) + ";"
+    print("Saving js data in: "+  file_path,flush=True)
     f=open(file_path,"w")
     f.write("var t='"+ localtime +"';\n")
     f.write("var steps={0};\n ".format(len(costs)))
-    costhistory="var costhistory="+ np.array2string(costs, precision=2, separator=',') + ";\n"
-    f.write(costhistory)
+    costhistory="\nvar costhistory="+ np.array2string(costs, precision=2, separator=',') + ";\n"
+    
     #proj=proj+"[["+str(P1)+"],["+str(P2)+"],["+str(P3)+"]],"
     #proj="["+str(list(P1.T[0]))+","+str(list(P2.T[0]))+","+str(list(P3.T[0]))+"]"
     proj="["
@@ -32,7 +33,7 @@ def js_data_writer(A,file_path,costs,P):
     #pdb.set_trace()
     f.write("var proj="+proj + ";\n")
     f.write(jsdata)
-    
+    f.write(costhistory)
     f.close()
     print("JS file was saved in: ", file_path)
 
