@@ -1,87 +1,85 @@
 <%include header%>
- 
- <form method="post" action="run" enctype="multipart/form-data">
-<div class="container">
-    <div class="row">
-        <div class="col-sm-12">
-                <h1> <a href="http://uamap-dev.arl.arizona.edu:8085/MPSE"> MPSE Homepage and Precomputed Examples</a></h1> 
+
+<form method="post" action="run" enctype="multipart/form-data">
+    <div class="container">
+        <div class="row">
+            <div class="col-sm-12">
+                <h1> <a href="http://uamap-dev.arl.arizona.edu:8085/MPSE"> MPSE Homepage and Precomputed Examples</a>
+                </h1>
                 <br><br>
 
-                
-            <h1> Data</h1>
-            <hr>
-            <h3>  <label class="radio-inline"><input type="radio" name="data" value="preloaded" checked >  Preloaded Data</label></h3>
 
-            <label class="radio-inline"><input type="radio" name="preloadeddata" value="123" > 1-2-3 Examples</label>
-            <label class="radio-inline"><input type="radio" name="preloadeddata" value="credit"  > Credit Data</label>
-            <label class="radio-inline"><input type="radio" name="preloadeddata" value= "circlesquire" checked > Circle-Squire  Data</label>
-          
-            <br><br>
-<h3>  <label class="radio-inline"><input type="radio" name="data" value="uploaded"   > Upload Distance Matrices</label></h3> (<a href="data/dataset_3D/circle_square_new/dist_circle.csv"> Examples of data format</a>) <br>
-             Distance Matrix 1: <input type="file" name="file1"><br>
-            Distance Matrix 2: <input type="file" name="file2"><br>
-            Distance Matrix 3: <input type="file" name="file3"><br>
-            <br>
-   
-            <hr>
+                <h1> Data</h1>
+                <hr>
+                <h3> <label class="radio-inline"><input type="radio" name="data" value="preloaded" checked> Preloaded
+                        Data</label></h3>
 
-            <h1> Experiment Settings</h1>
-<!--
-            select algorithm: <select>
-                <option selected value="agd">adaptive gradient descent</option>
-                <option value="gd">gradient descent</option>
-                <option value="classic">classic implementation</option>
-            </select><br>
--->
+                <label class="radio-inline"><input type="radio" name="preloadeddata" value="123"> 1-2-3 Examples</label>
+                <label class="radio-inline"><input type="radio" name="preloadeddata" value="credit"> Credit Data</label>
+                <label class="radio-inline"><input type="radio" name="preloadeddata" value="circlesquire" checked>
+                    Circle-Squire Data</label>
 
-            experiment name : <input type="text" value="exp" name="EXPERIMENT_NAME"><br>
-            <!-- number of projections: <input type="text" value="3" name="projections"><br> -->
-            projections Type: <select name="projection_type">
-                <optgroup label="fixed">
-                    <option value="same">same</option>
-                    <option selected="selected" value="standard">standard</option>
-                    <option value="cylinder">cylinder</option>
-                    <option value="orthogonal">orthogonal</option>
-                    <option value="normal">normal</option>
-                    <option value="uniform">uniform</option>
-                </optgroup>
-                <option value="variable">variable</option>
-            </select><br>
+                <br><br>
+                <h3> <label class="radio-inline"><input type="radio" name="data" value="uploaded"> Upload Distance
+                        Matrices</label></h3> (<a href="data/dataset_3D/circle_square_new/dist_circle.csv"> Examples of
+                    data format</a>) <br>
+                Distance Matrix 1: <input type="file" name="file1"><br>
+                Distance Matrix 2: <input type="file" name="file2"><br>
+                Distance Matrix 3: <input type="file" name="file3"><br>
+                <br>
 
-            <!-- learning_rate: <input type="text" value="0.001" name="learning_rate"><br> -->
-            max iterations: <input type="text" value="100" name="max_iters"><br>
-            average neighbors: <input type="text" value="16" name="average_neighbors"><br>
-            sample_size: <input type="text" value="100" name="sample_size"><br>
+                <hr>
+
+                <h1> Experiment Settings</h1>
+        
+                experiment name : <input type="text" value="exp" name="EXPERIMENT_NAME"><br>
+                <!-- number of projections: <input type="text" value="3" name="projections"><br> -->
+                projections Type: <select name="projection_type">
+                    <optgroup label="fixed">
+                        <option value="same">same</option>
+                        <option selected="selected" value="standard">standard</option>
+                        <option value="cylinder">cylinder</option>
+                        <option value="orthogonal">orthogonal</option>
+                        <option value="normal">normal</option>
+                        <option value="uniform">uniform</option>
+                    </optgroup>
+                    <option value="variable">variable</option>
+                </select><br>
+
+                <!-- learning_rate: <input type="text" value="0.001" name="learning_rate"><br> -->
+                max iterations: <input type="text" value="100" name="max_iters"><br>
+                average neighbors: <input type="text" value="16" name="average_neighbors"><br>
+                sample_size: <input type="text" value="100" name="sample_size"><br>
 
 
-           Smart initialization: <select name="smart_initialization">
-                <option value="mds">mds based</option>
-                <option value="random" selected>random</option>
-            </select><br>
+                Smart initialization: <select name="smart_initialization">
+                    <option value="mds">mds based</option>
+                    <option value="random" selected>random</option>
+                </select><br>
 
-<!--             
-            verbose <input type="checkbox" name="verbose" checked><br>-->
-            <hr> 
+        
+                <hr>
 
 
-            <h1>3D Visualization Settings</h1>
-            Visualization template <select name=vistemplate><option value="pointbased">Point Based</option><option value="attributebased">Attribute Focused</option></select><br>
-            Background color: <select>
-                <option value="Black">Black</option>
-                <option value="White">White</option>
-            </select> <br>
-            Point color: <select>
-                <option value="Green">Green</option>
-                <option value="Purple">Purple</option>
-                <option value="Yellow">Yellow</option>
-            </select>
-            <hr>
-            You may leave your email address. If experiment takes more than 2 minutes we will send visualization link to
-            you. (optional)<br>
-            email <input type="email" name="email">
-            <hr>
-            <input type="submit" value="Run">
+                <h1>3D Visualization Settings</h1>
+                Visualization template <select name=vistemplate>
+                    <option value="pointbased">Point Based</option>
+                    <option value="attributebased">Attribute Focused</option>
+                </select><br>
+                Background color: <select>
+                    <option value="Black">Black</option>
+                    <option value="White">White</option>
+                </select> <br>
+                Point color: <select>
+                    <option value="Green">Green</option>
+                    <option value="Purple">Purple</option>
+                    <option value="Yellow">Yellow</option>
+                </select>
+                <hr>
+             
+               
+                <input type="submit" value="Run">
+            </div>
         </div>
     </div>
-</div>
 </form>
