@@ -7,3 +7,4 @@ mpserecords.sqlite
 MPSE/outputs/*
 old/*
 .vscode
+.DS_Store
