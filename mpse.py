@@ -18,28 +18,18 @@ parser.add_argument('-o', '--output_dir', default='outputs',
                     help='Output directory', required=False)
 parser.add_argument('-e', '--experiment_name', default='exp',
                     help='Experiment name', required=False)
-
-#parser.add_argument( '-p','--projections', type=int,default=3,   help='Number of projections to optimize',required=False)
-#parser.add_argument( '-t','--projection_type', default='fixed', help='Projection type',required=False)
-#parser.add_argument( '-ps','--projection_set', default='resources/fixed_projection_1.txt', help='file for projection set for fixed projection, see examples in resource directory',required=False)
-
-#parser.add_argument( '-lr','--lr', type=float,default=0.0001, help='Learning rate',required=False)
 parser.add_argument('-max_iters', '--max_iters', type=int,
                     default=10000, help='Max iterations', required=False)
 parser.add_argument('-n', '--sample_size', type=int,
                     default=math.inf, help='Number of samples', required=False)
-parser.add_argument( '-X0','--X0', default=None, help='Initial initialization',required=False)
-#parser.add_argument( '-sp','--save_progress',type=int,  default=0, help='save progress',required=False)
-#parser.add_argument( '-v','--verbose',type=int,  default=2, help='verbose',required=False)
-#parser.add_argument( '-alg','--algorithm',  default='MULTIVIEW', choices=['classic','gd','gdm','agd','MULTIVIEW0','MULTIVIEW'], help="algorithms: 'classic' for autograd implementation,\n  'gd' for gradient descent,\n 'gdm' for GD with momentum, \n 'agd' for adaptive GD",required=False)
+parser.add_argument( '-X0','--X0', default=False, type=bool, choices=[True, False], help='Smart initialization',required=False)
 parser.add_argument('-ps', '--projection_type',  default='standard', choices=['fixed',
                     'same', 'standard', 'cylinder', 'orthogonal', 'normal', 'uniform', 'variable'], help="projection set", required=False)
 parser.add_argument('-vt', '--visualization_template',  default='pointbased', choices=[
-                    'pointbased', 'attributebased'], help="visualization template", required=False)
+                    'pointbased', 'attributebased'], help="Visualization template", required=False)
 parser.add_argument('-an', '--average_neighbors', type=int,
                     default=32, help="average  neighbors", required=False)
-
-parser.add_argument('-ex', '--example_name', default=None ,  help="example_name", required=False)
+parser.add_argument('-ds', '--preladed_dataset', default=None,  help="Preladed Dataset", required=False)
                     
 args = parser.parse_args()
 
@@ -63,7 +53,7 @@ print("<h1>Please keep the window running</h1>")
 
 
 
-if args.example_name=='123':
+if args.preladed_dataset=='123':
     D=load123data(args.sample_size)
 else:
     D = [data.get_matrix(f) for f in args.d]
