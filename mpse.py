@@ -2,7 +2,7 @@
 
 import argparse
 import math
-from MPSE.multiviewMDS import multiview_core
+import pandas as pd 
 from MPSE.multiviewMDS import data
 import numpy as np
 import os
@@ -58,7 +58,7 @@ print("<h1>Please keep the window running</h1>")
 
 
 def load_data(args):
-    D = [data.get_matrix(f) for f in args.d]
+    D = [pd.read_csv(f, header=None).values for f in args.d]
     print(f"Total Samples found:%d<br>" % len(D[0]))
     args.sample_size = min(len(D[0]), args.sample_size)
     sub = range(args.sample_size)
@@ -70,21 +70,22 @@ if args.preloaded_dataset == '123':
     D = load123data(args.sample_size)
 
 if args.preloaded_dataset == 'credit':
-    args.d = ['MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv',
-              'MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv']
+    path='MPSE/datasets/dataset_tabluar/data/'
+    args.d = [path+'dissimple1000_1.csv',  path+'dissimple1000_2.csv', path+'dissimple1000_3.csv']
     D = load_data(args)
 
 if args.preloaded_dataset == 'circlesquire':
-    args.d = ['MPSE/datasets/dataset_3D/circle_square_new/dist_circle.csv',
-              'MPSE/datasets/dataset_3D/circle_square_new/dist_square.csv']
+    path='MPSE/datasets/dataset_3D/circle_square_new/'
+    args.d = [path+'dist_circle.csv', path+'dist_square.csv']
     D = load_data(args)
 
 if args.preloaded_dataset == None:
     D = load_data(args)
 
 
-if args.projection_type == 'variable':
-    args.projection_type = None
+
+args.projection_type = None if args.projection_type == 'variable' else args.projection_type 
+
 
 
 mv = mview.basic(D,  Q=args.projection_type, verbose=2, smart_initialize=args.X0,
@@ -99,15 +100,17 @@ args.output_dir = 'MPSE/outputs/' + args.experiment_name + "/"
 
 if not os.path.exists(args.output_dir):
     os.makedirs(args.output_dir)
+path_to_copy = "cp -rf MPSE/resources/vistemplateattributebased/* "
 if args.visualization_template == "pointbased":
-    os.system("cp -rf MPSE/resources/vistemplatepointbased/* " + args.output_dir)
-else:
-    os.system("cp -rf MPSE/resources/vistemplateattributebased/* " + args.output_dir)
+    path_to_copy = "cp -rf MPSE/resources/vistemplatepointbased/* "
+
+os.system(path_to_copy + args.output_dir)
 
 f = open(args.output_dir+"/vis_param.js", "r")
 vis_param = f.read().replace("var numberofprojection=3;",
                              "var numberofprojection=" + str(len(projections)) + ";")
 f.close()
+
 f = open(args.output_dir+"/vis_param.js", "w+")
 f.write(vis_param)
 f.close()
@@ -132,7 +135,7 @@ plt.plot(x, costs)
 costfile = os.path.join(args.output_dir, "cost.png")
 plt.savefig(costfile)
 sys.stdout.flush()
-print("<br> output path: "+ os.path.join(args.output_dir) + "index.html")
+print("<br> output path: " + os.path.join(args.output_dir) + "index.html")
 
 print("<br><h1> <a target='_blank'  href ='static/" + args.experiment_name +
       "/index.html'>Interactive visualization</a></h1><br>", flush=True)

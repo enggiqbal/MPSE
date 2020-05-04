@@ -51,7 +51,25 @@
 			 <script src="vis_param.js"></script>
 		<script src="coordinates.js"></script>
 
-<script type="text/javascript">var zoomfactor=20; var view=Array(); view[0]=[0.3,0,35];view[1]=[0,35,0];view[2]=[35,0,0];var last = view[0]</script>
+<script type="text/javascript">
+
+
+
+function get_viewpoint_from_projection(proj, i)
+{
+let constant=35;
+let a=proj[i][0];
+let b=proj[i][1];
+let p= [ a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0] ]; 
+return [p[0]* constant , p[1]* constant , p[2]* constant  ];
+}
+	var zoomfactor = 20; 
+ 
+ 
+
+
+ 
+</script>
  
 <script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
 <script src ="label.js"></script>
@@ -79,14 +97,10 @@
 	for ( var i= 0 ; i < numberofprojection; i++)
 	{
 		console.log("test"+ i);
-		document.write('<img src="eye.png" width="64px" onclick=vizx(view['+ i +'])>')
+		document.write('<img src="eye.png" width="64px" onclick=viz( '+ i +')>')
 	}
 	</script >
-	<!--
-<img src="eye.png" width="64px" onclick=vizx(view[0])>
-<img src="eye.png" width="64px" onclick=vizx(view[1])>
- <img src="eye.png" width="64px" onclick=vizx(view[2])> 
- -->
+ 
 
 <br>
 <div id=info></div>
@@ -197,42 +211,7 @@ var MF={'M':0,'F':1}
 //var texture1 = new THREE.TextureLoader().load('dot.png');
 //var texture1 = new THREE.TextureLoader().load('crate.gif');
 //x=new THREE.IcosahedronBufferGeometry(2)
-
-function vizx(point)
-		{/*
-			var p2 =[]
-			p2 = last
-			var change = []
-			for ( var j = 0 ; j < 3; j++)
-			{
-				if ( last [j] < point[j])
-				{
-					change.push(0.1);
-				}
-				else if ( last [j] > point[j]) { change.push(-0.1);}
-				else { change.push(0)}
-			}
-			var i = 0
-			while ( i <1000)
-			{
-				var change_sum = 0
-				for ( var j = 0 ; j < 3; j++)
-				{
-					
-					if ( p2[j] == point[j]) {change[j]=0}
-					p2[j] =Math.round((p2[j] +change[j])*100)/100
-					change_sum +=Math.abs(change[j])
-				}
-				viz(p2)
-				if (change_sum == 0 ) {return 0}
-				console.log(p2)
-			}
-			last = point */
-			viz(point)
-		}
-
-
-
+ 
 
 
 var loader = new THREE.FontLoader();
@@ -307,9 +286,9 @@ scene.add(new THREE.Mesh(geom,material));
 var tmpColor = generateColor('#FFFFFF','#ff0ff0',points.length);
 
 
-function viz(point)
+function viz(p)
 {
-	
+let point=get_viewpoint_from_projection(proj, p)
 	
 
 camera.position.set(point[0]*zoomfactor,point[1]*zoomfactor,point[2]*zoomfactor);
@@ -383,7 +362,7 @@ scene.add( dot )
 }
 }
 
-viz(view[0])
+viz(0)
 var worldAxis = new THREE.AxesHelper(40);
    scene.add( worldAxis );
 

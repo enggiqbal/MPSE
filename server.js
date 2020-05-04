@@ -23,6 +23,7 @@ var multipartMiddleware = multipart();
 
 
 app.use('/static', express.static('MPSE/outputs/'))
+app.use('/precomputed', express.static('MPSE/precomputed/'))
 
 app.use('/data', express.static('MPSE/datasets/'))
 app.use('/MPSE', express.static('MPSE/MPSE/'))
@@ -89,7 +90,8 @@ app.post('/run', multipartMiddleware, function (req, res) {
         }
     }
 
-    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ex',preloadeddata ];
+    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ds',preloadeddata ];
+console.log(parameters);
     parameters = parameters.concat(datapath)
     console.log("python3.6 " + parameters.join(" "))
     mpse_process = spawn('python3.6', parameters)

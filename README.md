@@ -135,6 +135,10 @@ DEPRECATION WARNING: The system version of Tk is deprecated and may be removed i
 <br><img src=/static/mytest/cost.png>
 ```
 
+```
+python3.6 mpse.py -ds 123 -max_iters 500 -ps cylinder -e 123 -an 4
+```
+
 # Citation (draft version )
 
 ```console
