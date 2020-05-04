@@ -36,7 +36,7 @@
 
 	<script type="text/javascript">
 		function get_viewpoint_from_projection(proj, i) {
-			let constant = 5;
+			let constant = 10;
 			let a = proj[i][0];
 			let b = proj[i][1];
 			let p = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
@@ -68,13 +68,15 @@
 		var renderer = new THREE.WebGLRenderer();
 		renderer.setSize(window.innerWidth, window.innerHeight - 100);
 		document.body.appendChild(renderer.domElement);
-		//scene.background = new THREE.Color( 0xffffff );
+		if ( backgroundcolor === undefined)
+			backgroundcolor='black';
+		scene.background = new THREE.Color( backgroundcolor );
 		var controls = new THREE.OrbitControls(camera, renderer.domElement);
 		//var color = ["red", "green", "blue", 'yellow', 'orange']
 
 		point3Ddrawing();
 		viz(0);
-		var worldAxis = new THREE.AxesHelper(45);
+		var worldAxis = new THREE.AxesHelper(5);
 		scene.add(worldAxis);
 		function render() {
 			renderer.render(scene, camera);

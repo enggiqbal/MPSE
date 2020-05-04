@@ -45,8 +45,8 @@ function uploader(tmp_path, target_path, res) {
 app.post('/run', multipartMiddleware, function (req, res) {
 
 
-
     res.header('Content-Type', 'text/html;charset=utf-8');
+    let  datapath = [];
     if (req.body.data == "uploaded") {
         var f1 = './uploaded/dist1.csv'
         var f2 = './uploaded/dist2.csv'
@@ -69,28 +69,15 @@ app.post('/run', multipartMiddleware, function (req, res) {
 
 
 
-    console.log(req.body);
+ 
     sample_size = req.body.sample_size;
     preloadeddata = req.body.preloadeddata;
     projection_type = req.body.projection_type;
 
-    if (req.body.data == "preloaded") {
-        var datapath = ""
-        if (preloadeddata == 'credit')
-            datapath = ['-d', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv', 'MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv']
-
-        if (preloadeddata == '123')
-            datapath = ['-d', 'MPSE/datasets/dataset_3D/123_dataset_new/250/data_mat_1_250.csv', 'MPSE/datasets/dataset_3D/123_dataset_new/250/data_mat_2_250.csv', 'MPSE/datasets/dataset_3D/123_dataset_new/250/data_mat_3_250.csv']
-
-        if (preloadeddata == 'circlesquire') {
-            req.body.projections = 2;
-            //datapath = ['-d', 'MPSE/datasets/dataset_3D/sq_cir_tr_dataset/350/data_mat_cir_350.csv', 'MPSE/datasets/dataset_3D/sq_cir_tr_dataset/350/data_mat_sq_350.csv', 'MPSE/datasets/dataset_3D/sq_cir_tr_dataset/350/data_mat_tr_350.csv']
-            datapath = ['-d', 'MPSE/datasets/dataset_3D/circle_square_new/dist_circle.csv', 'MPSE/datasets/dataset_3D/circle_square_new/dist_square.csv']
-
-        }
+    if (req.body.data == "preloaded") { 
     }
 
-    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ds',preloadeddata ];
+    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ds',preloadeddata , '-bgcolor',req.body.backgroundcolor, '-pcolor', req.body.pointcolor  ];
 console.log(parameters);
     parameters = parameters.concat(datapath)
     console.log("python3.6 " + parameters.join(" "))
