@@ -1,3 +1,5 @@
+
+
 var express = require('express');
 var app = express();
 var spawn = require('child_process').spawn;
@@ -43,8 +45,7 @@ function uploader(tmp_path, target_path, res) {
 }
 
 app.post('/run', multipartMiddleware, function (req, res) {
-
-
+ 
     res.header('Content-Type', 'text/html;charset=utf-8');
     let  datapath = [];
     if (req.body.data == "uploaded") {
@@ -84,12 +85,14 @@ console.log(parameters);
     mpse_process = spawn('python3.6', parameters)
     mpse_process.stdout.on('data', function (data) {
         console.log('stdout: ' + data);
+       
         res.write(data + "<br>", 'utf-8');
+        res.flush();
+       
     });
     mpse_process.stderr.on('data', function (data) {
         console.log('stderr: ' + data);
-        //db.run("insert into history values('" + req.body.EXPERIMENT_NAME + "')");
-        //db.close();
+      
         res.write(data, 'utf-8');
 
     });
