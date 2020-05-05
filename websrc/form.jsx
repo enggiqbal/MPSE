@@ -1,5 +1,16 @@
-<%include header%>
+import ReactDOM from 'react-dom';
+import React from 'react';
 
+export class MpseForm extends React.Component {
+    constructor(props) {
+        super(props);
+this.state={
+
+};
+    }
+
+render(){
+    return(
 <form method="post" action="run" enctype="multipart/form-data">
     <div class="container">
         <div class="row">
@@ -10,13 +21,10 @@
         </div>
         <div class="row top-buffer">
             <div class="col-md-12">
-
-
                 <div class="card1">
                     <div class="header">
                         Precomputed results
                     </div>
-
                     <div class="list-group">
                         <a href="/precomputed/123" class="list-group-item list-group-item-action list-group-item-light">
                             123 example (sample size: 10000, max_iters: 500, projection: cylinder average_neighbors: 4,
@@ -68,8 +76,6 @@
                             <label > Matrix 1: <input type="file" name="file1"></label>
                             <label > Matrix 2: <input type="file" name="file2"></label>
                                 <label >Matrix 3: <input type="file" name="file3"></label>
-                       
-
                     </div>
                 </div>
             </div>
@@ -166,10 +172,11 @@
    
 
         <div class="row justify-content-center top-buffer">
-            <button type="submit" class="btn btn-primary" >Run MPSE</button>
- 
-            <!-- <div id="app"></div>
-             <script src="/websrc/js/index.bundle.js"></script> -->
+            <div id="app"></div>
+             <script src="/websrc/js/index.bundle.js"></script>
         </div>
     </div>
 </form>
+);
+}
+}

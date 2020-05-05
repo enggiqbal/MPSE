@@ -1,18 +1,52 @@
 {
-  "name": "mpse-web",
-  "version": "1.0.0",
+  "name": "MPSE-web",
+  "version": "0.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "src/index.js",
+  "dependencies": {
+    "axios": "^0.19.2",
+    "babel-preset-react": "^6.24.1",
+    "body-parser": "^1.19.0",
+    "connect-multiparty": "^2.2.0",
+    "cookie-parser": "^1.4.4",
+    "cookie-session": "^1.4.0",
+    "d3": "^5.15.0",
+    "dotenv": "^8.2.0",
+    "ejs": "^2.7.4",
+    "express": "^4.17.1",
+    "express-session": "^1.17.0",
+    "file-saver": "^2.0.2",
+    "mapbox-gl": "^1.10.0",
+    "mongodb": "^3.5.1",
+    "multer": "^1.4.2",
+    "nodemailer": "^6.4.2",
+    "nodemon": "^1.19.4",
+    "ol": "^5.3.3",
+    "react-d3-graph": "^2.4.1",
+    "react-google-charts": "^3.0.15",
+    "react-modal": "^3.11.1",
+    "react-render-html": "^0.6.0",
+    "react-router-dom": "^5.1.2",
+    "react-slider": "^1.0.2",
+    "request": "^2.88.0",
+    "xml2js": "^0.4.23"
+  },
+  "devDependencies": {
+    "@babel/preset-env": "^7.8.3",
+    "@babel/preset-react": "^7.8.3",
+    "babel-core": "^6.26.3",
+    "babel-loader": "^7.1.5",
+    "json-loader": "^0.5.7",
+    "react": "^16.12.0",
+    "react-dom": "^16.12.0",
+    "webpack": "^4.41.5",
+    "webpack-cli": "^3.3.10"
+  },
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "build": "rm -rf dist && webpack --progress --config webpack.config.js --mode development",
+    "watch": "webpack --config webpack.config.js --watch",
+    "server": "nodemon server.js"
   },
   "author": "",
-  "license": "ISC",
-  "dependencies": {
-    "connect-multiparty": "^2.2.0",
-    "ejs": "^2.7.2",
-    "express": "^4.17.1",
-    "minimist": "^1.2.5",
-    "sqlite3": "^4.1.0"
-  }
+  "license": "ISC"
 }

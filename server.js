@@ -21,7 +21,7 @@ var multipartMiddleware = multipart();
 
 
 
-
+app.use('/websrc', express.static('websrc/'))
 app.use('/static', express.static('MPSE/outputs/'))
 app.use('/precomputed', express.static('MPSE/precomputed/'))
 
