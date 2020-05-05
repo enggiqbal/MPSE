@@ -2,18 +2,18 @@ import ReactDOM from 'react-dom';
 import React from 'react';
 import axios from 'axios';
 import ProgressBar from 'react-bootstrap/ProgressBar'
-
+import { LineChart } from './LineChart'
 export class MpseForm extends React.Component {
     constructor(props) {
         super(props);
 
         this.state = {
-            loading: false,
+            resultsLoaded: false,
             error: '',
             hasResults: false,
             response: null,
             data: 'preloaded', average_neighbors: 16,
-            sample_size: 200, vistemplate: 'pointbased', EXPERIMENT_NAME: 'exp', projection_type: 'standard', max_iters: 200, smart_initialization: 'random', preloadeddata: '123', backgroundcolor: 'black', pointcolor: 'red',
+            sample_size: 200, vistemplate: 'pointbased', EXPERIMENT_NAME: 'exp', projection_type: 'standard', max_iters: 200, smart_initialization: 'random', preloadeddata: 'circlesquire', backgroundcolor: 'black', pointcolor: 'red',
 
         };
         this.submitQuery = this.submitQuery.bind(this);
@@ -37,7 +37,7 @@ export class MpseForm extends React.Component {
             bodyFormData.append(a, this.state[a]);
 
         this.setState({
-            loading: true,
+            resultsLoaded: false,
             error: '',
         });
 
@@ -48,12 +48,12 @@ export class MpseForm extends React.Component {
         const config = {
 
             onDownloadProgress: progressEvent => {
+
                 this.setState({ response: progressEvent.currentTarget.response })
-
-
             }
+
         }
-        axios.post('/run', bodyFormData, config);
+        axios.post('/run', bodyFormData, config).then(this.onQueryLoad);
 
 
 
@@ -63,7 +63,7 @@ export class MpseForm extends React.Component {
     onQueryLoad(response) {
         //   console.log(response.data);
         this.setState({
-            loading: false,
+            resultsLoaded: true,
             hasResults: true,
             response: response.data,
         });
@@ -129,7 +129,7 @@ function Row2() {
 
 function Row3(props) {
     let data = props.this.state
-    // console.log(data);
+
 
     return (
         <div className="row top-buffer">
@@ -222,7 +222,7 @@ function Row3(props) {
             <div className="col-md-4 ">
                 <div className="card">
                     <div className="header">
-                        3D Visualization Settings
+                        3D Vis. Settings
                     </div>
 
                     <div className="container">
@@ -277,30 +277,71 @@ function Row5(props) {
 
 
     let response = props.this.state.response;
+    //console.log(response);
 
-    const regex = /(\d+).(\d+).:.cost./gm;
+
+    const regex = /<br>\s+(\d+).(\d+).:.cost.=(.*?),/gm;
     let m;
     let steps = 0
     let totalstep = 200;
+    let data = []
+
     while ((m = regex.exec(response)) !== null) {
         if (m.index === regex.lastIndex) {
             regex.lastIndex++;
         }
-        if (parseInt(m[1]) > steps) {
-            steps = parseInt(m[1]);
-            totalstep = parseInt(m[2]);
-        }
-
+        steps = parseInt(m[1]);
+        totalstep = parseInt(m[2]);
+        data.push({ a: steps, b: parseFloat(m[3]) })
     }
+    let expname = null;
+    console.log(props.this.state.resultsLoaded);
+    if (props.this.state.resultsLoaded && response.includes('cost.png'))
+        expname = props.this.state.EXPERIMENT_NAME;
+
+
+    const width = 600, height = 350, margin = 20
+
 
 
     return (
-        <div className="row justify-content-center top-buffer">
-            <div className="col-md-12" height="200px">
-                <ProgressBar now={steps + 1} max={totalstep} label={'steps ' + `${steps + 1}` + ' of ' + totalstep} />
+        [
+            <div className="row justify-content-center top-buffer">
+                <div className="col-md-12" height="200px">
+                    <ProgressBar now={steps + 1} max={totalstep} label={'steps ' + `${steps + 1}` + ' of ' + totalstep} />
+                </div>
+            </div>,
+            <div className="row justify-content-center top-buffer">
+                <div className="col-md-6"  >
+                    <div className="card">
+                        <div className="header">
+                            Cost History
+                    </div>
+                        <div className="container">
+                            <LineChart data={data} width={width} height={height} />
+                        </div>
+                    </div>
+                </div>
+                <div className="col-md-6">
+                    {expname ? <OutputLinks expname={expname}></OutputLinks> : "Output links"}
+                </div>
             </div>
-            <div>{"response"}</div>
-        </div>
+        ]
+    )
+}
 
+function OutputLinks(props) {
+    let expname = props.expname;
+    return (
+        <div className="card">
+            <div className="header">
+                Outputs
+        </div>
+            <div className="container">
+                <a target='_blank' href={'static/' + expname + '/index.html'}>Interactive visualization</a>
+                <br></br>
+                <a target='_blank' href={'static/' + expname + '/' + expname + '_pos.csv'}>Download 3D positions</a>
+            </div>
+        </div>
     )
 }
