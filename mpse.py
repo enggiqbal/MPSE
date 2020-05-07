@@ -84,9 +84,7 @@ def write_output(mv, args):
     projections = mv.Q
     costs = mv.H["costs"]
     pos = mv.X
-    args.output_dir = 'MPSE/outputs/' + args.experiment_name + "/"
-    if not os.path.exists(args.output_dir):
-        os.makedirs(args.output_dir)
+
     path_to_copy = "cp -rf MPSE/resources/vistemplateattributebased/* "
     if args.visualization_template == "pointbased":
         path_to_copy = "cp -rf MPSE/resources/vistemplatepointbased/* "
@@ -136,11 +134,11 @@ if __name__ == '__main__':
     parser.add_argument('-e', '--experiment_name', default='exp',
                         help='Experiment name', required=False)
     parser.add_argument('-max_iters', '--max_iters', type=int,
-                        default=1000, help='Max iterations', required=False)
+                        default=100, help='Max iterations', required=False)
     parser.add_argument('-esp', '--min_cost', type=int,
                         default=0.001, help='stopping cost', required=False)
     parser.add_argument('-n', '--sample_size', type=int,
-                        default=math.inf, help='Number of samples', required=False)
+                        default=20, help='Number of samples', required=False)
     parser.add_argument('-X0', '--X0', default=False, type=bool,
                         choices=[True, False], help='Smart initialization', required=False)
     parser.add_argument('-ps', '--projection_type',  default='standard', choices=['fixed',
@@ -149,14 +147,16 @@ if __name__ == '__main__':
                         'pointbased', 'attributebased'], help="Visualization template", required=False)
     parser.add_argument('-an', '--average_neighbors', type=int,
                         default=32, help="average  neighbors", required=False)
-    parser.add_argument('-ds', '--preloaded_dataset', default=None,
+    parser.add_argument('-ds', '--preloaded_dataset', default='123',
                         help="Preloaded Dataset", required=False)
 
     parser.add_argument('-bgcolor', '--bgcolor', default='black',
                             help="vis: background color", required=False)
     parser.add_argument('-pcolor', '--pcolor', default='red',
                             help="vis: poing color", required=False)
-                            
+    parser.add_argument('-interactive', '--interactive', default=True,
+                            help="vis: poing color", required=False)
+
     args = parser.parse_args()
     if args.preloaded_dataset == None and args.d == None:
         print("Please provide either -d ( distace matices) or -ds (preloaded dataset)")
@@ -166,7 +166,11 @@ if __name__ == '__main__':
 
     D = get_matrix(args)
     args.projection_type = None if args.projection_type == 'variable' else args.projection_type
+    
+    args.output_dir = 'MPSE/outputs/' + args.experiment_name + "/"
+    if not os.path.exists(args.output_dir):
+        os.makedirs(args.output_dir)
 
     mv = mview.basic(D, Q=args.projection_type, verbose=2, smart_initialize=args.X0,
-                     max_iter=args.max_iters, average_neighbors=args.average_neighbors, min_cost=args.min_cost)
+                     max_iter=args.max_iters, average_neighbors=args.average_neighbors, min_cost=args.min_cost, interactive=args.output_dir)
     write_output(mv, args)

@@ -43,11 +43,26 @@ function uploader(tmp_path, target_path, res) {
     });
 
 }
+let parserResponse = (txt) => {
 
+    let data = [];
+    const regex = /(\d+).(\d+)\s:\scost\s=\s(.*?),\sgrad\s=\s(.*?),\slr\s=\s(.*?),\sstep\s=/gm;
+    let m;
+    while ((m = regex.exec(txt)) !== null) {
+        if (m.index === regex.lastIndex) {
+            regex.lastIndex++;
+        }
+        for (let i = 0; i < 5; i++) {
+            data.push(parseFloat( m[i + 1]));
+        }
+    }
+   // console.log(data)
+    return data
+}
 app.post('/run', multipartMiddleware, function (req, res) {
- 
+
     res.header('Content-Type', 'text/html;charset=utf-8');
-    let  datapath = [];
+    let datapath = [];
     if (req.body.data == "uploaded") {
         var f1 = './uploaded/dist1.csv'
         var f2 = './uploaded/dist2.csv'
@@ -70,29 +85,38 @@ app.post('/run', multipartMiddleware, function (req, res) {
 
 
 
- 
+
     sample_size = req.body.sample_size;
     preloadeddata = req.body.preloadeddata;
     projection_type = req.body.projection_type;
 
-    if (req.body.data == "preloaded") { 
+    if (req.body.data == "preloaded") {
     }
 
-    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ds',preloadeddata , '-bgcolor',req.body.backgroundcolor, '-pcolor', req.body.pointcolor  ];
-console.log(parameters);
+    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ds', preloadeddata, '-bgcolor', req.body.backgroundcolor, '-pcolor', req.body.pointcolor];
+    console.log(parameters);
     parameters = parameters.concat(datapath)
     console.log("python3.6 " + parameters.join(" "))
     mpse_process = spawn('python3.6', parameters)
     mpse_process.stdout.on('data', function (data) {
-        console.log('stdout: ' + data);
-       
-        res.write(data + "<br>", 'utf-8');
-        res.flush();
-       
+       // console.log('stdout: ' + data);
+        var fs = require('fs');
+      
+        var proj =  fs.readFileSync('MPSE/outputs/' + req.body.EXPERIMENT_NAME + "/temp_proj.json", 'utf8');
+        var pos =  fs.readFileSync('MPSE/outputs/' + req.body.EXPERIMENT_NAME + "/temp_pos.json", 'utf8');
+
+        let stepDetails = parserResponse("" + data)
+    
+        let string=JSON.stringify({ stepDetails: stepDetails, proj: proj, pos: pos });
+        console.log(string);
+        res.write(string);
+        //res.flush();
+
     });
     mpse_process.stderr.on('data', function (data) {
         console.log('stderr: ' + data);
-      
+
+
         res.write(data, 'utf-8');
 
     });

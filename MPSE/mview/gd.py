@@ -199,6 +199,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
     scheme : string
     Algorithm stepping scheme.
     """
+    interactive=kwargs.get('interactive', None)
     if Xi is None:
         stochastic = False
     else:
@@ -224,7 +225,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         if min_step is not None:
             print('  '*level+f'    min_step : {min_step:0.2e}')
         print('  '*level+f'    max_iter : {max_iter}')
-        print('  '*level+f'    max_step : {max_step:0.2e}')
+        print('  '*level+f'    max_step : {max_step:0.2e}',flush=True)
         
     if min_cost is None:
         min_cost = -np.Inf
@@ -264,7 +265,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
 
     if verbose > 1:
         print('  '*level+'  progress:')
-        
+
     for i in range(it0,max_iter):
 
         if stochastic is False:
@@ -319,7 +320,10 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
             print('  '*level+f'    {i:>4}/{max_iter} : cost = {costs[i]:0.2e},'+
                   f' grad = {grads[i]:0.2e}, lr = {lrs[i]:0.2e},'+
                   f' step = {steps[i]:0.2e}',flush=True, end="\r")
-    
+        if interactive:
+            import json
+            json.dump(x.tolist(), open(interactive+'/temp_pos.json', 'w', encoding='utf-8'), separators=(',', ':'))
+
     tf = time.time()
 
     costs = costs[0:i+1]
@@ -370,7 +374,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
     Gradient descent algorithms.
     """
     assert isinstance(X,list); K = len(X)
-
+    interactive=kwargs.get('interactive', None)
     if Xi is None:
         stochastic = False
     else:
@@ -414,7 +418,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         if min_step is not None:
             print(f'    min_step : {min_step:0.2e}')
         print(f'    max_iter : {max_iter}')
-        print(f'    max_step : {max_step:0.2e}')
+        print(f'    max_step : {max_step:0.2e}',flush=True)
         
     if min_cost is None:
         min_cost = -np.Inf
@@ -522,6 +526,12 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
                   f'grad = {np.max(grads[i]):0.2e}, cost = {costs[i]:0.2e}, '+\
                   f'lr = {np.max(lrs[i]):0.2e}',
                   flush=True, end="\r")
+
+        if interactive:
+            import json
+            json.dump(X[0].tolist(), open(interactive+'/temp_pos.json', 'w', encoding='utf-8'), separators=(',', ':'))
+            json.dump(X[1].tolist(), open(interactive+'/temp_proj.json', 'w', encoding='utf-8'), separators=(',', ':'))
+
             #sys.stdout.write("\033[F")
     
     if verbose > 0:

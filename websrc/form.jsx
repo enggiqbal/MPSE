@@ -9,6 +9,9 @@ export class MpseForm extends React.Component {
 
         this.state = {
             resultsLoaded: false,
+            stepDetails:[],
+            lastCoordinates:[],
+            lastProjection:[],
             error: '',
             hasResults: false,
             response: null,
@@ -39,6 +42,7 @@ export class MpseForm extends React.Component {
         this.setState({
             resultsLoaded: false,
             error: '',
+            stepDetails:[],
         });
 
         // axios.post('/run', bodyFormData)
@@ -48,15 +52,21 @@ export class MpseForm extends React.Component {
         const config = {
 
             onDownloadProgress: progressEvent => {
+              // console.log(  progressEvent.currentTarget.response);
+                let txt=progressEvent.currentTarget.response;
+                txt=txt.replace("}0","}");
+                txt= "{\"stepDetails"+txt.split("stepDetails")[txt.split("stepDetails").length - 1]
+                console.log(txt);
+                let data=JSON.parse(txt)
 
-                this.setState({ response: progressEvent.currentTarget.response })
+                let history=this.state.stepDetails;
+                history.push(data.stepDetails);
+ 
+                if (data.stepDetails.length==5)
+                    this.setState({ stepDetails: history , lastCoordinates:data.pos,lastProjection:data.proj })
             }
-
         }
         axios.post('/run', bodyFormData, config).then(this.onQueryLoad);
-
-
-
     }
 
 
@@ -82,7 +92,7 @@ export class MpseForm extends React.Component {
                         <Row2 this={this}></Row2>
                         <Row3 this={this} ></Row3>
                         <Row4 this={this}></Row4>
-                        {this.state.response && <Row5 this={this}></Row5>}
+                        {this.state.stepDetails.length > 1 && <Row5 data={this.state}></Row5>}
                     </div>
                 </form>
             </React.Fragment>
@@ -274,30 +284,28 @@ function Row4(props) {
 
 
 function Row5(props) {
+//return (<div></div>)
+    let stepDetails = props.data.stepDetails;
+ 
+    
+     let data=[];
+    let totalStep=0;
+  let  steps=0;
+    
+  for (let i of stepDetails){
+      if (i.length>0){
+        data.push({ a: parseInt( i[0]), b: parseFloat(i[2]) })
+        totalStep=i[1];
+        steps=i[0];
 
-
-    let response = props.this.state.response;
-    //console.log(response);
-
-
-    const regex = /<br>\s+(\d+).(\d+).:.cost.=(.*?),/gm;
-    let m;
-    let steps = 0
-    let totalstep = 200;
-    let data = []
-
-    while ((m = regex.exec(response)) !== null) {
-        if (m.index === regex.lastIndex) {
-            regex.lastIndex++;
-        }
-        steps = parseInt(m[1]);
-        totalstep = parseInt(m[2]);
-        data.push({ a: steps, b: parseFloat(m[3]) })
     }
+}
+ 
+
     let expname = null;
-    console.log(props.this.state.resultsLoaded);
-    if (props.this.state.resultsLoaded && response.includes('cost.png'))
-        expname = props.this.state.EXPERIMENT_NAME;
+    
+    if (props.data.resultsLoaded  )
+        expname = props.data.EXPERIMENT_NAME;
 
 
     const width = 600, height = 350, margin = 20
@@ -308,7 +316,7 @@ function Row5(props) {
         [
             <div className="row justify-content-center top-buffer">
                 <div className="col-md-12" height="200px">
-                    <ProgressBar now={steps + 1} max={totalstep} label={'steps ' + `${steps + 1}` + ' of ' + totalstep} />
+                {  totalStep >0 &&  <ProgressBar now={steps + 1} max={totalStep} label={'steps ' + `${steps + 1}` + ' of ' + totalStep} />}
                 </div>
             </div>,
             <div className="row justify-content-center top-buffer">

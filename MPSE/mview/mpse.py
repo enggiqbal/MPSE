@@ -64,7 +64,9 @@ class MPSE(object):
             X0 = X
         if self.Q_is_fixed == True:
             Q0 = Q
-
+        if kwargs.get('interactive',None):
+            import json
+            json.dump(np.array(Q0).tolist(), open(kwargs.get('interactive')+'/temp_proj.json', 'w', encoding='utf-8'), separators=(',', ':'))
         self.initial_cost = None
         self.initial_individual_cost = None
         self.initialize(X0=X0,Q0=Q0)
