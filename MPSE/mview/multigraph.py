@@ -62,28 +62,53 @@ def attribute_setup(D,**kwargs):
         D = diss.D[0]
     return D
 
-def attribute_rms(D,estimate=True,**kwargs):
-    estimate_default = 128
+def attribute_rms(D,estimate=True,weighted=False,**kwargs):
+
+    if weighted is True:
+        assert D['weighted'] is True
+        
     if D['complete'] is True:
         rms = 0
         if estimate is True and D['node_number'] > 64:
             edge_list = misc.random_triangular(D['node_number'],int(64*63/2))
-            for i1,i2 in edge_list:
-                rms += D['dfunction'](i1,i2)**2
+            if weighted is False:
+                for i1,i2 in edge_list:
+                    rms += D['dfunction'](i1,i2)**2
+            else:
+                for i1,i2 in edge_list:
+                    dist = D['dfunction'](i1,i2)
+                    rms += D['wfunction'](dist)*dist**2
             rms = math.sqrt(rms/(64*63/2))
         else:
-            for i in range(D['node_number']):
-                for j in range(D['node_number']):
-                    rms += D['dfunction'](i,j)**2
-            rms = math.sqrt(rms/(D['node_number']*(D['node_number']-1)/2))
+            if weighted is False:
+                for i in range(D['node_number']):
+                    for j in range(D['node_number']):
+                        rms += D['dfunction'](i,j)**2
+                rms = math.sqrt(rms/(D['node_number']*(D['node_number']-1)/2))
+            else:
+                for i in range(D['node_number']):
+                    for j in range(D['node_number']):
+                        dist = D['dfunction'](i,j)
+                        rms += D['wfunction'](dist)*dist**2
+                rms = math.sqrt(rms/(D['node_number']*(D['node_number']-1)/2))
     else:
         if estimate is True and D['edge_number'] > 64*63/2:
             inds = np.random.choice(D['edge_number'],int(64*63/2))
-            rms = np.linalg.norm(D['dissimilarity_list'][inds])/ \
-                math.sqrt(64*63/2)
+            if weighted is False:
+                rms = np.linalg.norm(D['dissimilarity_list'][inds])/ \
+                    math.sqrt(64*63/2)
+            else:
+                dist = D['dissimilarity_list'][inds]
+                weights = D['weights'][inds]
+                rms = math.sqrt(weights*(dist**2)/(64*63/2))
         else:
-            rms = np.linalg.norm(D['dissimilarity_list'])/ \
-                math.sqrt(D['edge_number'])
+            if weighted is False:
+                rms = np.linalg.norm(D['dissimilarity_list'])/ \
+                    math.sqrt(D['edge_number'])
+            else:
+                dist = D['dissimilarity_list']
+                weights = D['weights']
+                rms = math.sqrt(weights*(dist**2)/D['edge_number'])
     return rms
 
 def attribute_sample(D,edge_proportion=None,average_neighbors=None,
@@ -95,7 +120,7 @@ def attribute_sample(D,edge_proportion=None,average_neighbors=None,
         if edge_proportion is not None:
             NN = round(edge_proportion*NN0)
         elif average_neighbors is not None:
-            NN = min(round(average_neighbors*N/2),NN0)
+            NN = int(min(round(average_neighbors*N/2),NN0))
         
         if D['complete'] is True:
             edge_list = misc.random_triangular(N,NN,replace=replace)
@@ -104,9 +129,11 @@ def attribute_sample(D,edge_proportion=None,average_neighbors=None,
                 edge = edge_list[i]
                 dissimilarity_list[i] = D['dfunction'](int(edge[0]),int(edge[1]))
         else:
-            inds = np.random.choice(NN0,NN)
+            inds = np.random.choice(NN0,NN,replace=False)
             edge_list = D['edge_list'][inds]
             dissimilarity_list= D['dissimilarity_list'][inds]
+            if D['weighted'] is True:
+                weights = D['weights'][inds]
 
         Ds = {}
         Ds['node_number'] = N
@@ -116,7 +143,11 @@ def attribute_sample(D,edge_proportion=None,average_neighbors=None,
         Ds['edge_list'] = edge_list
         Ds['dissimilarity_list'] = dissimilarity_list
         Ds['label'] = 'sample'
-        Ds['weighted'] = False
+        if D['weighted'] is True:
+            Ds['weighted'] = True
+            Ds['weights'] = weights
+        else:
+            Ds['weighted'] = False
 
         Ds['rms'] = attribute_rms(Ds)
 
@@ -134,6 +165,19 @@ def attribute_color(D,index=0):
         d = np.empty(node_number)
         for i in range(node_number):
             d[i] = D['dfunction'](index,i)
+    elif D['type'] == 'graph':
+        d = np.zeros(node_number)
+        for i in range(D['edge_number']):
+            i1,i2 = D['edge_list'][i]
+            if i1==index:
+                d[i2] = D['dissimilarity_list'][i]
+            elif i2==index:
+                d[i1] = D['dissimilarity_list'][i]
+        unconnected = max(d)*1.2
+        for i in range(node_number):
+            if d[i]==0:
+                d[i] = unconnected
+        d[index]=0
     return d
 
 def multigraph_setup(dissimilarity_list,verbose=0,**kwargs):
@@ -315,8 +359,9 @@ class DISS(object):
             print('  added attribute:')
             self.attribute_information(self.attributes-1)
         
-    def add_graph(self,edge_list,dissimilarity_list=None,label=None,
-                  node_colors=None,**kwargs):
+    def add_graph(self,edge_list,dissimilarity_list=None,
+                  weight_function=None,
+                  label=None,node_colors=None,**kwargs):
         """\
         Adds an attribute to self using lists of edge_list and distances.
         
@@ -340,14 +385,25 @@ class DISS(object):
             assert len(edge_list) == len(dissimilarity_list)
         D['dissimilarity_list'] = np.array(dissimilarity_list)
         D['label'] = label
+
+        self.complete_graph(D,**kwargs)
+
         if node_colors is None:
             D['node_colors'] = self.node_colors
+        elif isinstance(node_colors,int):
+            D['node_colors'] = attribute_color(D,node_colors)
         else:
             D['node_colors'] = node_colors
-            
-        self.complete_graph(D,**kwargs)
+
+        if weight_function is None:
+            D['weighted'] = False
+        else:
+            D['weighted'] = True
+            assert callable(weight_function)
+            D['weights'] = weight_function(D['dissimilarity_list'])
+
         D['rms'] = attribute_rms(D,**kwargs)
-        self.add_weights(D,**kwargs)
+
         self.D.append(D)
         self.attributes += 1
 
@@ -430,8 +486,9 @@ class DISS(object):
                         edge_list.append([i,j])
                         dissimilarity_list.append(paths[i][j])
             dd['edge_number'] = len(edge_list)
-            dd['edge_list'] = edge_list
-            dd['dissimilarity_list'] = dissimilarity_list
+            dd['edge_list'] = np.array(edge_list)
+            dd['dissimilarity_list'] = np.array(dissimilarity_list)
+            dd['networx_paths'] = paths
 
     ### Sample multigraph ###
 
@@ -468,17 +525,23 @@ class DISS(object):
     ### Weights ###
 
     def add_weights(self,D,weights=None,**kwargs):
+        """\
+        If weights are specified, adds weights to pairwise relations.
+
+        D : dictionary
+        Pairwise relations.
+
+        weights : None or function
+        Function of dissimilarity.
+        """
         if weights is None:
             D['weighted'] = False
         else:
             D['weighted'] = True
             if isinstance(weights,np.ndarray):
-                D['weight_matrix'] = weights
-                D['weights'] = lambda i,j : D['weight_matrix'][i,j]
+                D['wmatrix'] = weights
             elif callable(weights):
-                D['weight_function'] = weights
-                D['weights'] = lambda i,j :\
-                    D['weight_function'](D['weight_matrix'][i,j])
+                D['wfunction'] = weights
             else:
                 sys.error('Incorrect weights type')
 
@@ -1033,13 +1096,5 @@ class MultiGraph(object):
     def average_distances(self):
         return
 
-### TESTS ###
-
-def test_florence_distances():
-    S = np.load('../multigraphs/florence/similarity_matrices.npy')
-    #print(S)
-    D = sim2dist(S[0])
-    print(D)
-
 if __name__ == '__main__':
-    test_florence_distances()
+    " "

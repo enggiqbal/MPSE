@@ -18,8 +18,8 @@ def plot_cost(cost,steps=None,title='computations',plot=True,ax=None):
         plt.draw()
         plt.pause(1.0)
         
-def plot2D(Y,save=False,colors=None,edges=None,title=None,axis=True,ax=None,
-           plot=True):
+def plot2D(Y,save=False,colors=None,edges=None,labels=None,
+           title=None,axis=True,ax=None,plot=True,markersize=25,**kwargs):
     if ax is None:
         fig, ax = plt.subplots()
     else:
@@ -30,7 +30,16 @@ def plot2D(Y,save=False,colors=None,edges=None,title=None,axis=True,ax=None,
             ax.plot([Y[i,0],Y[j,0]],
                     [Y[i,1],Y[j,1]],'-',
                     linewidth=0.15,color='gray')
-    ax.scatter(Y[:,0],Y[:,1],s=25,c=colors)
+            
+    ax.scatter(Y[:,0],Y[:,1],s=markersize,c=colors)
+    
+    if labels is not None:
+        N = len(Y)
+        if labels is True:
+            labels = range(N)
+        for i in range(N):
+            ax.annotate(labels[i],(Y[i,0],Y[i,1]),textcoords="offset points",
+                        xytext=(0,4),ha='center')
     ax.title.set_text(title)
     
     if axis is False:
@@ -41,7 +50,7 @@ def plot2D(Y,save=False,colors=None,edges=None,title=None,axis=True,ax=None,
         plt.pause(1)
 
 def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
-           title=None,axis=False,ax=None):
+           title=None,axis=False,ax=None,markersize=25,labels=None):
         
     if ax is None:
         fig= plt.figure()
@@ -55,19 +64,24 @@ def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
         for k in range(len(q)):
             ind = np.argmax(np.sum(q[k]*X,axis=1))
             m = np.linalg.norm(X[ind])/np.linalg.norm(q[k])
-            ax.plot([0,m*q[k][0]],[0,m*q[k][1]],[0,m*q[k][2]],'-',linewidth=3,
+            ax.plot([0,m*q[k][0]],[0,m*q[k][1]],[0,m*q[k][2]],'--',linewidth=3,
                     color='black')
     N = len(X)
     if edges is not None:
-        for i in range(N):
-            for j in range(i+1,N):
-                if edges[i,j] > 0:
-                    ax.plot([X[i,0],X[j,0]],
-                            [X[i,1],X[j,1]],
-                            [X[i,2],X[j,2]],'-',
-                            linewidth=0.25,color='blue')
+        for i,j in edges:
+            ax.plot([X[i,0],X[j,0]],
+                    [X[i,1],X[j,1]],
+                    [X[i,2],X[j,2]],'-',
+                    linewidth=0.25,color='black')
                         
-    ax.scatter3D(X[:,0],X[:,1],X[:,2],c=colors)
+    ax.scatter3D(X[:,0],X[:,1],X[:,2],c=colors,s=markersize)
+
+    if labels is not None:
+        N = len(X)
+        if labels is True:
+            labels = range(N)
+        for i in range(N):
+            ax.text(X[i,0],X[i,1],X[i,2],labels[i])
     #ax.set_aspect(1.0)
     if axis is False:
         ax.set_axis_off()
@@ -75,6 +89,7 @@ def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
         ax.title.set_text(title)
         
     if plot is True:
+        plt.tight_layout()
         plt.draw()
         plt.pause(0.1)
 

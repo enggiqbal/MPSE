@@ -94,7 +94,7 @@ def similarity_graph(attribute,allowed_families=None):
         if fam1 in allowed_families and fam2 in allowed_families:
             j = allowed_families.index(fam1)
             k = allowed_families.index(fam2)
-            edges.append([j,k])
+            edges.append([min(j,k),max(j,k)])
     
     edges, counts = np.unique(edges,return_counts=True,axis=0)
 
