@@ -92,7 +92,7 @@ export class MpseForm extends React.Component {
                                 <p><u><a href="https://github.com/enggiqbal/MPSE">MPSE github link</a></u></p>
                                 
                                 <p>Paper: <u><a href="https://arxiv.org/pdf/1909.06485.pdf">Multi-Perspective, Simultaneous Embedding</a></u></p>
-                                <p className="h6">© University of Arizona<a class="text-green ml-2" href="http://uamap-dev.arl.arizona.edu:8085/" target="_blank">MPSE web</a></p>
+                                <p className="h6">© University of Arizona<a className="text-green ml-2" href="http://uamap-dev.arl.arizona.edu:8085/" target="_blank">MPSE web</a></p>
                             </div>
                             <hr />
                         </div>
@@ -131,7 +131,7 @@ function Row2() {
                             smart initialization: random, visualization template: point based)
                     </a>
                         <a href="/precomputed/circlesquire"
-                            className="list-group-item   "> circle-squire example:
+                            className="list-group-item   "> Circling the Square example:
                             (sample size: 200, max_iters: 200, projection: standard, smart
                         initialization: random, visualization template: point based) </a>
                         <a href="/MPSE" className="list-group-item   "> Desciption and more
@@ -296,20 +296,23 @@ function Row5(props) {
     //console.log(response);
 
 
-    const regex = /<br>\s+(\d+).(\d+).:.cost.=(.*?),/gm;
+    //const regex = /<br>\s+(\d+).(\d+).:.cost.=(.*?),/gm;
+    const regex = /(\d+).\s(\d+)\s+(.*?)\s/gm
     let m;
     let steps = 0
     let totalstep = 0;
     let data = []
-
+    console.log(response);
     while ((m = regex.exec(response)) !== null) {
         if (m.index === regex.lastIndex) {
             regex.lastIndex++;
         }
         steps = parseInt(m[1]);
         totalstep = parseInt(m[2]);
+      //  console.log(m[3])
         data.push({ a: steps, b: parseFloat(m[3]) })
     }
+    //console.log(data);
     let expname = null;
     // console.log(props.this.state.resultsLoaded);
     if (props.this.state.resultsLoaded && response.includes('cost.png'))
@@ -378,8 +381,8 @@ function Row6() {
                 <div className="container">
 
 
-                    <div class="embed-responsive embed-responsive-16by9">
-                        <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/LvWvrBfA9nA"></iframe>
+                    <div className="embed-responsive embed-responsive-16by9">
+                        <iframe className="embed-responsive-item" src="https://www.youtube.com/embed/LvWvrBfA9nA"></iframe>
                     </div>
 
                 </div>

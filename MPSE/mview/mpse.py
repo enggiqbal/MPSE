@@ -254,7 +254,7 @@ class MPSE(object):
                 vis = mds.MDS(D,dim=self.proj.d1,min_grad=1e-4,
                               indent=self.indent)
                 vis.initialize(X0=self.X0)
-                vis.gd(average_neighbors=2,verbose=self.verbose,
+                vis.gd(average_neighbors=2, 
                        max_iter=max_iter[0],**kwargs)
                 self.X = vis.X
                 self.update_history(H=vis.H,Q_is_fixed=True)
@@ -387,7 +387,7 @@ class MPSE(object):
             if 'lr' not in kwargs and 'X_lr' in self.H:
                 kwargs['lr'] = self.H['X_lr']
             self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,
-                                  verbose=self.verbose,
+                                  
                                   indent=self.indent+'    ',**kwargs)
             self.update_history(H=H,Q_is_fixed=True,**kwargs)
 
