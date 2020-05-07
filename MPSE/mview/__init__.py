@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import projections, mds, mpse, misc
 from multigraph import DISS
 from mds import MDS
+from mpse import MPSE
 
 def MDS_old(D,dim=2,X0=None,batch_number=None,batch_size=10,lr=0.01,max_iters0=200,
         max_iters=200,verbose=0,plot=False,title='MDS solution',labels=None,

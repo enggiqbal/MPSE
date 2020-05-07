@@ -11,10 +11,11 @@ class MPSE(object):
     Class with methods for multi-perspective simultaneous embedding.
     """
 
-    def __init__(self, dissimilarities, d1=3, d2=2, family='linear',
+    def __init__(self, dissimilarities, weighted=False, d1=3, d2=2,
+                 family='linear',
                  constraint='orthogonal', X=None, Q=None, X0=None, Q0=None,
                  visualization='mds', total_cost_function='rms', verbose=0,
-                 title='',level=0,**kwargs):
+                 title='',indent='',**kwargs):
         """\
         Initializes MPSE object.
 
@@ -31,7 +32,7 @@ class MPSE(object):
         """
         if verbose > 0:
             print('mpse.MPSE('+title+'):')
-        self.verbose = verbose; self.title = title; self.level = level
+        self.verbose = verbose; self.title = title; self.indent = indent
 
         self.DD = multigraph.multigraph_setup(dissimilarities,Q=Q,
                                               verbose=verbose,
@@ -40,6 +41,9 @@ class MPSE(object):
 
         self.K = self.DD.attributes
         self.N = self.DD.node_number
+
+        assert isinstance(weighted,bool)
+        self.weighted = weighted
 
         self.d1 = d1; self.d2 = d2
         self.family = family; self.constraint=constraint
@@ -64,20 +68,22 @@ class MPSE(object):
             X0 = X
         if self.Q_is_fixed == True:
             Q0 = Q
-
+    
+        if verbose > 0:
+            print(self.indent+'    dissimilarity stats:')
+            print(self.indent+f'      number of views : {self.K}')
+            print(self.indent+f'      number of points : {self.N}')
+            print(self.indent+'    embedding stats:')
+            print(self.indent+f'      embedding dimension : {self.proj.d1}')
+            print(self.indent+f'      projection dimension : {self.proj.d2}')
+            print(self.indent+f'      fixed embedding : {self.X_is_fixed}')
+            print(self.indent+f'      fixed perspectives : {self.Q_is_fixed}')
+            
         self.initial_cost = None
         self.initial_individual_cost = None
         self.initialize(X0=X0,Q0=Q0)
 
         self.update_history(**kwargs)
-    
-        if verbose > 0:
-            print('  dissimilarity stats:')
-            print(f'    number of views : {self.K}')
-            print(f'    number of points : {self.N}')
-            print('  embedding stats:')
-            print(f'    embedding dimension : {self.proj.d1}')
-            print(f'    projection dimension : {self.proj.d2}')
 
     def setup_visualization(self,visualization='mds',**kwargs):
         assert visualization in ['mds','tsne']
@@ -93,7 +99,7 @@ class MPSE(object):
             self.visualization.\
                 append(visualization_class(self.D[k],self.proj.d2,
                                            verbose=0, #self.verbose,
-                                           level=self.level+1,
+                                           weighted=self.weighted,
                                            title=f'perspective # {k+1}',
                                            **kwargs))
         
@@ -187,7 +193,7 @@ class MPSE(object):
 
     def initialize(self,X0=None,Q0=None,**kwargs):
         if self.verbose > 0:
-            print('  MPSE.initialize():')
+            print(self.indent+'  MPSE.initialize():')
 
         self.time = 0
         
@@ -216,7 +222,7 @@ class MPSE(object):
 
         self.update(**kwargs)
 
-    def smart_initialize(self,verbose=0,**kwargs):
+    def smart_initialize(self,**kwargs):
         """\
         Computes an mds embedding (dimension d1) of the combined distances. Only
         works when self.Q_is_fixed is False (as this is unnecessary otherwhise).
@@ -234,7 +240,7 @@ class MPSE(object):
         
         else:
             if self.verbose > 0:
-                print('  MPSE.smart_initialize():')
+                print(self.indent+'  MPSE.smart_initialize():')
 
             if 'max_iter' in kwargs:
                 max_iter = kwargs.pop('max_iter')
@@ -246,9 +252,9 @@ class MPSE(object):
                 self.DD.combine_attributes()
                 D = self.DD.D0
                 vis = mds.MDS(D,dim=self.proj.d1,min_grad=1e-4,
-                              verbose=self.verbose)
+                              indent=self.indent)
                 vis.initialize(X0=self.X0)
-                vis.gd(average_neighbors=2,verbose=verbose,
+                vis.gd(average_neighbors=2,verbose=self.verbose,
                        max_iter=max_iter[0],**kwargs)
                 self.X = vis.X
                 self.update_history(H=vis.H,Q_is_fixed=True)
@@ -260,7 +266,7 @@ class MPSE(object):
                 kwargs['lr'] = 0.1
             self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
                                   max_iter=max_iter[1],
-                                  verbose=verbose,**kwargs)
+                                  verbose=self.verbose,**kwargs)
             self.update_history(H=H,X_is_fixed=True)
             return
 
@@ -370,24 +376,25 @@ class MPSE(object):
     def gd(self, scheme='mm', **kwargs):
         
         if self.verbose > 0:
-            print('  MPSE.gd():')
+            print(self.indent+'  MPSE.gd():')
             
         if self.Q_is_fixed is True:
             if self.verbose > 0:
-                print('    mpse method : fixed projections')
-                print(f'    initial stress : {self.cost:0.2e}')
+                print(self.indent+'      mpse method : fixed projections')
+                print(self.indent+f'      initial stress : {self.cost:0.2e}')
             F = lambda X, xi=self.D: self.FX(X,self.Q,D=xi,**kwargs)
             Xi = self.subsample_generator(**kwargs)
             if 'lr' not in kwargs and 'X_lr' in self.H:
                 kwargs['lr'] = self.H['X_lr']
             self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,
-                                  **kwargs)
+                                  verbose=self.verbose,
+                                  indent=self.indent+'    ',**kwargs)
             self.update_history(H=H,Q_is_fixed=True,**kwargs)
 
         elif self.X_is_fixed is True:
             if self.verbose > 0:
-                print('    mpse method : fixed embedding')
-                print(f'    initial stress : {self.cost:0.2e}')
+                print(self.indent+'      mpse method : fixed embedding')
+                print(self.indent+f'      initial stress : {self.cost:0.2e}')
             Xi = self.subsample_generator(**kwargs)
             F = lambda Q, xi=self.D: self.FQ(self.X,Q,D=xi,**kwargs)
             Q0 = np.array(self.Q)
@@ -397,13 +404,14 @@ class MPSE(object):
                 kwargs['lr'] = 0.1
             self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
                                   scheme=scheme,
-                                  **kwargs)
+                                  verbose=self.verbose,
+                                  indent=self.indent+'    ',**kwargs)
             self.update_history(H=H,X_is_fixed=True,**kwargs)
 
         else:
             if self.verbose > 0:
-                print('    mpse method : optimize all')
-                print(f'    initial stress : {self.cost:0.2e}')
+                print(self.indent+'      mpse method : optimize all')
+                print(self.indent+f'      initial stress : {self.cost:0.2e}')
             p = [None,self.proj.restrict]
             XQ = [self.X,np.array(self.Q)]
             F = lambda XQ, xi=self.D: self.F(XQ[0],XQ[1],D=xi,**kwargs)
@@ -418,16 +426,20 @@ class MPSE(object):
                     kwargs['lr'][1] = self.H['Q_lr']
                 else:
                     kwargs['lr'][1] = 1.0
-            XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,scheme=scheme,**kwargs)
+            XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,scheme=scheme,
+                                verbose=self.verbose,
+                                indent=self.indent+'    ',**kwargs)
             self.X = XQ[0]; self.Q = XQ[1];
             self.update_history(H=H,**kwargs)
 
         self.update()
         if self.verbose > 0:
-            print(f'  Final stress : {self.cost:0.2e}')            
+            print(self.indent+f'    final stress : {self.cost:0.2e}')
+            stresses = ', '.join(f'{x:0.2e}' for x in self.individual_cost)
+            print(self.indent+f'    individual stresses : {stresses}')
  
-    def figureX(self,title=None,perspectives=True,
-                labels=None,edges=None,colors=True,plot=True,ax=None):
+    def figureX(self,title=None,perspectives=True,edges=None,colors=True,
+                plot=True,ax=None,**kwargs):
 
         if perspectives is True:
             perspectives = []
@@ -444,27 +456,31 @@ class MPSE(object):
         if colors is True:
             colors = self.DD.node_colors
         plots.plot3D(self.X,perspectives=perspectives,edges=edges,
-                     colors=colors,title=title,ax=ax)
+                     colors=colors,title=title,ax=ax,**kwargs)
 
-    def figureY(self,title='projections',include_edges=False,
+    def figureY(self,title='projections',edges=False,
                 include_colors=True,plot=True,
                 ax=None,**kwargs):
         if ax is None:
-            fig, ax = plt.subplots(1,self.K)
+            fig, ax = plt.subplots(1,self.K,figsize=(3*self.K,3))
         else:
             plot = False
+
+        if edges is False:
+            edges = [None]*self.K
+        elif edges is True:
+            edges = []
+            for k in range(self.K):
+                edges.append(self.D[k]['edge_list'])
+        else:
+            edges = edges
+            
         for k in range(self.K):
-            if include_edges is True:
-                edges_k = self.D[k]['edge_list']
-            elif include_edges is False:
-                edges_k = None
-            else:
-                edges_k = include_edges[k]
             if include_colors is True:
                 colors_k = self.D[k]['node_colors'] ####
             else:
                 colors_k = None
-            plots.plot2D(self.Y[k],edges=edges_k,colors=colors_k,ax=ax[k],
+            plots.plot2D(self.Y[k],edges=edges[k],colors=colors_k,ax=ax[k],
                          **kwargs)
         plt.suptitle(title)
         if plot is True:
@@ -478,9 +494,10 @@ class MPSE(object):
             windows = 2
         else:
             windows = 3
-        fig, ax = plt.subplots(1,windows,figsize=(3*windows,3))
-        fig.suptitle('computations')
-        fig.subplots_adjust(top=0.80)
+        if ax is None:
+            fig, ax = plt.subplots(1,windows,figsize=(3*windows,3))
+            fig.suptitle('computations')
+            fig.subplots_adjust(top=0.80)
         ax[0].semilogy(self.H['costs'],linewidth=3)
         ax[0].set_title('cost')
         i = 1
@@ -488,7 +505,7 @@ class MPSE(object):
             ax[i].semilogy(self.H['X_iters'],self.H['X_grads'][:],
                            label='grad size', linestyle='--')
             ax[i].semilogy(self.H['X_iters'],self.H['X_lrs'][:],
-                           label='lr', linestyle='--')
+                           label='learning rate', linestyle='--')
             ax[i].semilogy(self.H['X_iters'],self.H['X_steps'][:],
                            label='step size', linestyle='--')
             ax[i].set_title('X')
@@ -497,7 +514,7 @@ class MPSE(object):
             i = 2
         if self.Q_is_fixed is False:
             ax[i].semilogy(self.H['Q_iters'],self.H['Q_grads'][:],
-                           label='gradient size',linestyle='--')
+                           label='grad size',linestyle='--')
             ax[i].semilogy(self.H['Q_iters'],self.H['Q_lrs'][:],
                            label='learning rate', linestyle='--')
             ax[i].semilogy(self.H['Q_iters'],self.H['Q_steps'][:],
@@ -513,7 +530,7 @@ class MPSE(object):
 ##### TESTS #####
 
 def disk_fixed_perspectives(N=100,**kwargs):
-    fig, ax = plt.subplots(1,5,figsize=(15,3))
+    fig, ax = plt.subplots(1,4,figsize=(12,3))
     fig.suptitle('MPSE - disk data w/ fixed perspectives')
     fig.subplots_adjust(top=0.8)
     
@@ -529,13 +546,13 @@ def disk_fixed_perspectives(N=100,**kwargs):
     Q = diss.Q
     mv = MPSE(diss,Q=Q,verbose=2)
     
-    ax0 = fig.add_subplot(1,5,1,projection='3d')
+    ax0 = fig.add_subplot(1,4,1,projection='3d')
     mv.figureX(title='initial embedding',ax=ax0)
-    mv.gd(verbose=2,**kwargs)
-    #mv.gd(verbose=2,lr=1,average_neighbors=30,max_iter=50)
-    mv.figureX(title='final embedding')
+    mv.gd(**kwargs)
+    ax0 = fig.add_subplot(1,4,4,projection='3d')
+    mv.figureX(title='final embedding',ax=ax0)
+    mv.figureH('computation history',ax=[ax[1],ax[2]])
     mv.figureY()
-    mv.figureH('computation history')
     plt.draw()
     plt.pause(0.2)
 
@@ -546,7 +563,7 @@ def disk_fixed_embedding(N=100,**kwargs):
     for i in range(3):
         DD.add_feature(proj.project(Q[i],X))
     mv = MPSE(DD,X=X,verbose=1)
-    mv.gd(verbose=2,**kwargs)
+    mv.gd(**kwargs)
     mv.figureX(title='final embedding')
     mv.figureY()
     mv.figureH('computation history')
@@ -560,20 +577,20 @@ def disk(N=100,**kwargs):
     DD = multigraph.DISS(N,ncolor=labels)
     for i in range(dim):
         DD.add_feature(proj.project(Q[i],X))
-    mv = MPSE(DD,verbose=1,**kwargs)
+    mv = MPSE(DD,verbose=2,**kwargs)
     mv.figureX(title='initial embedding')
-    mv.smart_initialize(verbose=2)
-    mv.figureX(title='smart initial embedding')
-    mv.gd(verbose=2,**kwargs)
-    mv.gd(verbose=2,average_neighbors=64,max_iter=15)
+    #mv.smart_initialize()
+    #mv.figureX(title='smart initial embedding')
+    mv.gd(**kwargs)
+    #mv.gd(average_neighbors=64,max_iter=15)
     mv.figureX(title='final embedding')
     mv.figureY()
-    mv.figureH('computation history')
+    mv.figureH(title='')
     plt.show()
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
     #disk_fixed_perspectives(100,average_neighbors=1,max_iter=200,lr=1)
     #disk_fixed_embedding(100,average_neighbors=2,max_iter=100,lr=1)
-    disk(100,average_neighbors=2,max_iter=100,estimate=True)
+    disk(100,average_neighbors=6,max_iter=100)
     plt.show()

@@ -172,7 +172,7 @@ schemes = {
     
 def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
            min_grad=None, min_step=None,max_iter=100,max_step=1e10,
-           lr=1,verbose=0,level=0,plot=False,**kwargs):
+           lr=1,verbose=0,indent='',plot=False,**kwargs):
     """\
     Gradient descent algorithm, with different options for update rule and 
     stochastic and/or projected variaties.
@@ -211,20 +211,20 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
     algorithm = schemes[scheme]
     
     if verbose > 0:
-        print('  '*level+'gd.single(): ')
-        print('  '*level+'  computation parameters:')
-        print('  '*level+f'    stochastic : {stochastic}')
-        print('  '*level+f'    constraint : {constraint}')
-        print('  '*level+f'    scheme : {scheme}')
-        print('  '*level+f'    initial lr : {lr}')
+        print(indent+'gd.single(): ')
+        print(indent+'  computation parameters:')
+        print(indent+f'    stochastic : {stochastic}')
+        print(indent+f'    constraint : {constraint}')
+        print(indent+f'    scheme : {scheme}')
+        print(indent+f'    initial lr : {lr}')
         if min_cost is not None:
-            print('  '*level+f'    min_cost : {min_cost:0.2e}')
+            print(indent+f'    min_cost : {min_cost:0.2e}')
         if min_grad is not None:
-            print('  '*level+f'    min_grad : {min_grad:0.2e}')
+            print(indent+f'    min_grad : {min_grad:0.2e}')
         if min_step is not None:
-            print('  '*level+f'    min_step : {min_step:0.2e}')
-        print('  '*level+f'    max_iter : {max_iter}')
-        print('  '*level+f'    max_step : {max_step:0.2e}')
+            print(indent+f'    min_step : {min_step:0.2e}')
+        print(indent+f'    max_iter : {max_iter}')
+        print(indent+f'    max_step : {max_step:0.2e}')
         
     if min_cost is None:
         min_cost = -np.Inf
@@ -263,7 +263,8 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         y = kwargs['y']
 
     if verbose > 1:
-        print('  '*level+'  progress:')
+        print(indent+'  progress:')
+        print(indent+'    iter:      cost:     grad:     lr:       step:')
         
     for i in range(it0,max_iter):
 
@@ -316,9 +317,9 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
             conclusion = 'maximum step size reached (unstable)'
             break
         if verbose > 1:
-            print('  '*level+f'    {i:>4}/{max_iter} : cost = {costs[i]:0.2e},'+
-                  f' grad = {grads[i]:0.2e}, lr = {lrs[i]:0.2e},'+
-                  f' step = {steps[i]:0.2e}',flush=True, end="\r")
+            print(indent+f'    {i+1:>4}/{max_iter:>4}  {costs[i]:0.2e}'+
+                  f'  {grads[i]:0.2e}  {lrs[i]:0.2e}'+
+                  f'  {steps[i]:0.2e}',flush=True, end="\r")
     
     tf = time.time()
 
@@ -350,22 +351,23 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         'lr' : lr
         }
         
-    if verbose > 1:
-        print()
-        print('  '*level+'  results:')
-        print('  '*level+f'    conclusion : {conclusion}')
-        print('  '*level+f'    total iterations : {i}')
-        print('  '*level+f'    final cost : {costs[-1]:0.2e}')
-        print('  '*level+f'    final gradient size : {grads[-1]:0.2e}')        
-        print('  '*level+f'    final learning rate : {lrs[-1]:0.2e}')
-        print('  '*level+f'    final step size : {steps[-1]:0.2e}')
-        print('  '*level+f'    time : {tf-t0:0.2e} [sec]')
+    if verbose > 0:
+        if verbose > 1:
+            print()
+        print(indent+'  results:')
+        print(indent+f'    conclusion : {conclusion}')
+        print(indent+f'    total iterations : {i+1}')
+        print(indent+f'    final cost : {costs[-1]:0.2e}')
+        print(indent+f'    final gradient size : {grads[-1]:0.2e}')        
+        print(indent+f'    final learning rate : {lrs[-1]:0.2e}')
+        print(indent+f'    final step size : {steps[-1]:0.2e}')
+        print(indent+f'    time : {tf-t0:0.2e} [sec]')
         
     return x, outputs
 
 def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
              min_grad=None, min_step=None,max_iter=100,max_step=1e10,
-             lr=1,verbose=0,level=0,plot=False,**kwargs):
+             lr=1,verbose=0,indent='',plot=False,**kwargs):
     """\
     Gradient descent algorithms.
     """
@@ -400,21 +402,22 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         algorithm.append(schemes[scheme[k]])
 
     if verbose > 0:
-        print('  '*level+f'gd.multiple(): ')
-        print('  '*level+f'  computation parameters:')
-        print('  '*level+f'    stochastic : {stochastic}')
-        print('  '*level+f'    constraint : {constraint}')
-        print('  '*level+f'    projected : {projected}')
-        print(f'    scheme : {scheme}')
-        print(f'    initial lr : {lr}')
+        print(indent+f'gd.multiple(): ')
+        print(indent+f'  computation parameters:')
+        print(indent+f'    stochastic : {stochastic}')
+        print(indent+f'    constraint : {constraint}')
+        print(indent+f'    projected : {projected}')
+        print(indent+f'    scheme : {scheme}')
+        lrs = ', '.join(f'{a:0.2e}' for a in lr)
+        print(indent+f'    initial lr : {lrs}')
         if min_cost is not None:
-            print(f'    min_cost : {min_cost:0.2e}')
+            print(indent+f'    min_cost : {min_cost:0.2e}')
         if min_grad is not None:
-            print(f'    min_grad : {min_grad:0.2e}')
+            print(indent+f'    min_grad : {min_grad:0.2e}')
         if min_step is not None:
-            print(f'    min_step : {min_step:0.2e}')
-        print(f'    max_iter : {max_iter}')
-        print(f'    max_step : {max_step:0.2e}')
+            print(indent+f'    min_step : {min_step:0.2e}')
+        print(indent+f'    max_iter : {max_iter}')
+        print(indent+f'    max_step : {max_step:0.2e}')
         
     if min_cost is None:
         min_cost = -np.Inf
@@ -458,7 +461,8 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         steps[i] = [KWARGS[k]['ndx']/normalization[k] for k in range(K)]
         
     if verbose > 0:
-        print('  progress:')
+        print(indent+'  progress:')
+        print(indent+'    iter:      cost:     grad:     lr:       step:')
         
     for i in range(it0,max_iter):
 
@@ -518,16 +522,15 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
             break
         if verbose > 0:
             #sys.stdout.write("\033[K")
-            print(f'    {i:>4}/{max_iter} : step = {np.max(steps[i]):0.2e}, '+\
-                  f'grad = {np.max(grads[i]):0.2e}, cost = {costs[i]:0.2e}, '+\
-                  f'lr = {np.max(lrs[i]):0.2e}',
+            print(indent+f'    {i+1:>4}/{max_iter:>4}  {costs[i]:0.2e}'+\
+                  f'  {np.max(grads[i]):0.2e}  {np.max(lrs[i]):0.2e}'+\
+                  f'  {np.max(steps[i]):0.2e}',
                   flush=True, end="\r")
-            #sys.stdout.write("\033[F")
     
-    if verbose > 0:
-        sys.stdout.write("\033[K")
-        sys.stdout.write("\033[F")
-        sys.stdout.write("\033[K")
+   # if verbose > 0:
+    #    sys.stdout.write("\033[K")
+     #   sys.stdout.write("\033[F")
+      #  sys.stdout.write("\033[K")
         
     tf = time.time()
 
@@ -563,12 +566,13 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
         }
         
     if verbose > 0:
-        print()
-        print('  results:')
-        print(f'    conclusion : {conclusion}')
-        print(f'    total iterations : {i}')
-        print(f'    final cost : {costs[-1]:0.2e}')
-        print(f'    time : {tf-t0:0.2e} [sec]')
+        if verbose > 1:
+            print()
+        print(indent+'  results:')
+        print(indent+f'    conclusion : {conclusion}')
+        print(indent+f'    total iterations : {i+1}')
+        print(indent+f'    final cost : {costs[-1]:0.2e}')
+        print(indent+f'    time : {tf-t0:0.2e} [sec]')
     return X, outputs
 
 
