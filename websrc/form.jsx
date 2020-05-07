@@ -1,4 +1,4 @@
-import ReactDOM from 'react-dom';
+
 import React from 'react';
 import axios from 'axios';
 import ProgressBar from 'react-bootstrap/ProgressBar'
@@ -8,6 +8,7 @@ export class MpseForm extends React.Component {
         super(props);
 
         this.state = {
+            clicked: false,
             resultsLoaded: false,
             error: '',
             hasResults: false,
@@ -39,6 +40,7 @@ export class MpseForm extends React.Component {
         this.setState({
             resultsLoaded: false,
             error: '',
+            clicked: true
         });
 
         // axios.post('/run', bodyFormData)
@@ -82,7 +84,20 @@ export class MpseForm extends React.Component {
                         <Row2 this={this}></Row2>
                         <Row3 this={this} ></Row3>
                         <Row4 this={this}></Row4>
-                        {this.state.response && <Row5 this={this}></Row5>}
+                        {this.state.clicked && <Row5 this={this}></Row5>}
+                        <Row6 this={this}></Row6>
+
+                        <div className="row">
+                            <div className="col-xs-12 col-sm-12 col-md-12 mt-2 mt-sm-2 text-center">
+                                <p><u><a href="https://github.com/enggiqbal/MPSE">MPSE github link</a></u></p>
+                                
+                                <p>Paper: <u><a href="https://arxiv.org/pdf/1909.06485.pdf">Multi-Perspective, Simultaneous Embedding</a></u></p>
+                                <p className="h6">© University of Arizona<a class="text-green ml-2" href="http://uamap-dev.arl.arizona.edu:8085/" target="_blank">MPSE web</a></p>
+                            </div>
+                            <hr />
+                        </div>
+
+
                     </div>
                 </form>
             </React.Fragment>
@@ -93,9 +108,10 @@ export class MpseForm extends React.Component {
 function Row1() {
     return (
         <div className="row">
-            <div className="col-md-12">
+            <div className="col-md-12  text-center">
                 <h1> Multi-Perspective, Simultaneous Embedding (MPSE) Homepage
             </h1>
+                <h3> Iqbal Hossain, Vahan Huroyan, Stephen Kobourov, Raymundo Navarrete</h3>
             </div>
         </div>
     );
@@ -110,16 +126,16 @@ function Row2() {
                         Precomputed results
                 </div>
                     <div className="list-group">
-                        <a href="/precomputed/123" className="list-group-item list-group-item-action list-group-item-light">
-                            123 example (sample size: 10000, max_iters: 500, projection: cylinder average_neighbors: 4,
+                        <a href="/precomputed/123" className="list-group-item   ">
+                            123 example: (sample size: 10000, max_iters: 500, projection: cylinder average_neighbors: 4,
                             smart initialization: random, visualization template: point based)
                     </a>
                         <a href="/precomputed/circlesquire"
-                            className="list-group-item list-group-item-action list-group-item-light"> circlesquire example
+                            className="list-group-item   "> circle-squire example:
                             (sample size: 200, max_iters: 200, projection: standard, smart
                         initialization: random, visualization template: point based) </a>
-                        <a href="/MPSE" className="list-group-item list-group-item-action list-group-item-light"> More
-                        Examples </a>
+                        <a href="/MPSE" className="list-group-item   "> Desciption and more
+                        precomputed examples </a>
                     </div>
                 </div>
             </div>
@@ -283,7 +299,7 @@ function Row5(props) {
     const regex = /<br>\s+(\d+).(\d+).:.cost.=(.*?),/gm;
     let m;
     let steps = 0
-    let totalstep = 200;
+    let totalstep = 0;
     let data = []
 
     while ((m = regex.exec(response)) !== null) {
@@ -295,7 +311,7 @@ function Row5(props) {
         data.push({ a: steps, b: parseFloat(m[3]) })
     }
     let expname = null;
-    console.log(props.this.state.resultsLoaded);
+    // console.log(props.this.state.resultsLoaded);
     if (props.this.state.resultsLoaded && response.includes('cost.png'))
         expname = props.this.state.EXPERIMENT_NAME;
 
@@ -308,7 +324,7 @@ function Row5(props) {
         [
             <div className="row justify-content-center top-buffer">
                 <div className="col-md-12" height="200px">
-                    <ProgressBar now={steps + 1} max={totalstep} label={'steps ' + `${steps + 1}` + ' of ' + totalstep} />
+                    {totalstep ? <ProgressBar now={steps + 1} max={totalstep} label={'steps ' + `${steps + 1}` + ' of ' + totalstep} /> : "please wait"}
                 </div>
             </div>,
             <div className="row justify-content-center top-buffer">
@@ -323,7 +339,7 @@ function Row5(props) {
                     </div>
                 </div>
                 <div className="col-md-6">
-                    {expname ? <OutputLinks expname={expname}></OutputLinks> : "Output links"}
+                    <OutputLinks expname={expname}></OutputLinks>
                 </div>
             </div>
         ]
@@ -338,10 +354,36 @@ function OutputLinks(props) {
                 Outputs
         </div>
             <div className="container">
-                <a target='_blank' href={'static/' + expname + '/index.html'}>Interactive visualization</a>
-                <br></br>
-                <a target='_blank' href={'static/' + expname + '/' + expname + '_pos.csv'}>Download 3D positions</a>
+                {expname &&
+                    <div>
+                        <a target='_blank' href={'static/' + expname + '/index.html'}>Interactive visualization</a>
+                        <br></br>
+                        <a target='_blank' href={'static/' + expname + '/' + expname + '_pos.csv'}>Download 3D positions</a>
+                    </div>
+                }
             </div>
         </div>
     )
+}
+
+
+function Row6() {
+
+    return (<div className="row top-buffer">
+        <div className="col-md-12">
+            <div className="card1">
+                <div className="header">
+                    Video
+        </div>
+                <div className="container">
+
+
+                    <div class="embed-responsive embed-responsive-16by9">
+                        <iframe class="embed-responsive-item" src="https://www.youtube.com/embed/LvWvrBfA9nA"></iframe>
+                    </div>
+
+                </div>
+            </div>
+        </div>
+    </div>)
 }
