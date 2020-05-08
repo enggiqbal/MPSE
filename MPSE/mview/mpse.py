@@ -266,7 +266,7 @@ class MPSE(object):
                 kwargs['lr'] = 0.1
             self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
                                   max_iter=max_iter[1],
-                                  verbose=self.verbose,**kwargs)
+                                   **kwargs)
             self.update_history(H=H,X_is_fixed=True)
             return
 
@@ -427,7 +427,7 @@ class MPSE(object):
                 else:
                     kwargs['lr'][1] = 1.0
             XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,scheme=scheme,
-                                verbose=self.verbose,
+                                
                                 indent=self.indent+'    ',**kwargs)
             self.X = XQ[0]; self.Q = XQ[1];
             self.update_history(H=H,**kwargs)
