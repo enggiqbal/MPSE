@@ -134,7 +134,7 @@ function Row2() {
                             className="list-group-item   "> Circling the Square example:
                             (sample size: 200, max_iters: 200, projection: standard, smart
                         initialization: random, visualization template: point based) </a>
-                        <a href="/MPSE" className="list-group-item   "> Desciption and more
+                        <a href="/MPSE" className="list-group-item   "> Description and more
                         precomputed examples </a>
                     </div>
                 </div>
