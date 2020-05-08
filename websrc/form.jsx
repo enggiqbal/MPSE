@@ -14,7 +14,7 @@ export class MpseForm extends React.Component {
             hasResults: false,
             response: null,
             data: 'preloaded', average_neighbors: 16,
-            sample_size: 200, vistemplate: 'pointbased', EXPERIMENT_NAME: 'exp', projection_type: 'standard', max_iters: 200, smart_initialization: 'random', preloadeddata: 'circlesquire', backgroundcolor: 'black', pointcolor: 'red',
+            sample_size: 200, vistemplate: 'pointbased', EXPERIMENT_NAME: 'exp', projection_type: 'standard', max_iters: 200, smart_initialization: 'random', preloadeddata: 'circlesquare', backgroundcolor: 'black', pointcolor: 'red',
 
         };
         this.submitQuery = this.submitQuery.bind(this);
@@ -130,7 +130,7 @@ function Row2() {
                             123 example: (sample size: 10000, max_iters: 500, projection: cylinder average_neighbors: 4,
                             smart initialization: random, visualization template: point based)
                     </a>
-                        <a href="/precomputed/circlesquire"
+                        <a href="/precomputed/circlesquare"
                             className="list-group-item   "> Circling the Square example:
                             (sample size: 200, max_iters: 200, projection: standard, smart
                         initialization: random, visualization template: point based) </a>
@@ -165,7 +165,7 @@ function Row3(props) {
                                 Dataset </option>
                             <option value="credit"  >Credit Dataset
                             </option>
-                            <option value="circlesquire">Circle-Squire Dataset
+                            <option value="circlesquare">Circle-Square Dataset
                             </option>
                             <option value="cluster">Cluster Dataset
                             </option>
@@ -302,19 +302,19 @@ function Row5(props) {
     let steps = 0
     let totalstep = 0;
     let data = []
-    console.log(response);
+    
     while ((m = regex.exec(response)) !== null) {
         if (m.index === regex.lastIndex) {
             regex.lastIndex++;
         }
         steps = parseInt(m[1]);
         totalstep = parseInt(m[2]);
-      //  console.log(m[3])
+ 
         data.push({ a: steps, b: parseFloat(m[3]) })
     }
-    //console.log(data);
+    
     let expname = null;
-    // console.log(props.this.state.resultsLoaded);
+ 
     if (props.this.state.resultsLoaded && response.includes('cost.png'))
         expname = props.this.state.EXPERIMENT_NAME;
 

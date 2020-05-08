@@ -75,12 +75,12 @@ pass distance matrices
 python3 mpse.py -d MPSE/datasets/dataset_tabluar/data/dissimple1000_1.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_2.csv  MPSE/datasets/dataset_tabluar/data/dissimple1000_3.csv
 ```
 
-run circlesquire example with 150 points, maximum iteration 100 then save output to mytest directory.
+run circlesquare example with 150 points, maximum iteration 100 then save output to mytest directory.
 
 ```console
-python3.6 mpse.py -ds circlesquire -n 150 -max_iters 100 -e mytest
+python3.6 mpse.py -ds circlesquare -n 150 -max_iters 100 -e mytest
 
-iqbal@on-campus-10-138-77-23 MPSE-web % python3.6 mpse.py -ds circlesquire -n 150 -max_iters 100 -e mytest
+iqbal@on-campus-10-138-77-23 MPSE-web % python3.6 mpse.py -ds circlesquare -n 150 -max_iters 100 -e mytest
 <h1>Please keep the window running</h1>
 Total Samples found:100<br>
 mpse.MPSE():

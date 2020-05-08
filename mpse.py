@@ -63,7 +63,7 @@ def get_matrix(args):
                   'dissimple1000_2.csv', path+'dissimple1000_3.csv']
         D = load_data(args)
 
-    if args.preloaded_dataset == 'circlesquire':
+    if args.preloaded_dataset == 'circlesquare':
         path = 'MPSE/datasets/dataset_3D/circle_square_new/'
         args.d = [path+'dist_circle.csv', path+'dist_square.csv']
         D = load_data(args)
