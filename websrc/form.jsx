@@ -3,6 +3,7 @@ import React from 'react';
 import axios from 'axios';
 import ProgressBar from 'react-bootstrap/ProgressBar'
 import { LineChart } from './LineChart'
+import {ThreeDvis} from './ThreeDvis'
 export class MpseForm extends React.Component {
     constructor(props) {
         super(props);
@@ -82,7 +83,9 @@ export class MpseForm extends React.Component {
                         <Row2 this={this}></Row2>
                         <Row3 this={this} ></Row3>
                         <Row4 this={this}></Row4>
+                       
                         {this.state.response && <Row5 this={this}></Row5>}
+                        <ThreeDvis></ThreeDvis>
                     </div>
                 </form>
             </React.Fragment>
