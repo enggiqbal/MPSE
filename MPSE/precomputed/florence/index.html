@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+	<title>MPSE</title>
+	<meta charset="utf-8">
+	<style>
+		body {
+			background-color: #000000;
+			margin: 0px;
+			overflow: hidden;
+			font-family: Monospace;
+			font-size: 13px;
+			text-align: center;
+			font-weight: bold;
+			text-align: center;
+		}
+	</style>
+
+
+	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.js"></script>
+	<script src="coordinates.js"></script>
+	<script src="vis_param.js"></script>
+	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
+
+
+</head>
+
+<body>
+	<script>
+		for (var i = 0; i < numberofprojection; i++) {
+			document.write('<img src="eye.png" width="64px" onclick=viz(' + i + ')>')
+		}
+	</script>
+
+
+	<script type="text/javascript">
+		function get_viewpoint_from_projection(proj, i) {
+			let constant = 10;
+			let a = proj[i][0];
+			let b = proj[i][1];
+			let p = [a[1] * b[2] - a[2] * b[1], a[2] * b[0] - a[0] * b[2], a[0] * b[1] - a[1] * b[0]];
+			return [p[0] * constant, p[1] * constant, p[2] * constant];
+		}
+
+		function viz(p) {
+			var zoomfactor = 20;
+			let point = get_viewpoint_from_projection(proj, p);
+			camera.position.set(point[0] * zoomfactor, point[1] * zoomfactor, point[2] * zoomfactor);
+			camera.lookAt(scene.position);
+		}
+		function point3Ddrawing() {
+			for (var i = 0; i < points.length; i++) {
+				var xyz = points[i];
+				var dotGeometry = new THREE.Geometry();
+				dotGeometry.vertices.push(new THREE.Vector3(xyz[0], xyz[1], xyz[2]));
+				var dotMaterial = new THREE.PointsMaterial({ color: 'red', size: 5, sizeAttenuation: false });
+				var dot = new THREE.Points(dotGeometry, dotMaterial);
+				scene.add(dot);
+			}
+		}
+
+
+		var scene = new THREE.Scene();
+		var camera = new THREE.PerspectiveCamera(1, window.innerWidth / window.innerHeight, 1, 100000);
+		camera.position.set(0, 0, 35);
+		camera.lookAt(scene.position);
+		var renderer = new THREE.WebGLRenderer();
+		renderer.setSize(window.innerWidth, window.innerHeight - 100);
+		document.body.appendChild(renderer.domElement);
+		if ( backgroundcolor === undefined)
+			backgroundcolor='black';
+		scene.background = new THREE.Color( backgroundcolor );
+		var controls = new THREE.OrbitControls(camera, renderer.domElement);
+		//var color = ["red", "green", "blue", 'yellow', 'orange']
+
+		point3Ddrawing();
+		viz(0);
+		var worldAxis = new THREE.AxesHelper(5);
+		scene.add(worldAxis);
+		function render() {
+			renderer.render(scene, camera);
+		}
+		(function animate() {
+			requestAnimationFrame(animate);
+			controls.update();
+			render();
+		})();
+
+	</script>
+
+</body>
+
+</html>
