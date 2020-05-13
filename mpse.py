@@ -141,8 +141,8 @@ if __name__ == '__main__':
                         default=0.001, help='stopping cost', required=False)
     parser.add_argument('-n', '--sample_size', type=int,
                         default=math.inf, help='Number of samples', required=False)
-    parser.add_argument('-X0', '--X0', default=False, type=bool,
-                        choices=[True, False], help='Smart initialization', required=False)
+    parser.add_argument('-X0', '--X0', default='False', 
+                        choices=['True', 'False'], help='Smart initialization', required=False)
     parser.add_argument('-ps', '--projection_type',  default='standard', choices=['fixed',
                                                                                   'same', 'standard', 'cylinder', 'orthogonal', 'normal', 'uniform', 'variable'], help="projection set", required=False)
     parser.add_argument('-vt', '--visualization_template',  default='pointbased', choices=[
@@ -166,7 +166,11 @@ if __name__ == '__main__':
 
     D = get_matrix(args)
     args.projection_type = None if args.projection_type == 'variable' else args.projection_type
-
+ 
+    if args.X0=="True":
+        args.X0=True
+    else:
+        args.X0=False
     mv = mview.basic(D, Q=args.projection_type, verbose=2, smart_initialize=args.X0,
                      max_iter=args.max_iters, average_neighbors=args.average_neighbors, min_cost=args.min_cost)
     write_output(mv, args)

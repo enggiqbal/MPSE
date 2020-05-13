@@ -13,7 +13,7 @@ export class MpseForm extends React.Component {
             error: '',
             hasResults: false,
             response: null,
-            data: 'preloaded', average_neighbors: 16,
+            data: 'preloaded', average_neighbors: 4,
             sample_size: 200, vistemplate: 'pointbased', EXPERIMENT_NAME: 'exp', projection_type: 'standard', max_iters: 200, smart_initialization: 'random', preloadeddata: 'circlesquare', backgroundcolor: 'black', pointcolor: 'red',
 
         };
@@ -318,6 +318,7 @@ function Row5(props) {
     if (props.this.state.resultsLoaded && response.includes('cost.png'))
         expname = props.this.state.EXPERIMENT_NAME;
 
+    
 
     const width = 600, height = 350, margin = 20
 
@@ -327,7 +328,7 @@ function Row5(props) {
         [
             <div className="row justify-content-center top-buffer">
                 <div className="col-md-12" height="200px">
-                    {totalstep ? <ProgressBar now={steps + 1} max={totalstep} label={'steps ' + `${steps + 1}` + ' of ' + totalstep} /> : "please wait"}
+                    {totalstep ? <ProgressBar now={steps + 1} max={totalstep} label={'steps ' + `${steps }` + ' of ' + totalstep} /> : "please wait"}
                 </div>
             </div>,
             <div className="row justify-content-center top-buffer">

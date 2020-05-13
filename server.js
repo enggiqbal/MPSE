@@ -77,8 +77,12 @@ app.post('/run', multipartMiddleware, function (req, res) {
 
     if (req.body.data == "preloaded") { 
     }
-
-    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ds',preloadeddata , '-bgcolor',req.body.backgroundcolor, '-pcolor', req.body.pointcolor  ];
+if (req.body.smart_initialization=='random')
+    req.body.smart_initialization="False";
+    else
+    req.body.smart_initialization="True";
+ 
+    var parameters = ['mpse.py', '-n', sample_size, '-vt', req.body.vistemplate, '-e', req.body.EXPERIMENT_NAME, '-an', req.body.average_neighbors,  '-ps', projection_type, '-max_iters', req.body.max_iters, '-X0', req.body.smart_initialization, '-ds',preloadeddata , '-bgcolor',req.body.backgroundcolor, '-pcolor', req.body.pointcolor  ];
 console.log(parameters);
     parameters = parameters.concat(datapath)
     console.log("python3.6 " + parameters.join(" "))
