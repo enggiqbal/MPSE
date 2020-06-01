@@ -15,12 +15,9 @@ import MPSE.mview as mview
 def load_data(n):
     (trainX, labels), _ = mnist.load_data()
     trainX=np.reshape(trainX,(trainX.shape[0], trainX.shape[1] * trainX.shape[2]))
-    
-     
-    index=[l in [2,3] for l in labels]
+    index=[l in [3,5,8] for l in labels]
     trainX=trainX[index]
     labels=labels[index]
-
     return trainX[0:n,:], labels[0:n]
 
 def get_embedding(trainX,labels,fn,outfile):
@@ -47,10 +44,13 @@ def draw_plot(data, x,y, l, outfile):
 
 def get_MPSE( labels):
     labels=pd.read_csv("label.csv")['label'].values 
-    p=pd.read_csv("tsne.csv").values 
-    d1=distance_matrix(p,p)
-    p=pd.read_csv("umap.csv").values 
-    d2=distance_matrix(p,p)
+    p=pd.read_csv("tsne.csv") 
+    p=p[['x','y']]
+    d1=distance_matrix(p.values,p.values)
+
+    p=pd.read_csv("umap.csv") 
+    p=p[['x','y']]
+    d2=distance_matrix(p.values,p.values)
     # p=pd.read_csv("mds.csv").values
     # d3=distance_matrix(p,p)
  
@@ -63,7 +63,7 @@ def get_MPSE( labels):
     return mv.X
 
 if __name__ == "__main__":
-    trainX, labels=load_data(1000)
+    trainX, labels=load_data(5000)
     tsne_dis=get_embedding(trainX,labels,TSNE,"tsne")
     # #mds_dis=get_embedding(trainX,labels,MDS,"mds")
     umap_dis=get_embedding(trainX,labels,umap.UMAP,"umap")
