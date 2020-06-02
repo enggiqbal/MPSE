@@ -320,18 +320,16 @@ class MDS(object):
                                  average_neighbors=average_neighbors,**kwargs)
             return Xi
 
-    def gd(self, scheme='mm', verbose=0, **kwargs):
+    def gd(self, scheme='mm', **kwargs):
         if hasattr(self,'X') is False:
             self.initialize(title='automatic',**kwargs)
         if self.verbose > 0:
             print(self.indent+f'  MDS.gd({self.title}):')
 
-        if verbose < self.verbose:
-            verbose = self.verbose
         Xi = self.subsample_generator(**kwargs)
         F = lambda X, xi=self.D : self.F(X,D=xi)
         self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,
-                              verbose=verbose,
+                              verbose=self.verbose,
                               indent=self.indent+'    ',
                               **kwargs)
         self.update(H=H,**kwargs)

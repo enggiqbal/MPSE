@@ -198,22 +198,6 @@ def compare_multiview_same(N=100,runs=1):
     plt.ylabel('normalized stress')
     plt.show()
     
-### OLD ###
-
-def example_tsne():
-    X_true = np.load('example123/2.npy')
-    D = distance_matrix(X_true,X_true)
-
-    mv = multiview.Multiview(D,dimX=2)
-    mv.setup_technique('tsne',perplexity=2)
-    mv.initialize_X()
-    mv.figureX(); plt.show()
-    stress0 = mv.cost
-    X0 = mv.X
-    mv.solve_X(algorithm='gd',rate=.5,max_iters=50)
-    mv.figureX(); plt.show()
-    X = mv.X; stress = mv.cost
-
 if __name__=='__main__':
     #agd_mds_standard(N=30,dim=2)
     #agd_multiview_mds_standard(30,trials=5,runs=5)
