@@ -8,69 +8,63 @@ MACHINE_EPSILON = np.finfo(np.double).eps
 
 import misc, gd, plots
 
-def compute_Pi(D,i,sigmai):
+def joint_probabilities(distances, perplexity):
     """\
-    Vector with conditional probabilities of p for entries 1 to n with respect
-    to datapoint i.
+    Computes the joint probabilities p_ij from distances D.
+
+    Parameters
+    ----------
+
+    distances : array, shape (N x N) or (N*(N-1)/2,)
+    Distances (as a square matrix or unraveled array).
+
+    perpelxity : float, >0
+    Desired perpelxity of the joint probability distribution.
     
-    --- arguments ---
-    D = Distance matrix
-    i = index
-    sigmai = variance of Gaussian centered on datapoint i
+    Returns
+    -------
 
-    Note: see equation (1) in tSNE paper
+    P : array, shape (N*(N-1)/2),)
+    Condensed joint probability matrix.
     """
-    Pi = np.exp(-D[i]**2/(2*sigmai**2))
-    Pi[i] = 0
-    Pi /= np.sum(Pi)
-    return Pi
+    assert isinstance(distances,np.ndarray)
+    if len(distances.shape)==1:
+        distances = distance.squareform(distances)
+    else:
+        assert len(distances.shape)==2
+    n_samples = len(distances)
 
-def compute_PerpPi(Pi,i):
-    """\
-    Perplexity of node i given current conditional probability Pi
-    """
-    Pi0 = np.delete(Pi,i)
-    HPi = -np.dot(Pi0,np.log2(Pi0+1e-32)) ###
-    PerpPi = 2**(HPi)
-    return PerpPi
-
-def find_sigmai(D,i,perplexity):
-    """\
-    Finds variance of Gaussian centered on datapoint i that produces the
-    desired perplexity.
-
-    --- arguments ---
-    D = distance matrix
-    i = index
-    perplexity = target perpelxity
-
-    Note: see page (4) of tSNE paper
-    """
+    #Find optimal neighborhood parameters to achieve desired perplexity
     lower_bound=1e-2; upper_bound=1e2; iters=10 #parameters for binary search
+    sigma = np.empty(n_samples) #bandwith array
+    for i in range(n_samples):
+        #initialize bandwith parameter for sample i:
+        sigma_i = (lower_bound*upper_bound)**(1/2)
+        for iter in range(iters):
+            #distances to sample i, not including self:
+            D_i = np.delete(distances[i],i) 
+            #compute array with conditional probabilities w.r.t. sample i:
+            P_i = np.exp(-D_i**2/(2*sigma_i**2))
+            P_i /= np.sum(P_i)
+            #compute perplexity w.r.t sample i:
+            HP_i = -np.dot(P_i,np.log2(P_i+MACHINE_EPSILON))
+            PerpP_i = 2**(HP_i)
+            #update bandwith parameter for sample i:
+            if PerpP_i > perplexity:
+                upper_bound = sigma_i
+            else:
+                lower_bound = sigma_i
+        #final bandwith parameter for sample i:
+        sigma[i] = (lower_bound*upper_bound)**(1/2)
+
+    conditional_P = np.exp(-distances**2/(2*sigma**2))
+    np.fill_diagonal(conditional_P,0)
+    conditional_P /= np.sum(conditional_P,axis=1)
     
-    for iter in range(iters):
-        sigmai = (lower_bound*upper_bound)**(1/2)
-        Pi = compute_Pi(D,i,sigmai); 
-        PerpPi = compute_PerpPi(Pi,i)
-        if PerpPi > perplexity:
-            upper_bound = sigmai
-        else:
-            lower_bound = sigmai            
-    return (lower_bound*upper_bound)**(1/2)
-
-def find_sigma(D,perplexity):
-    N = len(D)
-    sigma = np.empty(N)
-    for n in range(N):
-        sigma[n] = find_sigmai(D,n,perplexity)
-    return sigma
-
-def compute_P(D,sigma):
-    N = len(D)
-    P = np.empty((N,N))
-    for n in range(N):
-        P[n] = compute_Pi(D,n,sigma[n])
-    P = (P+P.T)#/(2*N)
+    P = conditional_P + conditional_P.T
+    sum_P = np.maximum(np.sum(P), MACHINE_EPSILON)
+    P = np.maximum(distance.squareform(P)/sum_P, MACHINE_EPSILON)
+    
     return P
 
 ### Functions to compute Q given embedded points Y ###
@@ -85,34 +79,51 @@ def compute_Q(Y):
     dist += 1.0
     dist **= -1.0
     Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON)
-    Q = distance.squareform(Q)
+    Q /= np.sum(Q)
     return Q
 
 
 ### Cost function and gradient ###
 
-def KL(P,Q):
+def KL(P,embedding):
     """\
-    KL divergence KL(P||Q) between distributions P and Q.
-    It is assumed that P and Q are symmetric with zero diagonals.
-    """
-    assert isinstance(P,np.ndarray)
-    assert isinstance(Q,np.ndarray)
-    N = len(P)
-    C = 0
-    for i in range(N):
-        for j in [k for k in range(N) if k != i]:
-            C -= P[i,j]*np.log(P[i,j]/Q[i,j]+1e-32) ###
-    return C
+    KL divergence KL(P||Q) between distributions P and Q, where Q is computed
+    from the student-t distribution from the given embedding array.
 
-def gradKL(P,Q,Y):
+    Parameters
+    ----------
+
+    P : array, shape (n_samples*(n_samples-1)/2,)
+    Condensed probability array.
+    
+    embedding : array, shape (n_samples,dim)
+    Current embedding.
+
+    Results
+    -------
+
+    kl_divergence : float
+    KL-divergence KL(P||Q).
+    """
+    dist = distance.pdist(embedding,metric='sqeuclidean')
+    dist += 1.0
+    dist **= -1.0
+    Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON)
+    Q /= np.sum(Q)
+
+    kl_divergence = 2.0 * np.dot(
+        P, np.log(np.maximum(P, MACHINE_EPSILON) / Q))
+        
+    return kl_divergence
+
+def gradKL0(P,Q,Y):
     """\
     Gradient of KL diverngence KL(P||Q(Y)) with respect to Y.
     
     Note: see formula (5) in tSNE paper.
     """
-    assert isinstance(P,np.ndarray) and isinstance(Q,np.ndarray)
-    assert isinstance(Y,np.ndarray)
+    P = distance.squareform(P)
+    Q = distance.squareform(Q)
     
     (N,dimY) = Y.shape
     gradient = np.zeros((N,dimY))
@@ -122,17 +133,29 @@ def gradKL(P,Q,Y):
         gradient[n] *= 4
     return gradient
 
-def F(X,P):
-    Q = compute_Q(X)
-    cost = KL(P,Q)
-    grad = gradKL(P,Q,X)
-    return (cost,grad)
+def grad_KL(P,X):
+    
+    dist = distance.pdist(X,metric='sqeuclidean')
+    dist += 1.0
+    dist **= -1.0
+    Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON)
+
+    kl_divergence = 2.0 * np.dot(
+        P, np.log(np.maximum(P, MACHINE_EPSILON) / Q))
+
+    grad = np.ndarray(X.shape)
+    PQd = distance.squareform((P-Q)*dist)
+    for i in range(len(X)):
+        grad[i] = np.dot(np.ravel(PQd[i],order='K'),X[i]-X)
+    grad *= 4
+    
+    return (kl_divergence,grad)
 
 class TSNE(object):
     """\
     Class to solve tsne problems
     """
-    def __init__(self, D, dim=2, sigma='optimal', perplexity=30.0, verbose=0,
+    def __init__(self, D, dim=2, perplexity=30.0, verbose=0,
                  indent='', title='', **kwargs):
         """\
         Initializes TSNE object
@@ -147,12 +170,10 @@ class TSNE(object):
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
 
-        self.set_sigma(sigma,perplexity)
-        self.P = compute_P(self.D,self.sigma)
+        self.P = joint_probabilities(self.D,perplexity)
 
-        self.f = lambda Y: KL(self.P,compute_Q(Y))
-        self.df = lambda Y: gradKL(self.P,compute_Q(Y),Y)
-        self.F = lambda Y: F(Y,self.P)
+        self.f = lambda X: KL(self.P,X)
+        self.F = lambda X: grad_KL(self.P,X)
 
     def set_sigma(self,sigma='optimal',perplexity=30.0):
         if isinstance(sigma,numbers.Number):
@@ -199,9 +220,7 @@ class TSNE(object):
 
 
     def update(self):
-        self.Q = compute_Q(self.X)
-        self.cost = KL(self.P,self.Q)
-        self.gradient = gradKL(self.P,self.Q,self.X)
+        self.cost = KL(self.P,self.X)
 
     def gd(self, scheme='mm', verbose=0, **kwargs):
         if hasattr(self,'X') is False:
@@ -245,16 +264,10 @@ def example_tsne():
     from scipy import spatial
     D = spatial.distance_matrix(X_true,X_true)
 
-    from sklearn.manifold import TSNE as tsne
-    X_embedded = tsne(n_components=2,verbose=2,method='exact').fit_transform(X_true)
-    plt.figure()
-    plt.plot(X_embedded[:,0],X_embedded[:,1],'o')
-    plt.show()
-
     vis = TSNE(D,verbose=2,perplexity=30)
     vis.initialize(X0=X_true)
     vis.figureX()
-    vis.gd(scheme='fixed',lr=0.1,verbose=3,plot=True)
+    vis.gd(scheme='fixed',lr=100,verbose=3,plot=True)
     vis.figureX()
     plt.show()
     #mv = mpse.Multiview(D,dimX=2)
@@ -266,6 +279,18 @@ def example_tsne():
     #mv.solve_X(algorithm='gd',rate=.5,max_iters=50)
     #mv.figureX(); plt.show()
     #X = mv.X; stress = mv.cost
+
+def sk_tsne():
+
+    X_true = np.load('examples/123/true2.npy')#[0:500]
+    from scipy import spatial
+    D = spatial.distance_matrix(X_true,X_true)
+    
+    from sklearn.manifold import TSNE as tsne
+    X_embedded = tsne(n_components=2,verbose=2,method='exact').fit_transform(X_true)
+    plt.figure()
+    plt.plot(X_embedded[:,0],X_embedded[:,1],'o')
+    plt.show()
     
 if __name__=='__main__':
     print('mview.tsne : tests')
