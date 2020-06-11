@@ -84,21 +84,22 @@ def write_output(mv, args):
     projections = mv.Q
     costs = mv.H["costs"]
     pos = mv.X
-    args.output_dir = 'MPSE/outputs/' + args.experiment_name + "/"
+    args.output_dir = 'MPSE\\outputs\\' + args.experiment_name + "\\"
     if not os.path.exists(args.output_dir):
         os.makedirs(args.output_dir)
-    path_to_copy = "cp -rf MPSE/resources/vistemplateattributebased/* "
+    path_to_copy = "xcopy MPSE\\resources\\vistemplateattributebased "
     if args.visualization_template == "pointbased":
-        path_to_copy = "cp -rf MPSE/resources/vistemplatepointbased/* "
+        path_to_copy = "xcopy MPSE\\resources\\vistemplatepointbased "
+    print(path_to_copy+args.output_dir)
     os.system(path_to_copy + args.output_dir)
-    f = open(args.output_dir+"/vis_param.js", "r")
+    f = open(args.output_dir+"\\vis_param.js", "r")
     vis_params = f.read().replace("var numberofprojection=3;",
                                  "var numberofprojection=" + str(len(projections)) + ";")
-    vis_params=vis_params+" var backgroundcolor='"+  str(args.bgcolor) + "';\n " 
-    vis_params=vis_params+" var pointcolor='"+  str(args.pcolor) + "';\n " 
+    vis_params=vis_params+" var backgroundcolor='"+  str(args.bgcolor) + "';\n "
+    vis_params=vis_params+" var pointcolor='"+  str(args.pcolor) + "';\n "
 
     f.close()
-    f = open(args.output_dir+"/vis_param.js", "w+")
+    f = open(args.output_dir+"\\vis_param.js", "w+")
     f.write(vis_params)
     f.close()
     js_file_path = os.path.join(args.output_dir, "coordinates.js")
