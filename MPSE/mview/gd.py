@@ -253,7 +253,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
             fx, dfx = F(x)
         else:
             xi = Xi()
-            fx, dfx = F(x,xi)
+            fx, dfx = F(x,**xi)
         x, kwargs = fixed(x,dfx,lr=lr,p=p)
         costs[i] = fx
         grads[i] = np.linalg.norm(dfx)/normalization #######
@@ -277,14 +277,14 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         else:
             if constraint is False:
                 if scheme in ['bb','mm']:
-                    f0x, df0x = F(x,xi)
+                    f0x, df0x = F(x,**xi)
                     kwargs['df0x'] = df0x
             else:
                 if scheme in ['bb','mm']:
-                    fy, dfy = F(y,xi)
+                    fy, dfy = F(y,**xi)
                     kwargs['df0x'] = dfy
             xi = Xi()
-            fx, dfx = F(x,xi)
+            fx, dfx = F(x,**xi)
         costs[i] = fx
         grads[i] = np.linalg.norm(dfx)/normalization #rms of gradient
         
@@ -299,7 +299,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
             steps[i] = None
             break
         
-        x, kwargs = algorithm(x,dfx,**kwargs)
+        x, kwargs = algorithm(x,dfx,p=p,**kwargs)
         
         if constraint is True:
             y = kwargs['y']
@@ -365,7 +365,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         
     return x, outputs
 
-def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
+def multiple(X,F,Xi=None,p=None,scheme='mm',min_cost=None,
              min_grad=None, min_step=None,max_iter=100,max_step=1e10,
              lr=1,verbose=0,indent='',plot=False,**kwargs):
     """\
@@ -445,7 +445,7 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
             fX, dfX = F(X)
         else:
             xi = Xi()
-            fX, dfX = F(X,xi)
+            fX, dfX = F(X,**xi)
         KWARGS = []
         if constraint is True:
             Y = []
@@ -472,11 +472,11 @@ def multiple(X,F,Xi=None,p=None,scheme='fixed',min_cost=None,
             fX, dfX = F(X)
         else:
             if constraint is False:
-                f0X, df0X = F(X,xi)
+                f0X, df0X = F(X,**xi)
             else:
-                f0Y, df0Y = F(Y,xi)
+                f0Y, df0Y = F(Y,**xi)
             xi = Xi()
-            fX, dfX = F(X,xi)
+            fX, dfX = F(X,**xi)
             
         costs[i] = fX     
         grads[i] = [np.linalg.norm(a)/b for a, b in zip(dfX,normalization)]
@@ -644,75 +644,3 @@ def mgd(x0,F,lr=0.1,attempts=10,reduce_factor=10,verbose=0,**kwargs):
         print('  number of attempts :',attempt, flush=True)
 
     return x, specs
-
-### TESTS ###
-
-def mds_comparison(N=100,**kwargs):
-    
-    import misc, distances, mds
-    print('\n*** gd2.mds_comparison(): ***\n')
-    
-    Y = misc.disk(N,3)
-    D = distances.compute(Y)
-    
-    vis = mds.MDS(D,dim=3,verbose=1)
-    vis.initialize()
-
-    label = 'gd, lr=0.005'
-    vis.optimize(algorithm='gd',lr=0.005,label=label,
-                 verbose=1,**kwargs)
-    vis.figureH(label)
-    vis.forget()
-
-    label = 'gdm, lr=0.05'
-    vis.optimize(algorithm='gdm',lr=0.05,label=label,
-                 verbose=1,**kwargs)
-    vis.figureH(label)
-    vis.forget()
-
-    label = 'agd'
-    vis.optimize(algorithm='agd',label=label,
-                 verbose=1,**kwargs)
-    vis.figureH(label)
-    vis.forget()
-    
-    plt.show()
-
-def mmds_comparison(N=100,**kwargs):
-    
-    import misc, distances, perspective,  multiview
-    print('\n*** gd2.mmds_comparison(): ***\n')
-    
-    X = misc.disk(N,3)
-    persp = perspective.Persp()
-    persp.fix_Q(number=3,special='standard')
-    Y = persp.compute_Y(X)
-    D = distances.compute(Y)
-    
-    vis = multiview.Multiview(D,persp=persp,verbose=1)
-    vis.setup_visualization()
-    vis.initialize_X(method='mds')
-
-    label = 'gd, lr=0.001'
-    vis.optimize_all(algorithm='gd',lr=0.001,label=label,
-                     verbose=1,**kwargs)
-    vis.figureH(label)
-    vis.forget()
-
-    label = 'gdm, lr=0.001'
-    vis.optimize_all(algorithm='gdm',lr=0.001,label=label,
-                     verbose=1,**kwargs)
-    vis.figureH(label)
-    vis.forget()
-
-    label = 'agd'
-    vis.optimize_all(algorithm='agd',label=label,
-                     verbose=1,**kwargs)
-    vis.figureH(label)
-    vis.forget()
-    
-    plt.show()
-    
-if __name__=="__main__":
-    #mds_comparison(N=100,max_iters=100)
-    mmds_comparison(N=100,max_iters=100)

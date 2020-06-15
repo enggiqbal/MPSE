@@ -4,8 +4,170 @@ import matplotlib.pyplot as plt
 import numpy as np
 import scipy as sp
 import scipy.spatial
+import scipy.spatial.distance
 
-import misc, multigraph, gd, plots
+import misc, setup, multigraph, gd, plots
+
+### MDS STRESS AND GRADIENT FUNCTIONS ###
+
+def stress(distances, embedding, weights=None, normalize=True):
+    """\
+    Returns MDS stress for given set of distances and embedding.
+
+    Parameters
+    ----------
+
+    distances : array, shape (n_samples*(n_samples-1)/2,)
+    Condensed true distances.
+
+    embedding : array, shape (n_samples, embedding_dimension)
+    Embedding.
+
+    weights : array, shape (n_samples*(n_samples-1)/2,)
+    Array containing weights of samples pairs, used in determining contribution
+    of each pair to MDS stress. If None given, then the MDS stress function is
+    unweighted.
+
+    normalize : boolean
+    If set to True, returns normalized stress.
+
+    Return
+    ------
+
+    stress : float
+    Stress for given distances and embedding.
+    """
+    dist = scipy.spatial.distance.pdist(embedding) #embedding distances
+    diff = distances-dist
+    if weights is None:
+        stress = np.linalg.norm(diff)**2
+    else:
+        stress = np.dot(weights,diff**2)
+    if normalize:
+        if weights is None:
+            stress = math.sqrt(stress)/len(distances)
+        else:
+            stress = math.sqrt(stress)/np.sum(weights)
+    return stress
+
+def full_gradient(distances, embedding, weights=None, normalize=True,
+                return_objective=True):
+    """\
+    Returns gradient of MDS stress function, along with MDS stress function
+    value (optional).
+
+    Parameters
+    ----------
+
+    distances : array, shape (n_samples*(n_samples-1)/2,)
+    Condensed distances.
+
+    embedding : array, shape (n_samples, embedding_dimension)
+    Embedding.
+
+    weights : array, shape (n_samples*(n_samples-1)/2,)
+    Array containing weights of samples pairs, used in determining contribution
+    of each pair to MDS stress. If None given, then the MDS stress function is
+    unweighted.
+
+    normalize : boolean
+    If set to True, returns normalized stress.
+
+    Return
+    ------
+
+    grad : array, shape (n_samples,embedding_dimension)
+    Gradient of MDS stress function for given distances and embedding.
+
+    stress : float
+    Stress (or estimate) for given embedding. This is returned by default, but
+    can be suppresed by setting return_objective to False.
+    """
+    grad = np.zeros(embedding.shape)
+    stress = 0
+    dist = scipy.spatial.distance.pdist(embedding) #embedding distances
+    diff = dist-distances
+
+    grad_terms = scipy.spatial.distance.squareform(2*diff/np.maximum(dist,1e-6)) ###check
+    for i in range(len(embedding)):
+        grad[i] = np.dot(np.ravel(grad_terms[i],order='K'),
+                                  embedding[i]-embedding)
+
+    if normalize:
+        grad /= np.linalg.norm(distances)
+
+    if return_objective:
+        if weights is None:
+            stress = np.linalg.norm(diff)**2
+        else:
+            stress = np.dot(weights,diff**2)
+        if normalize:
+            if weights is None:
+                stress = math.sqrt(stress)/len(distances)
+            else:
+                stress = math.sqrt(stress)/np.sum(weights)
+                
+    return stress, grad
+
+def batch_gradient(distances, embedding, batch_size=10, indices=None,
+                   weights=None,
+                   normalize=True, return_objective=True):
+    """\
+    Returns gradient of MDS stress function for given batch, along with the
+    corrresponding portion of the MDS stress function value (optional).
+
+    Parameters
+    ----------
+
+    distances : array, shape (n_samples*(n_samples-1)/2,)
+    Condensed distances.
+
+    embedding : array, shape (n_samples, embedding_dimension)
+    Embedding.
+
+    batch_indices : list
+    Indices of samples to be used.
+
+    weights : array, shape (n_samples*(n_samples-1)/2,)
+    Array containing weights of samples pairs, used in determining contribution
+    of each pair to MDS stress. If None given, then the MDS stress function is
+    unweighted.
+
+    normalize : boolean
+    If set to True, returns normalized stress.
+
+    Return
+    ------
+
+    grad : array, shape (n_samples,embedding_dimension)
+    Gradient of MDS stress function for given distances and embedding.
+
+    stress : float
+    Stress (or estimate) for given embedding. This is returned by default, but
+    can be suppresed by setting return_objective to False.
+    """
+    n_samples = len(embedding)
+    if indices is None:
+        indices = np.arange(n_samples)
+        np.random.shuffle(indices)
+    else:
+        assert len(indices) == n_samples
+    grad = np.empty(embedding.shape)
+    stress = 0
+    for start in range(0, n_samples, batch_size):
+        end = min(start+batch_size,n_samples)
+        batch_idx = np.sort(indices[start:end])
+        embedding_batch = embedding[batch_idx]
+        distances_batch = distances[setup.batch_indices(batch_idx,n_samples)]
+        st0, grad[batch_idx] = full_gradient(distances_batch,
+                                           embedding_batch)
+        stress += st0**2
+    if normalize:
+        grad /= np.linalg.norm(distances)/n_samples*batch_size
+        stress = math.sqrt(stress/len(distances))
+
+    return stress, grad
+        
 
 def stress_function(X,D,normalize=True,estimate=True,weighted=False,**kwargs):
     """\
@@ -198,14 +360,15 @@ class MDS(object):
     """\
     Class with methods to solve multi-dimensional scaling problems.
     """
-    def __init__(self, D, dim=2, weighted=False, estimate=True, verbose=0,
-                 indent='',title='',**kwargs):
+    def __init__(self, data, dim=2, weighted=False, estimate=True,
+                 normalize=True, initial_embedding='random',
+                 sample_colors=None, verbose=0, indent='', **kwargs):
         """\
         Initializes MDS object.
 
         Parameters:
 
-        D : dictionary or numpy array
+        distances : numpy array
         Either i) a dictionary with the lists of edges, distances, and weights 
         as described in dissimilarities.py or ii) a dissimilarity
         matrix.
@@ -222,14 +385,15 @@ class MDS(object):
         title : string
         Title assigned to MDS object.
         """
+        self.normalize = normalize
+        self.sample_colors = sample_colors
         self.verbose = verbose
         self.indent = indent
-        self.title = title
         if self.verbose > 0:
-            print(self.indent+'mds.MDS('+self.title+'):')
+            print(self.indent+'mview.MDS():')
 
-        self.D = multigraph.attribute_setup(D,**kwargs)
-        self.N = self.D['node_number']; self.NN = self.D['edge_number']
+        self.distances = setup.setup_distances(data)
+        self.n_samples = scipy.spatial.distance.num_obs_y(self.distances)
         
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
@@ -240,134 +404,133 @@ class MDS(object):
         assert isinstance(estimate,bool)
         self.estimate = estimate
 
-        def f(X,D=self.D,**kwargs):
-            return stress_function(X,D,weighted=self.weighted,
-                                   estimate=self.estimate,**kwargs)
-        self.f = f
-        def full(X,D=self.D,**kwargs):
-            return F(X,D,weighted=self.weighted,**kwargs)
-        self.F = full
-        
-        self.initial_cost = None
-        self.H = {}
-        
+
+        self.objective = lambda X, **kwargs : stress(self.distances,X)
+        def gradient(embedding,batch_size=None,indices=None,**kwargs):
+            if batch_size is None or batch_size >= self.n_samples:
+                return full_gradient(self.distances,embedding,
+                                   normalize=self.normalize)
+            else:
+                return batch_gradient(self.distances,embedding, batch_size,
+                                      indices, normalize=self.normalize)
+        self.gradient = gradient
+
         if verbose > 0:
-            print(self.indent+'    dissimilarity stats:')
-            print(self.indent+f'      number of points : {self.N}')
-            print(self.indent+f'      number of edges : {self.NN}')
-            print(self.indent+f'      weighted : {self.weighted}')
-            print(self.indent+f'      dissimilarity rms : {self.D["rms"]:0.2e}')
-            print(self.indent+'    embedding stats:')
-            print(self.indent+f'      dimension : {self.dim}')
-            
-    def initialize(self, X0=None, title='',**kwargs):
-        """\
-        Set initial embedding.
+            print(indent+'  data details:')
+            print(indent+f'    number of samples : {self.n_samples}')
+            print(indent+'  embedding details:')
+            print(indent+f'    embedding dimension : {self.dim}')
 
-        Parameters:
-
-        X0 : numpy array or None
-        Initial embedding. If set to None, the initial embedding is produced 
-        randomly using misc.initial_embedding().
-        """
-        if self.verbose > 0:
-            print(f'  MDS.initialize({self.title} - {title}):')
-            
-        if X0 is None:
-            X0 = misc.initial_embedding(self.N,dim=self.dim,
-                                        radius=self.D['rms'],**kwargs)
+        #save or compute initial embedding
+        if isinstance(initial_embedding,np.ndarray):
+            assert initial_embedding.shape == (self.n_samples,self.dim)
             if self.verbose > 0:
-                print('    method : random')
+                print('    initial embedding : given')
+            self.X0 = initial_embedding
+            self.X = self.X0
+        elif initial_embedding == 'random':
+            self.X0 = misc.initial_embedding(self.n_samples,dim=self.dim,
+                                        radius=1,**kwargs)
+            self.X = self.X0
+            if self.verbose > 0:
+                print('    initial embedding : random')
         else:
-            assert isinstance(X0,np.ndarray)
-            assert X0.shape == (self.N,self.dim)
+            assert initial_embedding is None
+
+        #save initial costs
+        if initial_embedding is not None:
+            self.initial_cost = self.objective(self.X0,**kwargs)
+            self.cost = self.initial_cost
             if self.verbose > 0:
-                print('    method : initialization given')
-            
-        self.X = X0
-        self.update(**kwargs)
-        self.X0 = self.X.copy()
-        
-        if self.verbose > 0:
-            print(f'    initial stress : {self.cost:0.2e}')
+                print(f'    initial stress : {self.cost:0.2e}')
 
-    def update(self,H=None,**kwargs):
-        self.cost = self.f(self.X,**kwargs)
-        if self.initial_cost is None:
-            self.initial_cost = self.cost
-        if H is not None:
-            if bool(self.H) is True:
-                H['costs'] = np.concatenate((self.H['costs'],H['costs']))
-                H['steps'] = np.concatenate((self.H['steps'],H['steps']))
-                H['lrs'] = np.concatenate((self.H['lrs'],H['lrs']))
-                H['grads'] = np.concatenate((self.H['grads'],H['grads']))
-                H['iterations'] = self.H['iterations']+H['iterations']
-            self.H = H        
+        self.computation_history = []
 
-    def forget(self):
-        self.X = self.X0; self.H = {}
-        self.update()
+    def update(self,X,H,**kwargs):
+        self.X = X
+        self.cost = self.objective(self.X,**kwargs)
+        self.computation_history.append(H)   
 
     ### Methods to update MDS embedding ###
-    
-    def subsample_generator(self,edge_proportion=None,average_neighbors=None,
-                            **kwargs):
-        if edge_proportion is None and average_neighbors is None:
-            return None
-        else:
-            Xi = lambda : multigraph.\
-                attribute_sample(self.D,edge_proportion=edge_proportion,
-                                 average_neighbors=average_neighbors,**kwargs)
-            return Xi
 
-    def gd(self, scheme='mm', **kwargs):
-        if hasattr(self,'X') is False:
-            self.initialize(title='automatic',**kwargs)
+    def gd(self, batch_size=None, **kwargs):
         if self.verbose > 0:
-            print(self.indent+f'  MDS.gd({self.title}):')
+            print(self.indent+'  MDS.gd():')
+            print(self.indent+'    specs:')
 
-        Xi = self.subsample_generator(**kwargs)
-        F = lambda X, xi=self.D : self.F(X,D=xi)
-        self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,
-                              verbose=self.verbose,
-                              indent=self.indent+'    ',
-                              **kwargs)
-        self.update(H=H,**kwargs)
+        if batch_size is None or batch_size >= self.n_samples:
+            Xi = None
+            F = lambda X : self.gradient(X)
+            if self.verbose > 0:
+                print(self.indent+'      gradient type : full')
+        else:
+            def Xi():
+                indices = np.arange(self.n_samples)
+                np.random.shuffle(indices)
+                xi = {
+                    'indices' : indices
+                }
+                return xi
+            F = lambda X, indices : self.gradient(X,batch_size=batch_size,
+                                                  indices=indices)
+            if self.verbose > 0:
+                print(self.indent+'      gradient type : batch')
+                print(self.indent+'      batch size :',batch_size)
+        X, H = gd.single(self.X,F,Xi=Xi,
+                         verbose=self.verbose,
+                         indent=self.indent+'    ',
+                         **kwargs)
+        self.update(X,H,**kwargs)
         if self.verbose > 0:
             print(self.indent+f'    final stress : {self.cost:0.2e}')
 
-    ### Plotting methods ###
+    ### PLOTS GENERATORS ###
 
-    def figureX(self,title='',edges=False,node_color=None,labels=None,
-                axis=True,plot=True,
-                ax=None,**kwargs):
+    def plot_embedding(self,title='embedding',edges=False,colors='default',
+                       labels=None,
+                       axis=True,plot=True,
+                       ax=None,**kwargs):
         assert self.dim >= 2
         if ax is None:
             fig, ax = plt.subplots()
         else:
             plot = False
         if edges is True:
-            edges = self.D['edge_list']
+            edges = self.distances['edge_list']
         elif edges is False:
             edges = None
-        if node_color is None:
-            node_color = self.D['node_colors']
-        plots.plot2D(self.X,edges=edges,colors=node_color,labels=labels,
+        if colors == 'default':
+            colors = self.sample_colors
+            
+        plots.plot2D(self.X,edges=edges,colors=colors,labels=labels,
                      axis=axis,ax=ax,title=title,**kwargs)
         if plot is True:
             plt.draw()
             plt.pause(1)
 
-    def figureH(self,title='computations',plot=True,ax=None):
-        assert hasattr(self,'H')
+    def plot_computations(self,title='computations',plot=True,ax=None):
         if ax is None:
             fig, ax = plt.subplots()
         else:
             plot = False
-        ax.semilogy(self.H['costs'],label='stress',linewidth=3)
-        ax.semilogy(self.H['grads'],label='grad size')
-        ax.semilogy(self.H['lrs'],label='lr')
-        ax.semilogy(self.H['steps'],label='step size')
+
+        costs = np.array([])
+        grads = np.array([])
+        lrs = np.array([])
+        steps = np.array([])
+        iterations=0; markers = []
+        for H in self.computation_history:
+            if iterations != 0:
+                ax.axvline(x=iterations-1,ls='--',c='black',lw=.5)
+            iterations += H['iterations']
+            costs = np.concatenate((costs,H['costs']))
+            grads = np.concatenate((grads,H['grads']))
+            lrs = np.concatenate((lrs,H['lrs']))
+            steps = np.concatenate((steps,H['steps']))
+        ax.semilogy(costs,label='stress',linewidth=3)
+        ax.semilogy(grads,label='grad size')
+        ax.semilogy(lrs,label='lr')
+        ax.semilogy(steps,label='step size')
         ax.legend()
         ax.set_title(title)
         if plot is True:
@@ -377,32 +540,28 @@ class MDS(object):
 ### TESTS ###
 
 def disk(N=128,**kwargs):
-    print('\n***mds.disk()***')
+    print('\n***disk example***\n')
     
     X = misc.disk(N,2); colors = misc.labels(X)
-    diss = multigraph.DISS(N)
-    diss.add_feature(X,node_colors=colors)
-    D = diss.return_attribute()
-
+    distances = scipy.spatial.distance.pdist(X)
+    
     title = 'basic disk example'
-    mds = MDS(D,dim=2,verbose=2,title=title)
-    mds.initialize(**kwargs)
+    mds = MDS(distances,dim=2,verbose=2,title=title,sample_colors=colors)
 
     fig, ax = plt.subplots(1,3,figsize=(9,3))
     fig.suptitle('MDS - disk data')
     fig.subplots_adjust(top=0.80)
-    mds.figureX(title='initial embedding',ax=ax[0])
-    mds.gd(max_iter=30,**kwargs)
-    mds.gd(max_iter=30,average_neighbors=2)
-    mds.gd(max_iter=30,average_neighbors=None)
-    mds.figureH(ax=ax[1])
-    mds.figureX(title='final embedding',ax=ax[2])
+    mds.plot_embedding(title='initial embedding',ax=ax[0])
+    mds.gd(min_cost=1e-6,**kwargs)
+    mds.gd(min_cost=1e-6,**kwargs)
+    mds.plot_computations(ax=ax[1])
+    mds.plot_embedding(title='final embedding',ax=ax[2])
     plt.draw()
     plt.pause(1.0)
 
 if __name__=='__main__':
 
     print('mview.mds : running tests')
-    disk(N=100,scheme='mm',average_neighbors=1)
+    disk(N=1000,batch_size=None,max_iter=100)
     plt.show()
     

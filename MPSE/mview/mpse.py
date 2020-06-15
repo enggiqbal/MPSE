@@ -3,228 +3,325 @@ import numbers, math, random
 import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
+import scipy.spatial.distance
 
-import misc, multigraph, gd, projections, mds, tsne, plots
+import misc, setup, multigraph, gd, projections, mds, tsne, plots
 
 class MPSE(object):
     """\
     Class with methods for multi-perspective simultaneous embedding.
     """
 
-    def __init__(self, dissimilarities, weighted=False, d1=3, d2=2,
-                 family='linear',
-                 constraint='orthogonal', X=None, Q=None, X0=None, Q0=None,
-                 visualization='mds', total_cost_function='rms', verbose=0,
-                 title='',indent='',**kwargs):
+    def __init__(self, data, data_args=None,
+                 fixed_embedding=None, fixed_projections=None,
+                 initial_embedding=None, initial_projections=None,
+                 visualization_method='mds', visualization_args={},
+                 total_cost_function='rms',
+                 embedding_dimension=3, image_dimension=2,
+                 projection_family='linear',projection_constraint='orthogonal',
+                 sample_labels=None, sample_colors=None,
+                 perspective_labels=None,
+                 verbose=0, indent='',
+                 **kwargs):
         """\
         Initializes MPSE object.
 
-        Parameters:
+        Parameters
+        ----------
 
-        D : list
-        List containing dissimilarity graphs.
+        data : list, length (n_perspectives)
+        List containing distance/dissimilarity/feature data for each 
+        perspective. Each array can be of the following forms:
+        1) A 1D condensed distance array
+        2) A square distance matrix
+        3) An array containing features
+        ***4) A dictionary describing a graph
 
+        data_args : dictionary (optional) or list
+        Optional arguments to pass to distances.setup().
+        If a list is passed, then the length must be the number of perspectives
+        and each element must be a dictionary. Then, each set of distances will
+        be set up using a different set of arguments.
+
+        fixed_embedding : array
+        If an array is given, this is assumed to be the true embedding and
+        by default optimization is done w.r.t. the projections only.
+
+        fixed_projections : list
+        If a list is given, this is assumed to be the true projections and by
+        defulat optimization is done w.r.t. the embedding coordinates only.
+
+        initial_embedding : array
+        If given, this is the initial embedding used.
+
+        initial_projections : list
+        If given, this is the initial projections used.
+
+        visualization_method : str
+        Visualization method. Current options are 'mds' and 'tsne'.
+        The visualization method can be different for different perspectives, 
+        by passing a list of visualization methods instead.
+
+        visualization_args : dict
+        Dictionary with arguments to pass to each visualization method.
+        Different arguments can be passed to different visualization methods
+        by passing a list of dictionaries instead.
+
+        embedding_dimension : int
+        Dimension of embedding.
+
+        image_dimension : int
+        Dimension of image (after projection). Each perspective can have a
+        different image dimension, by specifying a list instead.
+
+        projection_family : str
+        Projection family. Options are 'linear'.
+
+        projection_constraint : str
+        Constraints on projection family. Options are None, 'orthogonal',
+        'similar'.
+
+        embedding_dimension : int > 0
+        Dimension of the embedding.
+        Alternative name: embedding_dimension
+
+        projection_dimension : int or array
+        Dimension of projections. Can be different for each perspective.
+ 
         persp : Object instance of projections.Persp class or int > 0.
         Describes set of allowed projection functions and stores list of
         projection parameters. See perspective.py. If instead of a Persp object
-        a positive integer int is given, then it is assumed that d1=d2=int
-        and that all projections are the identity. 
+        a positive integer int is given, then it is assumed that embedding_dimension=image_dimension=int
+        and that all projections are the identity.
+
+        sample_labels : list (optional)
+        List containing labels of samples (used in plots).
+
+        sample_colors : array (optional)
+        Array containing color value of samples (used in plots).
         """
         if verbose > 0:
-            print('mpse.MPSE('+title+'):')
-        self.verbose = verbose; self.title = title; self.indent = indent
+            print(indent+'mview.MPSE():')
 
-        self.DD = multigraph.multigraph_setup(dissimilarities,Q=Q,
-                                              verbose=verbose,
-                                              **kwargs)
-        self.D = self.DD.D
+        ##set up sets of distances from data
+        self.distances = setup.setup_distances_from_multiple_perspectives( \
+                                                            data, data_args)
+        self.n_perspectives = len(self.distances)
+        self.n_samples = scipy.spatial.distance.num_obs_y(self.distances[0])
 
-        self.K = self.DD.attributes
-        self.N = self.DD.node_number
-
-        assert isinstance(weighted,bool)
-        self.weighted = weighted
-
-        self.d1 = d1; self.d2 = d2
-        self.family = family; self.constraint=constraint
-        proj = projections.PROJ(d1,d2,family,constraint)
+        ##set up parameters
+        self.embedding_dimension = embedding_dimension
+        self.image_dimension = image_dimension
+        self.projection_family = projection_family
+        self.projection_constraint = projection_constraint
+        self.embedding_dimension = embedding_dimension
+        self.image_dimension = image_dimension
+        self.family = projection_family
+        self.constraint = projection_constraint
+        proj = projections.PROJ(embedding_dimension,image_dimension,
+                                projection_family,projection_constraint)
         self.proj = proj
-
-        if Q is True:
-            assert hasattr(self.DD,'Q')
-            Q = self.DD.Q
-        elif isinstance(Q,str):
-            Q = proj.generate(number=self.K,method=Q)
-        if isinstance(Q0,str):
-            Q0 = proj.generate(number=self.K,method=Q0)
-            
-        assert X is None or Q is None
-        self.X = X; self.X_is_fixed = X is not None
-        self.Q = Q; self.Q_is_fixed = Q is not None
-
-        self.setup_visualization(visualization=visualization,**kwargs)
-
-        if self.X_is_fixed == True:
-            X0 = X
-        if self.Q_is_fixed == True:
-            Q0 = Q
-    
-        if verbose > 0:
-            print(self.indent+'    dissimilarity stats:')
-            print(self.indent+f'      number of views : {self.K}')
-            print(self.indent+f'      number of points : {self.N}')
-            print(self.indent+'    embedding stats:')
-            print(self.indent+f'      embedding dimension : {self.proj.d1}')
-            print(self.indent+f'      projection dimension : {self.proj.d2}')
-            print(self.indent+f'      fixed embedding : {self.X_is_fixed}')
-            print(self.indent+f'      fixed perspectives : {self.Q_is_fixed}')
-            
-        self.initial_cost = None
-        self.initial_individual_cost = None
-        self.initialize(X0=X0,Q0=Q0)
-
-        self.update_history(**kwargs)
-
-    def setup_visualization(self,visualization='mds',**kwargs):
-        assert visualization in ['mds','tsne']
-        self.visualization_method = visualization
-
-        if visualization is 'mds':
-            visualization_class = mds.MDS
-        elif visualization is 'tsne':
-            visualization_class = tsne.TSNE
-
-        self.visualization= []
-        for k in range(self.K):
-            self.visualization.\
-                append(visualization_class(self.D[k],self.proj.d2,
-                                           verbose=0, #self.verbose,
-                                           weighted=self.weighted,
-                                           title=f'perspective # {k+1}',
-                                           **kwargs))
         
-        def cost_function(X,Q,Y=None):
+        self.time = 0
+
+        if verbose > 0:
+            print(indent+'  data details:')
+            print(indent+f'    number of perspectives : {self.n_perspectives}')
+            print(indent+f'    number of samples : {self.n_samples}')
+            print(indent+'  visualization details:')
+            print(indent+'    embedding dimension :',self.embedding_dimension)
+            print(indent+f'    image dimension : {self.image_dimension}')
+            print(indent+f'    visualization type : {visualization_method}')
+
+        self.verbose = verbose; self.indent = indent
+
+        ##setup labels and colors:
+        #setup sample labels:
+        if sample_labels is None:
+            sample_labels = range(1,self.n_samples+1)
+        else:
+            assert len(sample_labels) == self.n_samples
+        self.sample_labels = sample_labels
+        #setup perspective labels:
+        if perspective_labels is None:
+            perspective_labels = range(1,self.n_perspectives+1)
+        else:
+            assert len(perspective_labels) == self.n_perspectives
+        self.perspective_labels = perspective_labels
+        #setup sample colors:
+        self.sample_colors = sample_colors
+
+        #setup visualization instances:
+        self.visualization_instances = []
+        self.visualization_method = visualization_method
+        if isinstance(visualization_method,str):
+            visualization_method = [visualization_method]*self.n_perspectives
+        if isinstance(visualization_args,dict):
+            visualization_args = [visualization_args]*self.n_perspectives
+        for i in range(self.n_perspectives):
+            assert visualization_method[i] in ['mds','tsne']
+            if self.verbose > 0:
+                print('  setup visualization instance for perspective',
+                      self.perspective_labels[i],':')
+            if visualization_method[i] is 'mds':
+                vis = mds.MDS(self.distances[i],
+                              embedding_dimension=self.image_dimension,
+                              verbose=self.verbose, indent=self.indent+'    ',
+                              **visualization_args[i])
+            elif visualization_method[i] is 'tsne':
+                vis = tsne.TSNE(self.distances[i],
+                                embedding_dimension=self.image_dimension,
+                                verbose=self.verbose, indent=self.indent+'    ',
+                                **visualization_args[i])
+            self.visualization_instances.append(vis)
+        self.visualization = self.visualization_instances
+
+        #setup objectives:
+        def cost_function_all(X,Q,Y=None,**kwargs):
+            if Y is None:
+                Y = self.proj.project(Q,X)
+            cost = 0; individual_cost = np.zeros(self.n_perspectives)
+            for k in range(self.n_perspectives):
+                cost_k = self.visualization[k].objective(Y[k],**kwargs)
+                cost += cost_k**2
+                individual_cost[k] = cost_k
+            cost = math.sqrt(cost/self.n_perspectives)
+            return cost, individual_cost
+        self.cost_function_all = cost_function_all
+        def cost_function(X,Q,Y=None,**kwargs):
             if Y is None:
                 Y = self.proj.project(X,Q=Q)
             cost = 0
-            for k in range(self.K):
+            for k in range(self.n_perspectives):
                 cost += self.visualization[k].cost_function(Y[k],**kwargs)**2
-            return math.sqrt(cost/self.K)
+            return math.sqrt(cost/self.n_perspectives)
         self.cost_function = cost_function
 
-        def cost_function_all(X,Q,Y=None):
-            if Y is None:
-                Y = self.proj.project(Q,X)
-            cost = 0; individual_cost = np.zeros(self.K)
-            for k in range(self.K):
-                cost_k = self.visualization[k].f(Y[k],**kwargs)
-                cost += cost_k**2
-                individual_cost[k] = cost_k
-            cost = math.sqrt(cost/self.K)
-            return cost, individual_cost
-        self.cost_function_all = cost_function_all
-        
-        self.cost_function = cost_function
+        #setup gradients:
+
+        #setup gradient functions:
+        self.setup_gradients(**kwargs)
+
+        #set up initial embedding and projections (fixed optional):
+        if verbose > 0:
+            print(indent+'  initialize:')
+        #set fixed and initial embedding:
+        if fixed_embedding is not None:
+            if verbose > 0:
+                print(indent+'    fixed embedding : True')
+            self.embedding = fixed_embedding
+            self.initial_embedding = fixed_embedding
+            self.fixed_embedding = True
+        else:
+            if verbose > 0:
+                print(indent+'    fixed embedding : False')
+            if initial_embedding is None:
+                if verbose > 0:
+                    print(indent+'    initial embedding : random')
+                self.initial_embedding = misc.initial_embedding(self.n_samples,
+                                                 dim=self.embedding_dimension, radius=1)
+            else:
+                assert isinstance(initial_embedding,np.ndarray)
+                assert initial_embedding.shape == (self.n_samples,self.proj.embedding_dimension)
+                if verbose > 0:
+                    print(indent+'    initial embedding : given')
+                self.initial_embedding = initial_embedding
+            self.embedding = self.initial_embedding
+            self.fixed_embedding = False
+        #set fixed and initial projections:
+        if fixed_projections is not None:
+            if isinstance(fixed_projections,str):
+                fixed_projections = self.proj.generate(number= \
+                            self.n_perspectives,method=fixed_projections)
+            self.Q = fixed_projections
+            self.Q0 = fixed_projections
+            self.fixed_projections = True
+            if verbose > 0:
+                print(indent+'    fixed projections : True')
+        else:
+            if verbose > 0:
+                print(indent+'    fixed projections : False')
+            if initial_projections is None:
+                if verbose > 0:
+                    print(indent+'    initial projections : random')
+                self.Q0 = self.proj.generate(number=self.n_perspectives,
+                                             **kwargs)
+            else:
+                if verbose > 0:
+                    print(indent+'    initial projections : given')
+                if isinstance(initial_projections,str):
+                    initial_projections = self.proj.generate(number= \
+                            self.n_perspectives,method=initial_projections)
+                self.Q0 = initial_projections
+            self.Q = self.Q0
+            self.fixed_projections = False        
+
+        self.initial_cost = None
+        self.initial_individual_cost = None
+        self.update(**kwargs)
+
+        self.computation_history = []
+
+    def setup_gradients(self,**kwargs):
         
         if self.proj.family == 'linear':
 
-            def F(X,Q,D=None,**kwargs):
+            def gradient(embedding,projections,batch_size=None,indices=None,
+                         return_embedding=True,return_projections=True):
                 """\
-                Returns cost and gradient at (X,Q) for dissimilarities D.
+                Returns cost and gradient at X,Q
                 """
-                if D is None:
-                    D = self.D
                 cost = 0
-                dX = np.zeros((self.N,self.proj.d1))
-                dQ = []
-                Y = self.proj.project(Q,X)
-                for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],D=D[k])
-                    cost += costk**2
-                    dX += dYk @ Q[k]
-                    dQ.append(dYk.T @ X)
-                dX /= self.K
-                cost = math.sqrt(cost/self.K)
-                return (cost,[dX,np.array(dQ)])
-            self.F = F
-
-            def FX(X,Q,D=None,**kwargs):
-                if D is None:
-                    D = self.D
-                cost = 0
-                dX = np.zeros((self.N,self.proj.d1))
-                Y = self.proj.project(Q,X)
-                for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],D=D[k])
-                    cost += costk**2
-                    dX += dYk @ Q[k]
-                dX /= self.K
-                cost = math.sqrt(cost/self.K)
-                return (cost,dX)
-            self.FX = FX
-
-            def FQ(X,Q,D=None,**kwargs):
-                if D is None:
-                    D = self.D
-                cost = 0
-                dQ = []
-                Y = self.proj.project(Q,X)
-                for k in range(self.K):
-                    costk, dYk = self.visualization[k].F(Y[k],D=D[k])
-                    cost += costk**2
-                    dQ.append(dYk.T @ X)
-                cost = math.sqrt(cost/self.K)
-                return (cost,np.array(dQ))
-            self.FQ = FQ
+                if return_embedding:
+                    dX = np.zeros(embedding.shape)
+                if return_projections:
+                    dQ = []
+                Y = self.proj.project(projections,embedding)
+                for k in range(self.n_perspectives):
+                    cost_k, dY_k = self.visualization[k].gradient( \
+                        Y[k],batch_size=batch_size,indices=indices)
+                    cost += cost_k**2
+                    if return_embedding:
+                        dX += dY_k @ projections[k]
+                    if return_projections:
+                        dQ.append(dY_k.T @ embedding)
+                if return_embedding:
+                    dX /= self.n_perspectives
+                cost = math.sqrt(cost/self.n_perspectives)
+                if return_embedding is False:
+                    grad = np.array(dQ)
+                elif return_projections is False:
+                    grad = dX
+                else:
+                    grad = [dX,np.array(dQ)]
+                return (cost, grad)
+            self.gradient = gradient
             
         else:
 
             def gradient_X(X,Q,Y=None):
                 pgradient = self.proj.compute_gradient(X[0],params_list=Q)
-                print(pgradient[0])
                 if Y is None:
                     Y = self.proj.project(X,params_list=Q)
-                gradient = np.zeros((self.N,self.d1))
-                for k in range(self.K):
-                    gradient += self.visualization[k].gradient_function(Y[k]) \
+                gradient = np.zeros((self.n_samples,self.embedding_dimension))
+                for k in range(self.n_perspectives):
+                    gradient += self.visualization[k].gradient(Y[k]) \
                                 @ pgradient[k]
                 return gradient
             self.gradient_X = gradient_X
 
-    def initialize(self,X0=None,Q0=None,**kwargs):
-        if self.verbose > 0:
-            print(self.indent+'  MPSE.initialize():')
+    def update(self,**kwargs):
+        self.Y = self.proj.project(self.Q,self.embedding)
+        self.cost, self.individual_cost = \
+            self.cost_function_all(self.embedding,self.Q,Y=self.Y,**kwargs) 
+        if self.initial_cost is None:
+            self.initial_cost = self.cost
+            self.initial_individual_cost = self.individual_cost
 
-        self.time = 0
-        
-        if X0 is None:
-            if self.verbose > 0:
-                print('    X0 : random')
-            self.X0 = misc.initial_embedding(self.N,dim=self.proj.d1,
-                                            radius=1)
-        else:
-            assert isinstance(X0,np.ndarray)
-            assert X0.shape == (self.N,self.proj.d1)
-            if self.verbose > 0:
-                print('    X0 : given')
-            self.X0 = X0
-        self.X = self.X0.copy()
-        
-        if Q0 is None:
-            if self.verbose > 0:
-                print('    Q0 : random')
-            self.Q0 = self.proj.generate(number=self.K,**kwargs)
-        else:
-            if self.verbose > 0:
-                print('    Q0 : given')
-            self.Q0 = Q0
-        self.Q = self.Q0.copy()         
-
-        self.update(**kwargs)
-
-    def smart_initialize(self,**kwargs):
+    def smart_initialize(self,max_iter=[100,50],lr=[1,0.1],
+                         batch_size=10,**kwargs):
         """\
-        Computes an mds embedding (dimension d1) of the combined distances. Only
+        Computes an mds embedding (dimension embedding_dimension) of the combined distances. Only
         works when self.Q_is_fixed is False (as this is unnecessary otherwhise).
 
         Parameters :
@@ -235,215 +332,163 @@ class MPSE(object):
         Q0 : None or list of arrays
         Optional initial projection parameters.
         """
-        if self.Q_is_fixed is True:
-            return
-        
-        else:
-            if self.verbose > 0:
-                print(self.indent+'  MPSE.smart_initialize():')
+        assert self.fixed_embedding is False
+        assert self.fixed_projections is False
+    
+        if self.verbose > 0:
+            print(self.indent+'  MPSE.smart_initialize():')
 
-            if 'max_iter' in kwargs:
-                max_iter = kwargs.pop('max_iter')
-                if isinstance(max_iter,int):
-                    max_iter = [max_iter,max_iter]
-            else:
-                max_iter = [100,50]
-            if self.X_is_fixed is False:
-                self.DD.combine_attributes()
-                D = self.DD.D0
-                vis = mds.MDS(D,dim=self.proj.d1,min_grad=1e-4,
-                              indent=self.indent)
-                vis.initialize(X0=self.X0)
-                vis.gd(average_neighbors=2, 
-                       max_iter=max_iter[0],**kwargs)
-                self.X = vis.X
-                self.update_history(H=vis.H,Q_is_fixed=True)
+        distances = np.sum(self.distances,axis=0)/self.n_perspectives
+        vis = mds.MDS(distances,dim=self.embedding_dimension,min_grad=1e-4,
+                      indent=self.indent+'    ',
+                      initial_embedding=self.embedding,
+                      verbose=self.verbose)
+        vis.gd(batch_size=batch_size, max_iter=max_iter[0],lr=lr[0],**kwargs)
+        self.embedding = vis.X
+        H = vis.computation_history[0]
+        H['fixed_embedding'] = False
+        H['fixed_projections'] = True
+        self.computation_history.append(H)
+
+        def Xi():
+            indices = np.arange(self.n_samples)
+            np.random.shuffle(indices)
+            xi = {
+                'indices' : indices
+            }
+            return xi
+        F = lambda Q, indices : self.gradient(self.embedding,Q,
+                                              batch_size=batch_size,
+                                              return_embedding=False)
+        Q0 = np.array(self.Q)
+        self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
+                              max_iter=max_iter[1],lr=lr[1],
+                              verbose=self.verbose,indent=self.indent+'    ',
+                              **kwargs)
+        H['fixed_embedding'] = True
+        H['fixed_projections'] = False
+        self.computation_history.append(H)
+        return
                 
-            F = lambda Q, xi=self.D: self.FQ(self.X,Q,D=xi,**kwargs)
-            Xi = self.subsample_generator(average_neighbors=2)
-            Q0 = np.array(self.Q)
-            if 'lr' not in kwargs:
-                kwargs['lr'] = 0.1
-            self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
-                                  max_iter=max_iter[1],
-                                   **kwargs)
-            self.update_history(H=H,X_is_fixed=True)
-            return
+    def gd(self, batch_size=None, lr=None, fixed_projections='default',
+           fixed_embedding='default',
+           **kwargs):
 
-    def update(self,H=None,**kwargs):
-        if self.X is not None and self.Q is not None:
-            self.Y = self.proj.project(self.Q,self.X)
-
-            self.cost, self.individual_cost = \
-                self.cost_function_all(self.X,self.Q,Y=self.Y,**kwargs)
-
-            if self.initial_cost is None:
-                self.initial_cost = self.cost
-                self.initial_individual_cost = self.individual_cost
-
-        #if H is not None:
-        #    if 'cost' in self.H:
-         #       H['cost'] = np.concatenate((self.H['cost'],H['cost']))
-          #      H['steps'] = np.concatenate((self.H['steps'],H['steps']))
-           #     H['iterations'] = self.H['iterations']+H['iterations']
-            #self.H = H
-
-    def update_history(self,H=None,X_is_fixed=None,Q_is_fixed=None,
-                       lr=None,**kwargs):
-        
-        if hasattr(self,'H') is False:
-            self.H = {}
-            self.H['iterations'] = 0
-            self.H['markers'] = []
-            self.H['costs'] = np.array([])
-            self.H['time'] = 0
-            if self.X_is_fixed is False:
-                self.H['X_iters'] = np.array([])
-                self.H['X_steps'] = np.array([])
-                self.H['X_grads'] = np.array([])
-                self.H['X_lrs'] = np.array([])
-            if self.Q_is_fixed is False:
-                self.H['Q_iters'] = np.array([])
-                self.H['Q_steps'] = np.array([])
-                self.H['Q_grads'] = np.array([])
-                self.H['Q_lrs'] = np.array([])
-
-        if X_is_fixed is None:
-            X_is_fixed = self.X_is_fixed
-        if Q_is_fixed is None:
-            Q_is_fixed = self.Q_is_fixed
+        if fixed_projections == 'default':
+            fixed_projections = self.fixed_projections
+        if fixed_embedding == 'default':
+            fixed_embedding = self.fixed_embedding
             
+        assert batch_size is None or isinstance(batch_size,int)
+        assert fixed_embedding is False or fixed_projections is False
 
-        if H is not None:
-            self.H['time'] += H['time']
-            self.time += H['time']
-            T1 = self.H['iterations']; T2 = H['iterations']
-            self.H['iterations'] = T1+T2
-            self.H['markers'].append(T1)
-            self.H['costs'] = np.concatenate((self.H['costs'],H['costs']))
-            if X_is_fixed is False and Q_is_fixed is True:
-                self.H['X_iters'] = np.concatenate(
-                    (self.H['X_iters'],range(T1,T1+T2)))
-                self.H['X_steps'] = np.concatenate(
-                    (self.H['X_steps'],H['steps']))
-                self.H['X_grads'] = np.concatenate(
-                    (self.H['X_grads'],H['grads']))
-                self.H['X_lrs'] = np.concatenate((self.H['X_lrs'],H['lrs']))
-                self.H['X_lr'] = H['lr']
-            elif X_is_fixed is True and Q_is_fixed is False:
-                self.H['Q_iters'] = np.concatenate(\
-                    (self.H['Q_iters'],range(T1,T1+T2)))
-                self.H['Q_steps'] = np.concatenate(
-                    (self.H['Q_steps'],H['steps']))
-                self.H['Q_grads'] = np.concatenate(
-                    (self.H['Q_grads'],H['grads']))
-                self.H['Q_lrs'] = np.concatenate(
-                    (self.H['Q_lrs'],H['lrs']))
-                self.H['Q_lr'] = H['lr']
+        if lr is None:
+            if self.visualization_method == 'mds':
+                lr = [1,0.01]
             else:
-                self.H['X_iters'] = np.concatenate(
-                    (self.H['X_iters'],range(T1,T1+T2)))
-                self.H['X_steps'] = np.concatenate(
-                    (self.H['X_steps'],H['steps'][:,0]))
-                self.H['X_grads'] = np.concatenate(
-                    (self.H['X_grads'],H['grads'][:,0]))
-                self.H['X_lrs'] = np.concatenate(
-                    (self.H['X_lrs'],H['lrs'][:,0]))
-                self.H['Q_iters'] = np.concatenate(
-                    (self.H['Q_iters'],range(T1,T1+T2)))
-                self.H['Q_steps'] = np.concatenate(
-                    (self.H['Q_steps'],H['steps'][:,1]))
-                self.H['Q_grads'] = np.concatenate(
-                    (self.H['Q_grads'],H['grads'][:,1]))
-                self.H['Q_lrs'] = np.concatenate(
-                    (self.H['Q_lrs'],H['lrs'][:,1]))
-                self.H['X_lr'],self.H['Q_lr'] = H['lr']
+                assert self.visualization_method == 'tsne'
+                lr = [100,10]
                 
-    def forget(self):
-        self.X = self.X0; self.H = {}; self.update()
-
-    def subsample_generator(self,edge_proportion=None,
-                            average_neighbors=None,**kwargs):
-        if edge_proportion is None and average_neighbors is None:
-            return None
-        else:
-            Xi = lambda :\
-                self.DD.sample(edge_proportion=edge_proportion,
-                               average_neighbors=average_neighbors,
-                               **kwargs)
-            return Xi
-
-    def gd(self, scheme='mm', **kwargs):
-        
         if self.verbose > 0:
             print(self.indent+'  MPSE.gd():')
-            
-        if self.Q_is_fixed is True:
+            print(self.indent+f'      initial stress : {self.cost:0.2e}')
+
+        if fixed_projections:
             if self.verbose > 0:
                 print(self.indent+'      mpse method : fixed projections')
-                print(self.indent+f'      initial stress : {self.cost:0.2e}')
-            F = lambda X, xi=self.D: self.FX(X,self.Q,D=xi,**kwargs)
-            Xi = self.subsample_generator(**kwargs)
+            if batch_size is None or batch_size >= self.n_samples:
+                Xi = None
+                F = lambda X : self.gradient(X,self.Q,
+                                             return_projections=False)
+            else:
+                def Xi():
+                    indices = np.arange(self.n_samples)
+                    np.random.shuffle(indices)
+                    xi = {
+                        'indices' : indices
+                    }
+                    return xi
+                F = lambda X, indices: self.gradient(X,self.Q,
+                                                     batch_size=batch_size,
+                                                     indices=indices,
+                                                     return_projections=False)
             if 'lr' not in kwargs and 'X_lr' in self.H:
                 kwargs['lr'] = self.H['X_lr']
-            self.X, H = gd.single(self.X,F,Xi=Xi,scheme=scheme,
-                                  
+            self.embedding, H = gd.single(self.embedding,F,Xi=Xi,
+                                          verbose=self.verbose,lr=lr[0],
                                   indent=self.indent+'    ',**kwargs)
-            self.update_history(H=H,Q_is_fixed=True,**kwargs)
-
-        elif self.X_is_fixed is True:
+            H['fixed_projections'] = True
+            H['fixed_embedding'] = False
+            self.computation_history.append(H)
+        elif fixed_embedding:
             if self.verbose > 0:
                 print(self.indent+'      mpse method : fixed embedding')
-                print(self.indent+f'      initial stress : {self.cost:0.2e}')
-            Xi = self.subsample_generator(**kwargs)
-            F = lambda Q, xi=self.D: self.FQ(self.X,Q,D=xi,**kwargs)
+            if batch_size is None or batch_size >= self.n_samples:
+                Xi = None
+                F = lambda Q : self.gradient(self.embedding,Q,
+                                             return_embedding=False)
+            else:
+                def Xi():
+                    indices = np.arange(self.n_samples)
+                    np.random.shuffle(indices)
+                    xi = {
+                        'indices' : indices
+                    }
+                    return xi
+                F = lambda Q, indices: self.gradient(self.embedding,Q,
+                                                     batch_size=batch_size,
+                                                     indices=indices,
+                                                     return_embedding=False)
             Q0 = np.array(self.Q)
             if 'lr' not in kwargs and 'Q_lr' in self.H:
                 kwargs['lr'] = self.H['Q_lr']
-            else:
-                kwargs['lr'] = 0.1
             self.Q, H = gd.single(Q0,F,Xi=Xi,p=self.proj.restrict,
-                                  scheme=scheme,
-                                  verbose=self.verbose,
+                                  verbose=self.verbose,lr=lr[1],
                                   indent=self.indent+'    ',**kwargs)
-            self.update_history(H=H,X_is_fixed=True,**kwargs)
-
+            H['fixed_projections'] = False
+            H['fixed_embedding'] = True
+            self.computation_history.append(H)
         else:
             if self.verbose > 0:
-                print(self.indent+'      mpse method : optimize all')
-                print(self.indent+f'      initial stress : {self.cost:0.2e}')
-            p = [None,self.proj.restrict]
-            XQ = [self.X,np.array(self.Q)]
-            F = lambda XQ, xi=self.D: self.F(XQ[0],XQ[1],D=xi,**kwargs)
-            Xi = self.subsample_generator(**kwargs)
-            if 'lr' not in kwargs:
-                kwargs['lr'] = [None,None]
-                if 'X_lr' in self.H:
-                    kwargs['lr'][0] = self.H['X_lr']
-                else:
-                    kwargs['lr'][0] = 1.0
-                if 'Q_lr' in self.H:
-                    kwargs['lr'][1] = self.H['Q_lr']
-                else:
-                    kwargs['lr'][1] = 1.0
-            XQ, H = gd.multiple(XQ,F,Xi=Xi,p=p,scheme=scheme,
-                                
-                                indent=self.indent+'    ',**kwargs)
-            self.X = XQ[0]; self.Q = XQ[1];
-            self.update_history(H=H,**kwargs)
-
+                print(self.indent+'      fixed : None')
+            if batch_size is None or batch_size >= self.n_samples:
+                Xi = None
+                F = lambda params : self.gradient(params[0],params[1])
+            else:
+                print(self.indent+'      batch size :',batch_size)
+                def Xi():
+                    indices = np.arange(self.n_samples)
+                    np.random.shuffle(indices)
+                    xi = {
+                        'indices' : indices
+                    }
+                    return xi
+                F = lambda params, indices: self.gradient(params[0],params[1],
+                                                     batch_size=batch_size,
+                                                     indices=indices)
+            params = [self.embedding,np.array(self.Q)]
+            params, H = gd.multiple(params,F,Xi=Xi,p=[None,self.proj.restrict],
+                                    verbose=self.verbose,lr=lr,
+                                    indent=self.indent+'    ',**kwargs)
+            self.embedding = params[0]
+            self.Q = params[1]
+            H['fixed_projections'] = False
+            H['fixed_embedding'] = False
+            self.computation_history.append(H)
+            
         self.update()
+
         if self.verbose > 0:
-            print(self.indent+f'    final stress : {self.cost:0.2e}')
-            stresses = ', '.join(f'{x:0.2e}' for x in self.individual_cost)
-            print(self.indent+f'    individual stresses : {stresses}')
+            print(self.indent+f'    final cost : {self.cost:0.2e}')
+            costs = ', '.join(f'{x:0.2e}' for x in self.individual_cost)
+            print(self.indent+f'    individual costs : {costs}')
  
-    def figureX(self,title=None,perspectives=True,edges=None,colors=True,
+    def plot_embedding(self,title=None,perspectives=True,edges=None,colors=True,
                 plot=True,ax=None,**kwargs):
 
         if perspectives is True:
             perspectives = []
-            for k in range(self.K):
+            for k in range(self.n_perspectives):
                 Q = self.Q[k]
                 q = np.cross(Q[0],Q[1])
                 perspectives.append(q)
@@ -454,31 +499,32 @@ class MPSE(object):
             if isinstance(edges,numbers.Number):
                 edges = edges-self.D
         if colors is True:
-            colors = self.DD.node_colors
-        plots.plot3D(self.X,perspectives=perspectives,edges=edges,
+            colors = self.sample_colors
+        plots.plot3D(self.embedding,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,ax=ax,**kwargs)
 
-    def figureY(self,title='projections',edges=False,
-                include_colors=True,plot=True,
+    def plot_projections(self,title=None,edges=False,
+                colors=True,plot=True,
                 ax=None,**kwargs):
         if ax is None:
-            fig, ax = plt.subplots(1,self.K,figsize=(3*self.K,3))
+            fig, ax = plt.subplots(1,self.n_perspectives,
+                                   figsize=(3*self.n_perspectives,3))
         else:
             plot = False
 
         if edges is False:
-            edges = [None]*self.K
+            edges = [None]*self.n_perspectives
         elif edges is True:
             edges = []
-            for k in range(self.K):
-                edges.append(self.D[k]['edge_list'])
+            for k in range(self.n_perspectives):
+                edges.append(self.distances[k]['edge_list'])
         else:
             edges = edges
             
-        for k in range(self.K):
-            if include_colors is True:
-                colors_k = self.D[k]['node_colors'] ####
-            else:
+        for k in range(self.n_perspectives):
+            if colors is True:
+                colors_k = [0]+list(self.distances[k][0:self.n_samples-1]) ####
+            elif colors is False:
                 colors_k = None
             plots.plot2D(self.Y[k],edges=edges[k],colors=colors_k,ax=ax[k],
                          **kwargs)
@@ -487,41 +533,91 @@ class MPSE(object):
             plt.draw()
             plt.pause(1.0)
     
-    def figureH(self,title='computations',plot=True,ax=None):
-        assert hasattr(self,'H')
-
-        if self.X_is_fixed is True or self.Q_is_fixed is True:
-            windows = 2
+    def plot_computations(self,title='computations',plot=True,ax=None):
+        if self.fixed_embedding is True or self.fixed_projections is True:
+            if ax is None:
+                fig, ax = plt.subplots()
+                fig.suptitle('computations')
+            costs = np.array([])
+            grads = np.array([])
+            lrs = np.array([])
+            steps = np.array([])
+            iterations=0; markers = []
+            for H in self.computation_history:
+                if iterations != 0:
+                    ax.axvline(x=iterations-1,ls='--',c='black',lw=.5)
+                iterations += H['iterations']
+                costs = np.concatenate((costs,H['costs']))
+                grads = np.concatenate((grads,H['grads']))
+                lrs = np.concatenate((lrs,H['lrs']))
+                steps = np.concatenate((steps,H['steps']))
+            ax.semilogy(costs,label='stress',linewidth=3)
+            ax.semilogy(grads,label='grad size')
+            ax.semilogy(lrs,label='lr')
+            ax.semilogy(steps,label='step size')
+            ax.legend()
+            if plot is True:
+                plt.draw()
+                plt.pause(1.0)
         else:
-            windows = 3
-        if ax is None:
-            fig, ax = plt.subplots(1,windows,figsize=(3*windows,3))
-            fig.suptitle('computations')
-            fig.subplots_adjust(top=0.80)
-        ax[0].semilogy(self.H['costs'],linewidth=3)
-        ax[0].set_title('cost')
-        i = 1
-        if self.X_is_fixed is False:
-            ax[i].semilogy(self.H['X_iters'],self.H['X_grads'][:],
-                           label='grad size', linestyle='--')
-            ax[i].semilogy(self.H['X_iters'],self.H['X_lrs'][:],
-                           label='learning rate', linestyle='--')
-            ax[i].semilogy(self.H['X_iters'],self.H['X_steps'][:],
-                           label='step size', linestyle='--')
-            ax[i].set_title('X')
-            ax[i].legend()
-            ax[i].set_xlabel('iterations')
-            i = 2
-        if self.Q_is_fixed is False:
-            ax[i].semilogy(self.H['Q_iters'],self.H['Q_grads'][:],
-                           label='grad size',linestyle='--')
-            ax[i].semilogy(self.H['Q_iters'],self.H['Q_lrs'][:],
-                           label='learning rate', linestyle='--')
-            ax[i].semilogy(self.H['Q_iters'],self.H['Q_steps'][:],
-                           label='step size',linestyle='--')
-            ax[i].set_title('Q')
-            ax[i].legend()
-            ax[i].set_xlabel('iterations')
+            if ax is None:
+                fig, ax = plt.subplots(1,3,figsize=(3*3,3))
+                fig.suptitle('computations')
+                fig.subplots_adjust(top=0.80)
+            costs = np.array([])
+            grads_Q = np.array([])
+            lrs_Q = np.array([])
+            steps_Q = np.array([])
+            grads_X = np.array([])
+            lrs_X = np.array([])
+            steps_X = np.array([])
+            iterations=0; markers = []
+            
+            for H in self.computation_history:
+                if iterations != 0:
+                    ax[0].axvline(x=iterations-1,ls='--',c='black',lw=.5)
+                    ax[1].axvline(x=iterations-1,ls='--',c='black',lw=.5)
+                    ax[2].axvline(x=iterations-1,ls='--',c='black',lw=.5)
+                iterations += H['iterations']
+                costs = np.concatenate((costs,H['costs']))
+                if H['fixed_projections']:
+                    grads_X = np.concatenate((grads_X,H['grads']))
+                    lrs_X = np.concatenate((lrs_X,H['lrs']))
+                    steps_X = np.concatenate((steps_X,H['steps']))
+                    grads_Q = np.concatenate((grads_Q,[None]*H['iterations']))
+                    lrs_Q = np.concatenate((lrs_Q,[None]*H['iterations']))
+                    steps_Q = np.concatenate((steps_Q,[None]*H['iterations']))
+                elif H['fixed_embedding']:
+                    grads_X = np.concatenate((grads_X,[None]*H['iterations']))
+                    lrs_X = np.concatenate((lrs_X,[None]*H['iterations']))
+                    steps_X = np.concatenate((steps_X,[None]*H['iterations']))
+                    grads_Q = np.concatenate((grads_Q,H['grads']))
+                    lrs_Q = np.concatenate((lrs_Q,H['lrs']))
+                    steps_Q = np.concatenate((steps_Q,H['steps']))
+                else:
+                    grads_X = np.concatenate((grads_X,H['grads'][:,0]))
+                    lrs_X = np.concatenate((lrs_X,H['lrs'][:,0]))
+                    steps_X = np.concatenate((steps_X,H['steps'][:,0]))
+                    grads_Q = np.concatenate((grads_Q,H['grads'][:,1]))
+                    lrs_Q = np.concatenate((lrs_Q,H['lrs'][:,1]))
+                    steps_Q = np.concatenate((steps_Q,H['steps'][:,1]))
+                    
+            ax[0].semilogy(costs,linewidth=3)
+            ax[0].set_title('cost')                                            
+
+            ax[1].semilogy(grads_X, label='grad size', linestyle='--')
+            ax[1].semilogy(lrs_X,label='learning rate', linestyle='--')
+            ax[1].semilogy(steps_X,label='step size', linestyle='--')
+            ax[1].set_title('X')
+            ax[1].legend()
+            ax[1].set_xlabel('iterations')
+
+            ax[2].semilogy(grads_Q,label='grad size',linestyle='--')
+            ax[2].semilogy(lrs_Q,label='learning rate', linestyle='--')
+            ax[2].semilogy(steps_Q,label='step size',linestyle='--')
+            ax[2].set_title('Q')
+            ax[2].legend()
+            ax[2].set_xlabel('iterations')
                 
         if plot is True:
             plt.draw()
@@ -529,68 +625,67 @@ class MPSE(object):
     
 ##### TESTS #####
 
-def disk_fixed_perspectives(N=100,**kwargs):
-    fig, ax = plt.subplots(1,4,figsize=(12,3))
-    fig.suptitle('MPSE - disk data w/ fixed perspectives')
-    fig.subplots_adjust(top=0.8)
-    
-    #X = misc.disk(N,dim=3); labels=misc.labels(X)
-    #proj = projections.PROJ(); Q = proj.generate(number=3,method='standard') ##
-    #DD = multigraph.DISS(N,ncolor=labels)
-    #for i in range(3):
-    #    DD.add_feature(proj.project(Q[i],X))
-    #mv = MPSE(DD,Q=Q,verbose=2)
-
-    diss = multigraph.DISS(N)
-    diss.add_projections(attributes=10,Q='random')
-    Q = diss.Q
-    mv = MPSE(diss,Q=Q,verbose=2)
-    
-    ax0 = fig.add_subplot(1,4,1,projection='3d')
-    mv.figureX(title='initial embedding',ax=ax0)
-    mv.gd(**kwargs)
-    ax0 = fig.add_subplot(1,4,4,projection='3d')
-    mv.figureX(title='final embedding',ax=ax0)
-    mv.figureH('computation history',ax=[ax[1],ax[2]])
-    mv.figureY()
+def disk(N=100,fixed_projections=False,fixed_embedding=False,**kwargs):
+    X = misc.disk(N,dim=3)
+    proj = projections.PROJ()
+    Q = proj.generate(number=3,method='standard')
+    X1, X2, X3 = proj.project(Q,X)
+    if fixed_projections:
+        mv = MPSE([X1,X2,X3],Q=Q,verbose=2,sample_colors=X1[:,0])
+    elif fixed_embedding:
+        mv = MPSE([X1,X2,X3],X=X,verbose=2,sample_colors=X1[:,0])
+    else:
+        mv = MPSE([X1,X2,X3],verbose=2,sample_colors=X1[:,0])
+    mv.plot_embedding(title='initial embedding')
+    if fixed_projections:
+        mv.gd(fixed_projections=True,**kwargs)
+    elif fixed_embedding:
+        mv.gd(fixed_embedding=True,**kwargs)
+    else:
+        mv.gd(**kwargs)
+    mv.plot_computations()
+    mv.plot_embedding(title='final embeding')
+    mv.plot_projections(colors=False)
     plt.draw()
     plt.pause(0.2)
 
-def disk_fixed_embedding(N=100,**kwargs):
-    X = misc.disk(N,dim=3); labels=misc.labels(X)
-    proj = projections.PROJ(); Q = proj.generate(number=3,method='standard') ##
-    DD = multigraph.DISS(N,ncolor=labels)
-    for i in range(3):
-        DD.add_feature(proj.project(Q[i],X))
-    mv = MPSE(DD,X=X,verbose=1)
+def e123(N=100,fixed_projections=False,fixed_embedding=False,
+         visualization_method='mds',smart=False,**kwargs):
+    X = np.genfromtxt('data/123/spicy_rice_1000_123.csv',delimiter=',')
+    X1 = np.genfromtxt('data/123/spicy_rice_1000_1.csv',delimiter=',')
+    X2 = np.genfromtxt('data/123/spicy_rice_1000_2.csv',delimiter=',')
+    X3 = np.genfromtxt('data/123/spicy_rice_1000_3.csv',delimiter=',')  
+    proj = projections.PROJ()
+    Q = proj.generate(number=3,method='cylinder')
+    if fixed_projections:
+        fixed_projections = Q
+    else:
+        fixed_projections = None
+    if fixed_embedding:
+        fixed_embedding = X
+    else:
+        fixed_embedding = None
+    mv = MPSE([X1,X2,X3],fixed_embedding=fixed_embedding,
+              fixed_projections=fixed_projections,verbose=2,
+              sample_colors=X1[:,0],
+              visualization_method=visualization_method,**kwargs)
+    mv.plot_embedding(title='initial embedding')
+    if smart:
+        mv.smart_initialize()
+        mv.plot_embedding(title='smart initialize')
     mv.gd(**kwargs)
-    mv.figureX(title='final embedding')
-    mv.figureY()
-    mv.figureH('computation history')
+    mv.plot_computations()
+    mv.plot_embedding(title='final embeding')
+    mv.plot_projections()
     plt.draw()
     plt.pause(0.2)
 
-def disk(N=100,**kwargs):
-    dim=3
-    X = misc.disk(N,dim=3); labels=misc.labels(X)
-    proj = projections.PROJ(); Q = proj.generate(number=dim)
-    DD = multigraph.DISS(N,ncolor=labels)
-    for i in range(dim):
-        DD.add_feature(proj.project(Q[i],X))
-    mv = MPSE(DD,verbose=2,**kwargs)
-    mv.figureX(title='initial embedding')
-    #mv.smart_initialize()
-    #mv.figureX(title='smart initial embedding')
-    mv.gd(**kwargs)
-    #mv.gd(average_neighbors=64,max_iter=15)
-    mv.figureX(title='final embedding')
-    mv.figureY()
-    mv.figureH(title='')
-    plt.show()
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
-    #disk_fixed_perspectives(100,average_neighbors=1,max_iter=200,lr=1)
-    #disk_fixed_embedding(100,average_neighbors=2,max_iter=100,lr=1)
-    disk(100,average_neighbors=6,max_iter=100)
+    e123(fixed_projections=False,fixed_embedding=False,batch_size=10,
+         visualization_method='mds',max_iter=100,smart=True)
+    #e123(fixed_projections=False,fixed_embedding=False,batch_size=None,
+     #    lr=[1,.1],#lr=[100,10],
+      #   visualization_method='tsne',max_iter=100,smart=True)
     plt.show()
