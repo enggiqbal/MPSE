@@ -85,11 +85,22 @@ def basic(data, data_args=None, fixed_projections=None,
     vis.projections = projection parameters
     vis.computation_history = list with computation dictionaries
     """
-    vis = mpse.MPSE(data,verbose=verbose,
+    #old variables:
+    if 'Q' in kwargs:
+        fixed_projections = kwargs['Q']
+        del kwargs['Q']
+        
+    vis = mpse.MPSE(data,verbose=verbose,fixed_projections=fixed_projections,
                     visualization_method=visualization_method,**kwargs)
-    if smart_initialize is True:
+    if smart_initialize is True and fixed_projections is None:
         vis.smart_initialize()
     if visualization_method == 'mds' and 'batch_size' not in kwargs:
         kwargs['batch_size'] = 10
     vis.gd(**kwargs)
+    
+    #old variables:
+    vis.X = vis.embedding
+    vis.Q = vis.projections
+    vis.H = vis.computation_history
+    
     return vis

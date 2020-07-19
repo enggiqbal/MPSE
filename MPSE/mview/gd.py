@@ -250,10 +250,10 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
     it0 = 1
     for i in range(it0):
         if stochastic is False:
-            fx, dfx = F(x)
+            dfx, fx = F(x)
         else:
             xi = Xi()
-            fx, dfx = F(x,**xi)
+            dfx, fx = F(x,**xi)
         x, kwargs = fixed(x,dfx,lr=lr,p=p)
         costs[i] = fx
         grads[i] = np.linalg.norm(dfx)/normalization #######
@@ -271,20 +271,20 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         if stochastic is False:
             if constraint is True:
                 if scheme in ['bb','mm']:
-                    fy, dfy = F(y)
+                    dfy, fy = F(y)
                     kwargs['df0x'] = dfy
-            fx, dfx = F(x)
+            dfx, fx = F(x)
         else:
             if constraint is False:
                 if scheme in ['bb','mm']:
-                    f0x, df0x = F(x,**xi)
+                    df0x, f0x = F(x,**xi)
                     kwargs['df0x'] = df0x
             else:
                 if scheme in ['bb','mm']:
                     fy, dfy = F(y,**xi)
                     kwargs['df0x'] = dfy
             xi = Xi()
-            fx, dfx = F(x,**xi)
+            dfx, fx = F(x,**xi)
         costs[i] = fx
         grads[i] = np.linalg.norm(dfx)/normalization #rms of gradient
         
@@ -442,10 +442,10 @@ def multiple(X,F,Xi=None,p=None,scheme='mm',min_cost=None,
     it0 = 1
     for i in range(it0):
         if stochastic is False:
-            fX, dfX = F(X)
+            dfX, fX = F(X)
         else:
             xi = Xi()
-            fX, dfX = F(X,**xi)
+            dfX, fX = F(X,**xi)
         KWARGS = []
         if constraint is True:
             Y = []
@@ -468,15 +468,15 @@ def multiple(X,F,Xi=None,p=None,scheme='mm',min_cost=None,
 
         if stochastic is False:
             if constraint is True:
-                fY, dfY = F(Y)
-            fX, dfX = F(X)
+                dfY, fY = F(Y)
+            dfX, fX = F(X)
         else:
             if constraint is False:
-                f0X, df0X = F(X,**xi)
+                df0X, f0X = F(X,**xi)
             else:
-                f0Y, df0Y = F(Y,**xi)
+                df0Y, f0Y = F(Y,**xi)
             xi = Xi()
-            fX, dfX = F(X,**xi)
+            dfX, fX = F(X,**xi)
             
         costs[i] = fX     
         grads[i] = [np.linalg.norm(a)/b for a, b in zip(dfX,normalization)]

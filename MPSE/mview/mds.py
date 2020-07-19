@@ -106,12 +106,14 @@ def full_gradient(distances, embedding, weights=None, normalize=True,
                 stress = math.sqrt(stress)/len(distances)
             else:
                 stress = math.sqrt(stress)/np.sum(weights)
-                
-    return stress, grad
+
+    if return_objective:
+        return grad, stress
+    else:
+        return grad
 
 def batch_gradient(distances, embedding, batch_size=10, indices=None,
-                   weights=None,
-                   normalize=True, return_objective=True):
+                   weights=None, normalize=True, return_objective=True):
     """\
     Returns gradient of MDS stress function for given batch, along with the
     corrresponding portion of the MDS stress function value (optional).
@@ -159,14 +161,17 @@ def batch_gradient(distances, embedding, batch_size=10, indices=None,
         batch_idx = np.sort(indices[start:end])
         embedding_batch = embedding[batch_idx]
         distances_batch = distances[setup.batch_indices(batch_idx,n_samples)]
-        st0, grad[batch_idx] = full_gradient(distances_batch,
-                                           embedding_batch)
+        grad[batch_idx], st0 = full_gradient(distances_batch, embedding_batch)
         stress += st0**2
     if normalize:
+        n_batches = math.ceil(n_samples/batch_size)
         grad /= np.linalg.norm(distances)/n_samples*batch_size
-        stress = math.sqrt(stress/len(distances))
+        stress = math.sqrt(stress/n_batches)
 
-    return stress, grad
+    if return_objective:
+        return grad, stress
+    else:
+        return grad
         
 
 def stress_function(X,D,normalize=True,estimate=True,weighted=False,**kwargs):
@@ -368,10 +373,13 @@ class MDS(object):
 
         Parameters:
 
-        distances : numpy array
-        Either i) a dictionary with the lists of edges, distances, and weights 
-        as described in dissimilarities.py or ii) a dissimilarity
-        matrix.
+        data : array or dictionary
+        Distance/dissimilarity/feature data, which can have any of the 
+        following formats:
+        1) a 1D condensed distance array
+        2) a square distance matrix/array
+        3) a feature array
+        4) a disctionary describing a graph
 
         dim : int > 0
         Embedding dimension.
