@@ -24,9 +24,7 @@ def stress(distances, embedding, weights=None, normalize=True):
     Embedding.
 
     weights : array, shape (n_samples*(n_samples-1)/2,)
-    Array containing weights of samples pairs, used in determining contribution
-    of each pair to MDS stress. If None given, then the MDS stress function is
-    unweighted.
+    MDS weights. If None given, the MDS stress function is unweighted.
 
     normalize : boolean
     If set to True, returns normalized stress.
@@ -41,13 +39,12 @@ def stress(distances, embedding, weights=None, normalize=True):
     diff = distances-dist
     if weights is None:
         stress = np.linalg.norm(diff)**2
+        if normalize:
+            stress = math.sqrt(stress/len(distances))
     else:
         stress = np.dot(weights,diff**2)
-    if normalize:
-        if weights is None:
-            stress = math.sqrt(stress)/len(distances)
-        else:
-            stress = math.sqrt(stress)/np.sum(weights)
+        if normalize:
+            stress = math.sqrt(stress/np.sum(weights))
     return stress
 
 def full_gradient(distances, embedding, weights=None, normalize=True,
@@ -83,18 +80,29 @@ def full_gradient(distances, embedding, weights=None, normalize=True,
     Stress (or estimate) for given embedding. This is returned by default, but
     can be suppresed by setting return_objective to False.
     """
+    #safety parameters:
+    min_dist = 1e-6 #minimum embedding distance used
+    
     grad = np.zeros(embedding.shape)
     stress = 0
-    dist = scipy.spatial.distance.pdist(embedding) #embedding distances
+    dist = scipy.spatial.distance.pdist(embedding)
     diff = dist-distances
 
-    grad_terms = scipy.spatial.distance.squareform(2*diff/np.maximum(dist,1e-6)) ###check
+    if weights is None:
+        constants = 2*diff/np.maximum(dist,min_dist)
+    else:
+        constants = 2*weights*diff/np.maximum(dist,min_dist)
+
+    grad_terms = scipy.spatial.distance.squareform(constants)
     for i in range(len(embedding)):
         grad[i] = np.dot(np.ravel(grad_terms[i],order='K'),
                                   embedding[i]-embedding)
 
     if normalize:
-        grad /= np.linalg.norm(distances)
+        if weights is None:
+            grad /= np.linalg.norm(distances)
+        else:
+            grad /= np.sqrt(np.dot(weights,distances**2))
 
     if return_objective:
         if weights is None:
@@ -103,9 +111,9 @@ def full_gradient(distances, embedding, weights=None, normalize=True,
             stress = np.dot(weights,diff**2)
         if normalize:
             if weights is None:
-                stress = math.sqrt(stress)/len(distances)
+                stress = math.sqrt(stress/len(distances))
             else:
-                stress = math.sqrt(stress)/np.sum(weights)
+                stress = math.sqrt(stress/np.sum(weights))
 
     if return_objective:
         return grad, stress
@@ -156,12 +164,17 @@ def batch_gradient(distances, embedding, batch_size=10, indices=None,
         assert len(indices) == n_samples
     grad = np.empty(embedding.shape)
     stress = 0
+    weights_batch = None
     for start in range(0, n_samples, batch_size):
         end = min(start+batch_size,n_samples)
         batch_idx = np.sort(indices[start:end])
         embedding_batch = embedding[batch_idx]
-        distances_batch = distances[setup.batch_indices(batch_idx,n_samples)]
-        grad[batch_idx], st0 = full_gradient(distances_batch, embedding_batch)
+        batch_indices = setup.batch_indices(batch_idx,n_samples)
+        distances_batch = distances[batch_indices]
+        if weights is not None:
+            weights_batch = weights[batch_indices]
+        grad[batch_idx], st0 = full_gradient(distances_batch, embedding_batch,
+                                             weights=weights_batch)
         stress += st0**2
     if normalize:
         n_batches = math.ceil(n_samples/batch_size)
@@ -365,7 +378,7 @@ class MDS(object):
     """\
     Class with methods to solve multi-dimensional scaling problems.
     """
-    def __init__(self, data, dim=2, weighted=False, estimate=True,
+    def __init__(self, data, dim=2, weights=None, estimate=True,
                  normalize=True, initial_embedding='random',
                  sample_colors=None, verbose=0, indent='', **kwargs):
         """\
@@ -384,8 +397,8 @@ class MDS(object):
         dim : int > 0
         Embedding dimension.
 
-        weighted : boolean
-        Whether to use weights in computation.
+        weights : None or str or callable or array
+        Weights to be used in defining MDS stress.
 
         verbose : int >= 0
         Print status of methods in MDS object if verbose > 0.
@@ -393,8 +406,6 @@ class MDS(object):
         title : string
         Title assigned to MDS object.
         """
-        self.normalize = normalize
-        self.sample_colors = sample_colors
         self.verbose = verbose
         self.indent = indent
         if self.verbose > 0:
@@ -402,25 +413,33 @@ class MDS(object):
 
         self.distances = setup.setup_distances(data)
         self.n_samples = scipy.spatial.distance.num_obs_y(self.distances)
+
+        self.weights = setup.setup_weights(self.distances, weights=weights)
+        self.normalize = normalize
+                
+        if sample_colors is None:
+            self.sample_colors = self.distances[0:self.n_samples]
+        else:
+            self.sample_colors = sample_colors
         
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
-
-        assert isinstance(weighted,bool)
-        self.weighted = weighted
 
         assert isinstance(estimate,bool)
         self.estimate = estimate
 
 
-        self.objective = lambda X, **kwargs : stress(self.distances,X)
-        def gradient(embedding,batch_size=None,indices=None,**kwargs):
+        self.objective = lambda X, **kwargs : stress(
+            self.distances, X, weights=self.weights, normalize=self.normalize)
+        def gradient(embedding, batch_size=None, indices=None, **kwargs):
             if batch_size is None or batch_size >= self.n_samples:
-                return full_gradient(self.distances,embedding,
-                                   normalize=self.normalize)
+                return full_gradient(
+                    self.distances,embedding,
+                    weights=self.weights, normalize=self.normalize)
             else:
-                return batch_gradient(self.distances,embedding, batch_size,
-                                      indices, normalize=self.normalize)
+                return batch_gradient(
+                    self.distances,embedding, batch_size, indices,
+                    weights=self.weights, normalize=self.normalize)
         self.gradient = gradient
 
         if verbose > 0:
@@ -499,19 +518,19 @@ class MDS(object):
                        axis=True,plot=True,
                        ax=None,**kwargs):
         assert self.dim >= 2
-        if ax is None:
-            fig, ax = plt.subplots()
-        else:
-            plot = False
         if edges is True:
             edges = self.distances['edge_list']
         elif edges is False:
             edges = None
         if colors == 'default':
             colors = self.sample_colors
-            
-        plots.plot2D(self.X,edges=edges,colors=colors,labels=labels,
-                     axis=axis,ax=ax,title=title,**kwargs)
+
+        if self.dim == 2:
+            plots.plot2D(self.X,edges=edges,colors=colors,labels=labels,
+                         axis=axis,ax=ax,title=title,**kwargs)
+        else:
+            plots.plot3D(self.X,edges=edges,colors=colors,title=title,
+                         ax=ax,**kwargs)
         if plot is True:
             plt.draw()
             plt.pause(1)
@@ -547,20 +566,24 @@ class MDS(object):
                                    
 ### TESTS ###
 
-def disk(N=128,**kwargs):
+def disk(N=128,weighted=False,**kwargs):
     print('\n***disk example***\n')
     
     X = misc.disk(N,2); colors = misc.labels(X)
     distances = scipy.spatial.distance.pdist(X)
     
     title = 'basic disk example'
-    mds = MDS(distances,dim=2,verbose=2,title=title,sample_colors=colors)
+    if weighted is False:
+        weights = None
+    else:
+        weights = 'reciprocal'
+    mds = MDS(distances,weights=weights,dim=2,verbose=2,title=title,
+              sample_colors=colors)
 
     fig, ax = plt.subplots(1,3,figsize=(9,3))
     fig.suptitle('MDS - disk data')
     fig.subplots_adjust(top=0.80)
     mds.plot_embedding(title='initial embedding',ax=ax[0])
-    mds.gd(min_cost=1e-6,**kwargs)
     mds.gd(min_cost=1e-6,**kwargs)
     mds.plot_computations(ax=ax[1])
     mds.plot_embedding(title='final embedding',ax=ax[2])
@@ -570,6 +593,6 @@ def disk(N=128,**kwargs):
 if __name__=='__main__':
 
     print('mview.mds : running tests')
-    disk(N=1000,batch_size=None,max_iter=100)
+    disk(N=1000,weighted=True,batch_size=10,max_iter=100)
     plt.show()
     

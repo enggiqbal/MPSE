@@ -11,7 +11,7 @@ def setup_distances(data,metric=None,**kwargs):
     """\
     Sets up condensed distances.
 
-    distances : array
+    data : array
     Can be a distance matrix or an array of features.
 
     Returns
@@ -32,6 +32,42 @@ def setup_distances(data,metric=None,**kwargs):
         else:
             distances = distance.pdist(data)
     return distances
+
+def setup_weights(distances, weights, max_weight=1.0, min_weight=1e-2):
+    """\
+    Sets up condensed weights array.
+
+    Parameters
+    ----------
+
+    distances : array (n_samples*(n_samples-1),)
+    Condensed distances.
+
+    weights : None or str or callable or array
+    Weights.
+    """
+    if isinstance(weights,str):
+        if weights == 'reciprocal':
+            weights = 1.0/distances
+        else:
+            sys.exit('weight type unknown')
+    elif callable(weights):
+        try:
+            weights = weights(distance)
+        except:
+            weights = np.array([weights(dist) for dist in distances])
+    elif isinstance(weights,np.ndarray):
+        assert distances == weights.shape
+    else:
+        assert weights is None
+        
+    if weights is not None:
+        if max_weight is not None:
+            weights = np.maximum(weights,max_weight)
+        if min_weight is not None:
+            weights = np.minimum(weights,min_weight)
+            
+    return weights
 
 def setup_distances_from_multiple_perspectives(data,data_args=None):
     """\

@@ -541,6 +541,8 @@ class MPSE(object):
                 colors_k = [0]+list(self.distances[k][0:self.n_samples-1]) ####
             elif colors is False:
                 colors_k = None
+            else:
+                colors_k = colors
             plots.plot2D(self.images[k],edges=edges[k],colors=colors_k,ax=ax[k],
                          **kwargs)
         plt.suptitle(title)

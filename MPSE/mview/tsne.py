@@ -130,7 +130,7 @@ def grad_KL(P,embedding,only_gradient=False):
         grad[i] = np.dot(np.ravel(PQd[i],order='K'),embedding[i]-embedding)
     grad *= 4
     
-    return (kl_divergence,grad)
+    return grad, kl_divergence
 
 def batch_gradient(P, embedding, batch_size=10, indices=None, weights=None,
                    return_objective=True):
@@ -150,11 +150,11 @@ def batch_gradient(P, embedding, batch_size=10, indices=None, weights=None,
         batch_idx = np.sort(indices[start:end])
         embedding_batch = embedding[batch_idx]
         P_batch = P[setup.batch_indices(batch_idx,n_samples)]
-        st0, grad[batch_idx] = grad_KL(P_batch,
+        grad[batch_idx], st0 = grad_KL(P_batch,
                                        embedding_batch)
         stress += st0
 
-    return stress, grad
+    return grad, stress
 
 class TSNE(object):
     """\
@@ -218,6 +218,8 @@ class TSNE(object):
             else:
                 return batch_gradient(self.P,embedding,batch_size,indices)
         self.gradient = gradient
+
+        self.initialize()
 
     def set_sigma(self,sigma='optimal',perplexity=30.0):
         if isinstance(sigma,numbers.Number):
@@ -323,7 +325,7 @@ def example_tsne(**kwargs):
     from scipy import spatial
     D = spatial.distance_matrix(X_true,X_true)
 
-    vis = TSNE(D,verbose=2,perplexity=150,sample_colors=colors)
+    vis = TSNE(D,verbose=2,perplexity=50,sample_colors=colors)
     vis.initialize(X0=X_true)
     vis.plot_embedding()
     vis.gd(plot=True,**kwargs)
@@ -344,5 +346,5 @@ def sk_tsne():
     
 if __name__=='__main__':
     print('mview.tsne : tests')
-    example_tsne(batch_size=150)
+    example_tsne()
     

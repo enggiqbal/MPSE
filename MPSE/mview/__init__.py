@@ -4,6 +4,7 @@ import matplotlib.pyplot as plt
 import projections, mds, mpse, misc
 from multigraph import DISS
 from mds import MDS
+from tsne import TSNE
 from mpse import MPSE
 
 def basic(data, data_args=None, fixed_projections=None,
