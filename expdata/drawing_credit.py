@@ -1069,7 +1069,7 @@ def save_figure(points,js_file_name, proj, outdir):
 def draw2d(points,outdir,js_file_name,proj):
     filename=outdir+js_file_name.replace(".js", proj) + ".png"
     fig = plt.figure()
-    ax = plt.axes()
+    
     ax.grid(False)
     plt.axis('off')
     ax.scatter(points.T[0], points.T[1],  c='green', marker="x" , cmap='Greens')
@@ -1092,6 +1092,79 @@ def mscatter(x,y,ax=None, m=None, **kw):
         sc.set_paths(paths)
     return sc
  
+def processingXX(ps1):
+    edu_shape={'Lower secondary':'P','Secondary / secondary special':'s' , 'Incomplete higher':'v' , 'Higher education':'o' } 
+
+    size=[]
+    markers=[]
+    for i in range(len(ps1)):
+        color.append(  edu_color[labels[i][2]])
+        s= 40* ( float (labels[i][0])  -  minmax[0]) / (minmax[1]-minmax[0]) 
+        size.append(s)
+        if (labels[i][1] == 'M'):
+            marker='s'
+        else:
+            marker='o'
+        markers.append(marker)
+    scatter = mscatter(ps1.T[0],ps1.T[1], c=color, s=size, m=markers, ax=ax, alpha=0.5)
+    return ax
+    
+
+def processing(ps1):
+    edu_shape={'Lower secondary':'P','Secondary / secondary special':'s' , 'Incomplete higher':'v' , 'Higher education':'o' } 
+
+    size=[]
+    markers=[]
+    for i in range(len(ps1)):
+        
+        markers.append(edu_shape[labels[i][2]])
+        s=   ( float (labels[i][0])  -  minmax[0]) / (minmax[1]-minmax[0]) 
+        size.append(s)
+        if (labels[i][1] == 'M'):
+           color.append('red' )
+        else:
+           color.append( 'blue')
+ 
+        ax.scatter(ps1.T[0][i], ps1.T[1][i], s=10, alpha=size[i], c=color[i], marker=markers[i], cmap='Greens')
+    #scatter = mscatter(ps1.T[0],ps1.T[1], c=color, s=10, m=markers, ax=ax, alpha=size)
+    return ax
+    
+def drawing1(ps1,ax, fname,ftype):
+    ax=processing(ps1)
+    legend_elements_salary =[]
+    legend_elements_salary.append(Line2D([0], [0], marker='s', alpha=0.5, color='w', label= 'Income (size)' , markerfacecolor='None', markersize=8))
+    ax.legend(handles=legend_elements_salary, loc='upper center')
+    plt.savefig(fname+ftype,  format=ftype)
+
+def drawing2(ps1,ax, fname,ftype):
+    ax=processing(ps1)
+    legend_elements_salary =[]
+    legend_elements_gender = [ 
+                       Line2D([0], [0], marker='s', alpha=0.5, color='w', label='Male',
+                              markerfacecolor='None', markersize=8),
+                         Line2D([0], [0], marker='o',alpha=0.5, color='w', label='Female',
+                              markerfacecolor='None', markersize=8),
+                        ]
+    ax.legend(handles=legend_elements_gender, loc='upper center')
+    plt.savefig(fname+ftype, format=ftype)
+    
+    
+def drawing3(ps1,ax, fname,ftype):
+    ax=processing(ps1)
+    legend_elements_edu = [ 
+                    Line2D([0], [0], marker='s', alpha=0.5, color='w', label='Lower secondary',
+                            markerfacecolor='red', markersize=8),
+                        Line2D([0], [0], marker='s',alpha=0.5, color='w', label='Secondary / secondary special',
+                            markerfacecolor='green', markersize=8),
+                        Line2D([0], [0], marker='s',alpha=0.5, color='w', label='Incomplete higher',
+                            markerfacecolor='blue', markersize=8),
+                        Line2D([0], [0], marker='s',alpha=0.5, color='w', label='Higher education',
+                            markerfacecolor='purple', markersize=8),
+                        ]
+    ax.legend(handles=legend_elements_edu, loc='lower left')
+    plt.savefig(fname+ftype,  format=ftype)
+    
+    
 
 P=np.array(proj)
 points_data=np.array(points)
@@ -1108,69 +1181,22 @@ color=[]
 markers=[]
 facecolors=[]
  
-ps1=ps3
-
-ax = plt.axes()
 labels=np.array(labels)
+
 minmax= [min([float(a) for a in labels.T[0]]) , max([float(a) for a in labels.T[0]])]
-# for i in range(len(ps1)):
-#     c=edu_color[labels[i][2]]
-#     s= 40* ( float (labels[i][0])  -  minmax[0]) / (minmax[1]-minmax[0]) 
-#     if (labels[i][1] == 'M'):
-#         marker='s'
-#         l="Male"
-#     else:
-#         marker='o'
-#         l="Female"
-    
-#     ax.scatter(ps1.T[0][i], ps1.T[1][i], s=s, alpha=0.5, c=c, marker=marker , cmap='Greens', label=l)
+#ax = plt.axes()
 
-size=[]
-markers=[]
-for i in range(len(ps1)):
-    color.append(  edu_color[labels[i][2]])
-    
-    s= 40* ( float (labels[i][0])  -  minmax[0]) / (minmax[1]-minmax[0]) 
-    size.append(s)
-    if (labels[i][1] == 'M'):
-        marker='s'
-    else:
-        marker='o'
-    markers.append(marker)
+plt.clf()
+ax = plt.axes()
+drawing1(ps1,ax,   'ps1.', 'png')
 
-scatter = mscatter(ps1.T[0],ps1.T[1], c=color, s=size, m=markers, ax=ax, alpha=0.5)
-  
-legend_elements_salary =[]
+plt.clf()
+ax = plt.axes()
+drawing2(ps2,ax, 'ps2.', 'png')
 
+plt.clf()
+ax = plt.axes()
+drawing3(ps3,ax, 'ps3.', 'png')
  
-# legend_elements_salary.append(Line2D([0], [0], marker='s', alpha=0.5, color='w', label= 'Income (size)' , markerfacecolor='None', markersize=8))
- 
-# ax.legend(handles=legend_elements_salary, loc='upper center')
-# plt.savefig("ps1.png")
  
 
- 
-
-# legend_elements_gender = [ 
-#                    Line2D([0], [0], marker='s', alpha=0.5, color='w', label='Male',
-#                           markerfacecolor='None', markersize=8),
-#                      Line2D([0], [0], marker='o',alpha=0.5, color='w', label='Female',
-#                           markerfacecolor='None', markersize=8),
-#                     ]
-# ax.legend(handles=legend_elements_gender, loc='upper center')
-# plt.savefig("ps2.png")
- 
-
-legend_elements_edu = [ 
-                   Line2D([0], [0], marker='s', alpha=0.5, color='w', label='Lower secondary',
-                          markerfacecolor='red', markersize=8),
-                     Line2D([0], [0], marker='s',alpha=0.5, color='w', label='Secondary / secondary special',
-                          markerfacecolor='green', markersize=8),
-                     Line2D([0], [0], marker='s',alpha=0.5, color='w', label='Incomplete higher',
-                          markerfacecolor='blue', markersize=8),
-                     Line2D([0], [0], marker='s',alpha=0.5, color='w', label='Higher education',
-                          markerfacecolor='purple', markersize=8),
-                    ]
-ax.legend(handles=legend_elements_edu, loc='lower left')
-plt.savefig("ps3.png")
- 
