@@ -3,22 +3,39 @@ import numbers, math, random
 import matplotlib.pyplot as plt
 import numpy as np
 import scipy.spatial.distance as distance
+import scipy.sparse.csgraph as csgraph
 import itertools
 
 ### Functions to setup condensed distances from data ###
 
-def setup_distances(data,metric=None,**kwargs):
+def setup_distances(data, shortest_path=False, **kwargs):
     """\
     Sets up condensed distances.
 
+    Parameters
+    ----------
+
     data : array
-    Can be a distance matrix or an array of features.
+    Distance/dissimilarity data. Options:
+    1) a condensed array containing distances (n_samples*(n_samples-1),)
+    2) a square matrix containing distances (n_samples, n_samples)
+    3) an array with features (length n_samples)
+
+    shortest_path : boolean
+    If True, alter distances by computing shortest path.
+
+    kwargs
+    ------
+
+    metric : str
+    If computing distances from an array of features, this is the metric to be
+    passed to scipy.spatial.distance.pdist
 
     Returns
     -------
 
-    condensed_distances : array
-    Array with condensed distances.
+    distances : array, shape (n_samples*(n_samples-1)/2,)
+    Condensed distances.
     """
     assert isinstance(data,np.ndarray)
     if len(data.shape) == 1:
@@ -28,9 +45,13 @@ def setup_distances(data,metric=None,**kwargs):
         assert len(data.shape) == 2
         a, b = data.shape
         if b == a:
-            distances = distance.squareform(data,checks=False)
+            distances = distance.squareform(data, checks=False)
         else:
-            distances = distance.pdist(data)
+            distances = distance.pdist(data,**kwargs)
+    if shortest_path:
+        distances = distance.squareform(distances)
+        distances = csgraph.shortest_path(distances)
+        distances = distance.squareform(distances, checks=False)
     return distances
 
 def setup_weights(distances, weights, max_weight=1.0, min_weight=1e-2):

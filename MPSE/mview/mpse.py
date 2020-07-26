@@ -119,7 +119,6 @@ class MPSE(object):
         proj = projections.PROJ(embedding_dimension,image_dimension,
                                 projection_family,projection_constraint)
         self.proj = proj
-        self.time = 0
 
         if verbose > 0:
             print(indent+'  data details:')
@@ -317,17 +316,20 @@ class MPSE(object):
         self.initial_cost = None
         self.initial_individual_cost = None
         self.computation_history = []
+        self.time = 0
         self.update(**kwargs)
 
     def update(self,**kwargs):
         self.images = self.proj.project(self.projections,self.embedding)
         self.cost, self.individual_cost = self.cost_function(
-            self.embedding,self.projections,Y=self.images,**kwargs) 
+            self.embedding,self.projections,Y=self.images,**kwargs)
         if self.initial_cost is None:
             self.initial_cost = self.cost
             self.initial_individual_cost = self.individual_cost
+        else:
+            self.time = self.computation_history[-1]['time']
 
-    def smart_initialize(self,max_iter=[100,50],lr=[1,0.1],
+    def smart_initialize(self,max_iter=[50,30],lr=[1,0.1],
                          batch_size=10,**kwargs):
         """\
         Computes an mds embedding (dimension embedding_dimension) of the 
@@ -554,7 +556,6 @@ class MPSE(object):
         if self.fixed_embedding is True or self.fixed_projections is True:
             if ax is None:
                 fig, ax = plt.subplots()
-                fig.suptitle('computations')
             costs = np.array([])
             grads = np.array([])
             lrs = np.array([])
@@ -569,8 +570,8 @@ class MPSE(object):
                 lrs = np.concatenate((lrs,H['lrs']))
                 steps = np.concatenate((steps,H['steps']))
             ax.semilogy(costs,label='stress',linewidth=3)
-            ax.semilogy(grads,label='grad size')
-            ax.semilogy(lrs,label='lr')
+            ax.semilogy(grads,label='gradient size')
+            ax.semilogy(lrs,label='learning rate')
             ax.semilogy(steps,label='step size')
             ax.legend()
             if plot is True:
@@ -579,7 +580,6 @@ class MPSE(object):
         else:
             if ax is None:
                 fig, ax = plt.subplots(1,3,figsize=(3*3,3))
-                fig.suptitle('computations')
                 fig.subplots_adjust(top=0.80)
             costs = np.array([])
             grads_Q = np.array([])
@@ -620,21 +620,22 @@ class MPSE(object):
                     steps_Q = np.concatenate((steps_Q,H['steps'][:,1]))
                     
             ax[0].semilogy(costs,linewidth=3)
-            ax[0].set_title('cost')                                            
+            ax[0].set_title('MPSE stress')                                            
 
-            ax[1].semilogy(grads_X, label='grad size', linestyle='--')
+            ax[1].semilogy(grads_X, label='gradient size', linestyle='--')
             ax[1].semilogy(lrs_X,label='learning rate', linestyle='--')
             ax[1].semilogy(steps_X,label='step size', linestyle='--')
-            ax[1].set_title('X')
+            ax[1].set_title('embedding stats')
             ax[1].legend()
-            ax[1].set_xlabel('iterations')
+            #ax[1].set_xlabel('iterations')
+            ax[1].set_xlim([0,len(costs)])
 
-            ax[2].semilogy(grads_Q,label='grad size',linestyle='--')
+            ax[2].semilogy(grads_Q,label='gradient size',linestyle='--')
             ax[2].semilogy(lrs_Q,label='learning rate', linestyle='--')
             ax[2].semilogy(steps_Q,label='step size',linestyle='--')
-            ax[2].set_title('Q')
+            ax[2].set_title('projections stats')
             ax[2].legend()
-            ax[2].set_xlabel('iterations')
+            ax[2].set_xlim([0,len(costs)])
                 
         if plot is True:
             plt.draw()
@@ -662,11 +663,11 @@ def disk(N=100,fixed_projections=False,fixed_embedding=False,**kwargs):
         mv.gd(**kwargs)
     mv.plot_computations()
     mv.plot_embedding(title='final embeding')
-    mv.plot_projections(colors=False)
+    mv.plot_images()
     plt.draw()
     plt.pause(0.2)
 
-def e123(N=100,fixed_projections=False,fixed_embedding=False,
+def e123(fixed_projections=False,fixed_embedding=False,
          visualization_method='mds',smart=False,**kwargs):
     X = np.genfromtxt('samples/123/123.csv',delimiter=',')
     X1 = np.genfromtxt('samples/123/1.csv',delimiter=',')
@@ -700,14 +701,8 @@ def e123(N=100,fixed_projections=False,fixed_embedding=False,
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
-    e123(fixed_projections=False,fixed_embedding=False,batch_size=10,
-         visualization_method='mds',max_iter=100,smart=True)
-    e123(fixed_projections=True,fixed_embedding=False,batch_size=10,
-         visualization_method='mds',max_iter=100,smart=True)
-    e123(fixed_projections=False,fixed_embedding=True,batch_size=10,
-         visualization_method='mds',max_iter=100,smart=True)
-    #e123(fixed_projections=False,fixed_embedding=False,batch_size=None,
-     #    lr=[1,.1],#lr=[100,10],
-      #   visualization_method='tsne',max_iter=100,smart=True)
+    disk(fixed_projections=False, batch_size=20)
+    #e123(fixed_projections=False,fixed_embedding=False,batch_size=20,
+     #    visualization_method='mds',max_iter=300,smart=False)
     plt.show()
     
