@@ -279,7 +279,7 @@ class MPSE(object):
             else:
                 assert isinstance(initial_embedding,np.ndarray)
                 assert initial_embedding.shape == (
-                    self.n_samples, self.proj.embedding_dimension)
+                    self.n_samples, self.embedding_dimension)
                 if verbose > 0:
                     print(indent+'    initial embedding : given')
                 self.initial_embedding = initial_embedding
@@ -422,6 +422,8 @@ class MPSE(object):
                 F = lambda X : self.gradient(X,self.projections,
                                              return_projections=False)
             else:
+                if self.verbose > 0:
+                    print(self.indent+'      batch size :',batch_size)
                 def Xi():
                     indices = np.arange(self.n_samples)
                     np.random.shuffle(indices)
@@ -447,6 +449,8 @@ class MPSE(object):
                 F = lambda Q : self.gradient(self.embedding,Q,
                                              return_embedding=False)
             else:
+                if self.verbose > 0:
+                    print(self.indent+'      batch size :',batch_size)
                 def Xi():
                     indices = np.arange(self.n_samples)
                     np.random.shuffle(indices)
@@ -472,7 +476,8 @@ class MPSE(object):
                 Xi = None
                 F = lambda params : self.gradient(params[0],params[1])
             else:
-                print(self.indent+'      batch size :',batch_size)
+                if self.verbose > 0:
+                    print(self.indent+'      batch size :',batch_size)
                 def Xi():
                     indices = np.arange(self.n_samples)
                     np.random.shuffle(indices)
