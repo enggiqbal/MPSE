@@ -1,4 +1,5 @@
 import matplotlib.pyplot as plt
+import matplotlib.spines as spines
 from mpl_toolkits.mplot3d import Axes3D
 import pickle; import csv
 import numpy as np
@@ -19,9 +20,9 @@ def plot_cost(cost,steps=None,title='computations',plot=True,ax=None):
         plt.pause(1.0)
         
 def plot2D(Y,save=False,colors=None,edges=None,labels=None,
-           title=None,axis=True,ax=None,plot=True,markersize=25,**kwargs):
+           title=None,axis=True,ax=None,plot=True,markersize=40,**kwargs):
     if ax is None:
-        fig, ax = plt.subplots()
+        fig, ax = plt.subplots(figsize=(5,4))
     else:
         plot = False
 
@@ -29,9 +30,9 @@ def plot2D(Y,save=False,colors=None,edges=None,labels=None,
         for i,j in edges:
             ax.plot([Y[i,0],Y[j,0]],
                     [Y[i,1],Y[j,1]],'-',
-                    linewidth=0.15,color='gray')
+                    linewidth=0.1,color='lightgray',zorder=1)
             
-    ax.scatter(Y[:,0],Y[:,1],s=markersize,c=colors)
+    ax.scatter(Y[:,0],Y[:,1],s=markersize,c=colors,zorder=2)
     
     if labels is not None:
         N = len(Y)
@@ -39,21 +40,25 @@ def plot2D(Y,save=False,colors=None,edges=None,labels=None,
             labels = range(N)
         for i in range(N):
             ax.annotate(labels[i],(Y[i,0],Y[i,1]),textcoords="offset points",
-                        xytext=(0,4),ha='center')
-    ax.title.set_text(title)
+                        xytext=(0,4),ha='center',fontsize='large',
+                        fontstyle='oblique',fontweight='bold',
+                        horizontalalignment='center',color='red')
+    plt.title(label=title,fontweight='bold',fontsize='large')
     
     if axis is False:
-        ax.set_axis_off()
-        
+        #ax.set_axis_off()
+        ax.set_xticks([])
+        ax.set_yticks([])
+    plt.tight_layout()
     if plot is True:
         plt.draw()
         plt.pause(1)
 
 def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
-           title=None,axis=False,ax=None,markersize=25,labels=None):
+           title=None,axis=False,ax=None,markersize=40,labels=None):
         
     if ax is None:
-        fig= plt.figure()
+        fig= plt.figure(figsize=(5,4))
         ax = fig.add_subplot(1,1,1,projection='3d')
         plot = True
     else:
@@ -64,15 +69,16 @@ def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
         for k in range(len(q)):
             ind = np.argmax(np.sum(q[k]*X,axis=1))
             m = np.linalg.norm(X[ind])/np.linalg.norm(q[k])
-            ax.plot([0,m*q[k][0]],[0,m*q[k][1]],[0,m*q[k][2]],'--',linewidth=3,
-                    color='black')
+            ax.plot([0,m*q[k][0]],[0,m*q[k][1]],[0,m*q[k][2]],'--',
+                    linewidth=4.5,
+                    color='gray')
     N = len(X)
     if edges is not None:
         for i,j in edges:
             ax.plot([X[i,0],X[j,0]],
                     [X[i,1],X[j,1]],
                     [X[i,2],X[j,2]],'-',
-                    linewidth=0.25,color='black')
+                    linewidth=0.1,color='lightgray')
                         
     ax.scatter3D(X[:,0],X[:,1],X[:,2],c=colors,s=markersize)
 
@@ -81,13 +87,24 @@ def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
         if labels is True:
             labels = range(N)
         for i in range(N):
-            ax.text(X[i,0],X[i,1],X[i,2],labels[i])
+            ax.text(X[i,0],X[i,1],X[i,2],labels[i],withdash=True,
+                    fontsize='large',fontstyle='oblique',fontweight='bold',
+                    horizontalalignment='center',color='red')
     #ax.set_aspect(1.0)
     if axis is False:
         ax.set_axis_off()
     if title is not None:
         ax.title.set_text(title)
-        
+    ax.grid(color='r')
+    ax.set_xticks([])
+    ax.set_yticks([])
+    ax.set_zticks([])
+    ax.xaxis.pane.fill = False
+    ax.yaxis.pane.fill = False
+    ax.zaxis.pane.fill = False
+    plt.setp(ax.spines.values(), color='blue')
+    ax.axes.get_xaxis().set_visible(False)
+    
     if plot is True:
         plt.tight_layout()
         plt.draw()

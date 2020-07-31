@@ -461,6 +461,10 @@ class MDS(object):
         if verbose > 0:
             print(indent+'  data details:')
             print(indent+f'    number of samples : {self.n_samples}')
+            if self.weights is None:
+                print(indent+f'    weighted : False')
+            else:
+                print(indent+f'    weighted : True')
             print(indent+'  embedding details:')
             print(indent+f'    embedding dimension : {self.dim}')
 

@@ -5,24 +5,34 @@ import numpy as np
 import pandas as pd
 
 sys.path.insert(1, '../')
-import misc, projections, mpse
+import misc, projections, mpse, setup
 
-def time(n_samples,n_perspectives,fixed_projections=False,
-         trials=50, best=40):
+def time(n_samples,n_perspectives,fixed_projections=False,batch_size=20,
+         method='random',trials=50, attempts=3, best=40,verbose=0,max_iter=500):
     proj = projections.PROJ()
     times = []
     for k in range(trials):
         X = misc.disk(n_samples,dim=3)
-        Q = proj.generate(number=n_perspectives,method='random')
-        data = proj.project(Q,X)
+        Q = proj.generate(number=n_perspectives,method=method)
+        data = setup.setup_distances_from_multiple_perspectives(
+            proj.project(Q,X))
         if fixed_projections:
-            mv = mpse.MPSE(data,fixed_projections=Q)
+            Q0 = Q
         else:
-            mv = mpse.MPSE(data)
-        #mv.smart_initialize()
-        mv.gd(batch_size=20,max_iter=1000,min_cost=1e-3,min_grad=1e-8)
-        if mv.cost < 1.5e-3:
-            times.append(mv.time)
+            Q0 = None
+
+        best_time = np.Inf; best_cost = np.Inf
+        for i in range(attempts):
+            mv = mpse.MPSE(data,fixed_projectiosn=Q0)
+            mv.gd(batch_size=batch_size,max_iter=max_iter,min_cost=1e-3,
+                  min_grad=1e-8)
+            if verbose>1:
+                print(k,i,mv.cost,mv.time)
+            if mv.cost < 1.5e-3 and mv.time < best_time:
+                best_time = mv.time
+                best_cost = mv.cost
+            if best_cost < 1.5e-3:
+                times.append(best_time)
         #mv.plot_computations()
         #mv.plot_embedding()
         #mv.plot_images()
@@ -65,5 +75,6 @@ def comparison():
 
 #### RUN #####
 
-time(100,3,fixed_projections=False)
+time(100,3,fixed_projections=True,trials=20,best=10,verbose=2,
+     batch_size=10,max_iter=400,method='random')
 #comparison()

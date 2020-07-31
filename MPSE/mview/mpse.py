@@ -525,6 +525,29 @@ class MPSE(object):
         plots.plot3D(self.embedding,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,ax=ax,**kwargs)
 
+    def plot_image(self,index,title='embedding',edges=False,colors='default',
+                       labels=None,
+                       axis=True,plot=True,
+                       ax=None,**kwargs):
+        assert self.image_dimension >= 2
+        if edges is True:
+            edges = self.distances['edge_list']
+        elif edges is False:
+            edges = None
+        if colors == 'default':
+            colors = self.sample_colors
+
+        if self.image_dimension == 2:
+            plots.plot2D(self.images[index],edges=edges,colors=colors,
+                         labels=labels,
+                         axis=axis,ax=ax,title=title,**kwargs)
+        else:
+            plots.plot3D(self.X,edges=edges,colors=colors,title=title,
+                         ax=ax,**kwargs)
+        if plot is True:
+            plt.draw()
+            plt.pause(1)
+
     def plot_images(self,title=None,edges=False,
                 colors=True,plot=True,
                 ax=None,**kwargs):
@@ -560,7 +583,8 @@ class MPSE(object):
     def plot_computations(self,title='computations',plot=True,ax=None):
         if self.fixed_embedding is True or self.fixed_projections is True:
             if ax is None:
-                fig, ax = plt.subplots()
+                fig, ax = plt.subplots(1,2,figsize=(6,3))
+                fig.subplots_adjust(top=0.8)
             costs = np.array([])
             grads = np.array([])
             lrs = np.array([])
@@ -574,11 +598,17 @@ class MPSE(object):
                 grads = np.concatenate((grads,H['grads']))
                 lrs = np.concatenate((lrs,H['lrs']))
                 steps = np.concatenate((steps,H['steps']))
-            ax.semilogy(costs,label='stress',linewidth=3)
-            ax.semilogy(grads,label='gradient size')
-            ax.semilogy(lrs,label='learning rate')
-            ax.semilogy(steps,label='step size')
-            ax.legend()
+            ax[0].semilogy(costs,label='stress',linewidth=3)
+            ax[1].semilogy(grads,label='gradient size')
+            ax[1].semilogy(lrs,label='learning rate')
+            ax[1].semilogy(steps,label='step size')
+            ax[1].legend()
+            ax[0].set_xlabel('iterations')
+            ax[0].set_ylabel('stress')
+            ax[1].set_xlabel('iterations')
+            ax[1].set_ylabel('size')
+            ax[0].set_title('MPSE stress')
+            ax[1].set_title('embedding parameters')
             if plot is True:
                 plt.draw()
                 plt.pause(1.0)
@@ -706,8 +736,8 @@ def e123(fixed_projections=False,fixed_embedding=False,
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
-    disk(fixed_projections=False, batch_size=20)
-    #e123(fixed_projections=False,fixed_embedding=False,batch_size=20,
-     #    visualization_method='mds',max_iter=300,smart=False)
+    #disk(fixed_projections=False, batch_size=20)
+    e123(fixed_projections=True,fixed_embedding=False,batch_size=20,
+         visualization_method='mds',max_iter=300,smart=False,min_cost=0.001)
     plt.show()
     

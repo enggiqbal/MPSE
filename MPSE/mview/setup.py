@@ -54,7 +54,7 @@ def setup_distances(data, shortest_path=False, **kwargs):
         distances = distance.squareform(distances, checks=False)
     return distances
 
-def setup_weights(distances, weights, max_weight=1.0, min_weight=1e-2):
+def setup_weights(distances, weights, max_weight=2.0, min_weight=1e-2):
     """\
     Sets up condensed weights array.
 
@@ -84,9 +84,9 @@ def setup_weights(distances, weights, max_weight=1.0, min_weight=1e-2):
         
     if weights is not None:
         if max_weight is not None:
-            weights = np.maximum(weights,max_weight)
+            weights = np.minimum(weights,max_weight)
         if min_weight is not None:
-            weights = np.minimum(weights,min_weight)
+            weights = np.maximum(weights,min_weight)
             
     return weights
 
