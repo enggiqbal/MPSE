@@ -87,7 +87,7 @@ def plot3D(X,save=False,perspectives=None,edges=None,colors=None,
         if labels is True:
             labels = range(N)
         for i in range(N):
-            ax.text(X[i,0],X[i,1],X[i,2],labels[i],withdash=True,
+            ax.text(X[i,0],X[i,1],X[i,2],labels[i],#withdash=True,
                     fontsize='large',fontstyle='oblique',fontweight='bold',
                     horizontalalignment='center',color='red')
     #ax.set_aspect(1.0)
