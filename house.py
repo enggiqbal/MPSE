@@ -9,7 +9,7 @@ import time
 
 def main():
    
-    path = 'data/'
+    path = 'MPSE/datasets/dataset_house/'
     y1 = np.genfromtxt(path+'house1.csv', delimiter = ',')
     y2 = np.genfromtxt(path+'house61.csv', delimiter = ',')
     y3 = np.genfromtxt(path+'house107.csv', delimiter = ',')
