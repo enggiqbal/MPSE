@@ -1,15 +1,18 @@
 import numpy  as np
 import matplotlib.pyplot as plt
-import MPSE.mview as mview
 import time
+from sys import path
+from os.path import dirname as dir
 
+path.append(dir(path[0]))
+import mview as mview
 
 
 
 
 def main():
    
-    path = 'MPSE/datasets/dataset_house/'
+    path = '../datasets/dataset_house/'
     y1 = np.genfromtxt(path+'house2.csv', delimiter = ',')
     y2 = np.genfromtxt(path+'house62.csv', delimiter = ',')
     y3 = np.genfromtxt(path+'house108.csv', delimiter = ',')

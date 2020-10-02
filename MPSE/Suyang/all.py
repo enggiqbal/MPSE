@@ -1,6 +1,9 @@
 import numpy  as np
 import matplotlib.pyplot as plt
-import MPSE.mview as mview
+from sys import path
+from os.path import dirname as dir
+path.append(dir(path[0]))
+import mview as mview
 import sys
 
 
