@@ -10,9 +10,9 @@ import time
 def main():
    
     path = 'MPSE/datasets/dataset_house/'
-    y1 = np.genfromtxt(path+'house1.csv', delimiter = ',')
-    y2 = np.genfromtxt(path+'house61.csv', delimiter = ',')
-    y3 = np.genfromtxt(path+'house107.csv', delimiter = ',')
+    y1 = np.genfromtxt(path+'house2.csv', delimiter = ',')
+    y2 = np.genfromtxt(path+'house62.csv', delimiter = ',')
+    y3 = np.genfromtxt(path+'house108.csv', delimiter = ',')
     fig, ax = plt.subplots(1, 3)
     ax[0].plot(y1[:, 0], y1[:, 1], 'o')
     ax[1].plot(y2[:, 0], y2[:, 1], 'o')
