@@ -43,7 +43,7 @@ def plot2D(Y,save=False,colors=None,edges=None,labels=None,
                         xytext=(0,4),ha='center',fontsize='large',
                         fontstyle='oblique',fontweight='bold',
                         horizontalalignment='center',color='red')
-    plt.title(label=title,fontweight='bold',fontsize='large')
+    plt.title(title,fontweight='bold',fontsize='large')
     
     if axis is False:
         #ax.set_axis_off()
