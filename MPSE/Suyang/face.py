@@ -35,7 +35,7 @@ def main():
             fd.write(",".join([str(each[0]), str(each[1]), str(each[2])]) +"\n")
     mv.plot_embedding()
     mv.plot_computations()
-    #mv.plot_images(labels=True)
+    mv.plot_images(labels=True)
     input()
 
 main()
