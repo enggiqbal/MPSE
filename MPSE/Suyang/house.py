@@ -4,12 +4,24 @@ import time
 from sys import path
 from os.path import dirname as dir
 import mpl_toolkits.mplot3d as plt3d
+import nudged
+import matplotlib.transforms as mtransforms
+
 
 path.append(dir(path[0]))
 import mview as mview
 
 
+def do_plot(ax, Z, transform, y):
+    im = ax.imshow(Z)
 
+    trans_data = transform + ax.transData
+    im.set_transform(trans_data)
+
+    # display intended extent of the image
+    ax.plot(y[:, 0], y[:, 1], "o", color = 'red')
+    #ax.plot(y[:, 0], y[:, 1], "o", color = 'red',
+    #        transform=trans_data)
 
 def main():
     #2, 62, 108
@@ -88,6 +100,36 @@ def main():
     mv.plot_embedding()
     mv.plot_computations()
     mv.plot_images(labels=True)
+
+    projections = []
+    projections.append(mv.embedding @ mv.projections[0].T)
+    projections.append(mv.embedding @ mv.projections[1].T)
+    projections.append(mv.embedding @ mv.projections[2].T)
+
+    trans = []
+    trans.append(nudged.estimate(y1, projections[0]))
+    trans.append(nudged.estimate(y2, projections[1]))
+    trans.append(nudged.estimate(y3, projections[2]))
+
+    fig1, cx = plt.subplots(1, 3)
+    
+    Z = [x1, x2, x3]
+    Y = [y1, y2, y3]
+    for i in range(len(trans)):
+        each = trans[i]
+        m = each.get_matrix()
+        r = each.get_rotation()
+        s = each.get_scale()
+        t = each.get_translation()
+
+        mse = nudged.estimate_error(each, Y[i], projections[i])
+        print(i, 'error:', mse)
+
+        do_plot(cx[i], Z[i], mtransforms.Affine2D().
+        rotate(r).scale(s).translate(t[0], t[1]), projections[i])
+
+
+    plt.show()
     input()
 
 main()
