@@ -11,6 +11,14 @@ import matplotlib.transforms as mtransforms
 path.append(dir(path[0]))
 import mview as mview
 
+def rotate(dom, r):
+    a = np.cos(r)
+    b = np.sin(r)
+    rotate_mtx = np.array([[a, -b, 0.0], [b, a, 0.0], [0.0, 0.0, 1.0]],
+                              float)
+    result = np.dot(rotate_mtx, dom)
+
+    return result
 
 def do_plot(ax, Z, transform, y):
     im = ax.imshow(Z)
@@ -26,12 +34,12 @@ def do_plot(ax, Z, transform, y):
 def main():
     #2, 62, 108
     path = '../datasets/dataset_house/'
-    y1 = np.genfromtxt(path+'house2.csv', delimiter = ',')
-    x1 = plt.imread(path+'house.seq2.png')
-    y2 = np.genfromtxt(path+'house62.csv', delimiter = ',')
-    x2 = plt.imread(path+'house.seq62.png')
-    y3 = np.genfromtxt(path+'house108.csv', delimiter = ',')
-    x3 = plt.imread(path+'house.seq108.png')
+    y1 = np.genfromtxt(path+'house6.csv', delimiter = ',')
+    x1 = plt.imread(path+'house.seq6.png')
+    y2 = np.genfromtxt(path+'house70.csv', delimiter = ',')
+    x2 = plt.imread(path+'house.seq70.png')
+    y3 = np.genfromtxt(path+'house100.csv', delimiter = ',')
+    x3 = plt.imread(path+'house.seq100.png')
     fig, ax = plt.subplots(1, 3)
     ax[0].imshow(x1)
     ax[0].plot(y1[:, 0], y1[:, 1], 'o', color = 'red')
@@ -121,9 +129,12 @@ def main():
         r = each.get_rotation()
         s = each.get_scale()
         t = each.get_translation()
+        #s = 1.0
+        
 
+        #print(rotate(Y[i], r))
         mse = nudged.estimate_error(each, Y[i], projections[i])
-        print(i, 'error:', mse)
+        print(i, 'error:', mse, 'scale:', s)
 
         do_plot(cx[i], Z[i], mtransforms.Affine2D().
         rotate(r).scale(s).translate(t[0], t[1]), projections[i])
