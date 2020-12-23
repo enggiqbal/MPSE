@@ -21,7 +21,7 @@ class MPSE(object):
                  projection_family='linear',projection_constraint='orthogonal',
                  sample_labels=None, sample_colors=None,
                  perspective_labels=None,
-                 verbose=0, indent='', hidden=None
+                 verbose=0, indent='', hidden=None,
                  **kwargs):
         """\
         Initializes MPSE object.

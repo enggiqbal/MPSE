@@ -9,7 +9,7 @@ from mpse import MPSE
 
 def basic(data, data_args=None, fixed_projections=None,
           visualization_method='mds', smart_initialize=True,
-          verbose=0,**kwargs):
+          verbose=0, hidden=None, **kwargs):
     """\
     Basic function, finding mpse embedding/projections (the projections can be
     specified beforehand). It uses the mpse.MPSE() methods.
@@ -92,7 +92,7 @@ def basic(data, data_args=None, fixed_projections=None,
         del kwargs['Q']
         
     vis = mpse.MPSE(data,verbose=verbose,fixed_projections=fixed_projections,
-                    visualization_method=visualization_method,**kwargs)
+                    visualization_method=visualization_method, hidden=hidden, **kwargs)
     if smart_initialize is True and fixed_projections is None:
         vis.smart_initialize()
     if visualization_method == 'mds' and 'batch_size' not in kwargs:
