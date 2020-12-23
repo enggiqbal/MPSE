@@ -310,6 +310,7 @@ class TSNE(object):
             edges = None
         if colors == 'default':
             colors = self.sample_colors
+        ax.set_xlable('final stress: '+ str(format(self.cost, '.6f')))
         plots.plot2D(self.embedding,edges=edges,colors=colors,labels=labels,
                      axis=axis,ax=ax,title=title,**kwargs)
         if plot is True:

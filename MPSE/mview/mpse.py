@@ -21,7 +21,7 @@ class MPSE(object):
                  projection_family='linear',projection_constraint='orthogonal',
                  sample_labels=None, sample_colors=None,
                  perspective_labels=None,
-                 verbose=0, indent='',
+                 verbose=0, indent='', hidden=None
                  **kwargs):
         """\
         Initializes MPSE object.
@@ -573,6 +573,7 @@ class MPSE(object):
                 colors_k = None
             else:
                 colors_k = colors
+            ax[k].set_xlabel('stress: ' + str(format(self.individual_cost[k], '.6f')))
             plots.plot2D(self.images[k],edges=edges[k],colors=colors_k,ax=ax[k],
                          **kwargs)
         plt.suptitle(title)
