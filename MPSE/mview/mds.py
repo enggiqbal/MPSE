@@ -37,17 +37,20 @@ def stress(distances, embedding, weights=None, normalize=True, hidden=None):
     """
     dist = scipy.spatial.distance.pdist(embedding) #embedding distances
     diff = distances-dist
-    print('dist: ')
+    print('dist: ', len(dist))
     print(dist)
     print('----------------------------')
-    print('embedding: ')
+    print('embedding: ', len(embedding))
     print(embedding)
     print('----------------------------')
-    print('diff: ')
+    print('diff: ', len(diff))
     print(diff)
     print('----------------------------')
-    print('distance: ')
+    print('distance: ', len(distances))
     print(distances)
+    print('----------------------------')
+    print('hidden: ')
+    print(hidden)
     print('----------------------------')
     if weights is None:
         stress = np.linalg.norm(diff)**2
