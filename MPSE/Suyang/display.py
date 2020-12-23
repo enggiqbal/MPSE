@@ -13,18 +13,20 @@ import sys
 
 def main():
     #2, 62, 108
-    num = int(sys.argv[1])
+    filename = sys.argv[1]
+    num = int(sys.argv[2])
     fig = plt.figure()
     ax = fig.add_subplot(111, projection='3d')
-    with open ('3d.csv', 'r') as fd:
+    with open (filename, 'r') as fd:
         for each in fd:
             data = each.split(',') 
             x = float(data[0])
             y = float(data[1])
             z = float(data[2])
-            ax.scatter(x, y, z, c= 'cyan', alpha = 1.0, edgecolor = 'b')
+            #ax.scatter(x, y, z, c= 'cyan', alpha = 1.0, edgecolor = 'b')
+            ax.scatter(x, y, z, color= 'blue')
     
-    matrix = np.genfromtxt('3d.csv', delimiter = ',') 
+    matrix = np.genfromtxt(filename, delimiter = ',') 
 
     for i in range(1, num+1):
         theta = math.pi/i

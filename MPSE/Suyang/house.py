@@ -6,10 +6,21 @@ from os.path import dirname as dir
 import mpl_toolkits.mplot3d as plt3d
 import nudged
 import matplotlib.transforms as mtransforms
+import math
 
 
 path.append(dir(path[0]))
 import mview as mview
+
+def get_distance(y1):
+    distance = []
+    for i in range(len(y1)):
+        temp = []
+        for j in range(len(y1)):
+            temp.append(math.sqrt(math.pow(abs(y1[i][0]-y1[j][0]),2) + math.pow(abs(y1[i][1]-y1[j][1]),2) ))
+        distance.append(temp)
+    return distance
+
 
 def rotate(dom, r):
     a = np.cos(r)
@@ -55,8 +66,16 @@ def main():
     for i in range(len(y3)):
         ax[2].annotate(i,y3[i])
 
+    y1 = get_distance(y1)
+    y2 = get_distance(y2)
+    y3 = get_distance(y3)
+
+    hidden = [(3, 29)]            #hidden is the point that hidden
+    #print(y3[29])              #point 30 distance to other points
+
+
     #plt.show()
-    mv = mview.basic([y1, y2, y3], smart_initialize=True, batch_size=10, max_iter=700, verbose = 2)
+    mv = mview.basic([np.matrix(y1), np.matrix(y2), np.matrix(y3)], smart_initialize=True, batch_size=10, max_iter=700, verbose = 2, hidden = hidden)
     
     with open ('output.csv', 'w') as fd:
         for each in mv.embedding:
@@ -109,15 +128,23 @@ def main():
     mv.plot_computations()
     mv.plot_images(labels=True)
 
+
     projections = []
     projections.append(mv.embedding @ mv.projections[0].T)
     projections.append(mv.embedding @ mv.projections[1].T)
     projections.append(mv.embedding @ mv.projections[2].T)
-
     trans = []
-    trans.append(nudged.estimate(y1, projections[0]))
-    trans.append(nudged.estimate(y2, projections[1]))
-    trans.append(nudged.estimate(y3, projections[2]))
+    #trans.append(nudged.estimate(y1, projections[0]))
+    #trans.append(nudged.estimate(y2, projections[1]))
+    #trans.append(nudged.estimate(y3, projections[2]))
+    dis = [0, 0, 0]
+    dis[0] = get_distance(projections[0])
+    dis[1] = get_distance(projections[1])
+    dis[2] = get_distance(projections[2])
+
+    trans.append(nudged.estimate(y1, dis[0]))
+    trans.append(nudged.estimate(y2, dis[1]))
+    trans.append(nudged.estimate(y3, dis[2]))
 
     fig1, cx = plt.subplots(1, 3)
     

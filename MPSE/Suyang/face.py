@@ -15,8 +15,9 @@ import mview as mview
 def main():
     #2, 62, 108
     #path = '../datasets/dataset_house/'
-    path = './'
+    #path = './'
     data_path = '../datasets/dataset_face/'
+    path = data_path
     #y1 = np.genfromtxt(path+'face1_2d.csv', delimiter = ',')
     #x1 = plt.imread(data_path+'face1.png')
     y2 = np.genfromtxt(path+'face2_2d.csv', delimiter = ',')
@@ -96,6 +97,7 @@ def main():
     mv.plot_embedding()
     mv.plot_computations()
     mv.plot_images(labels = True)
+
     #mv.figureY()
     #mv.figureH()
     input()
