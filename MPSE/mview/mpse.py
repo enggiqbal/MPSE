@@ -330,7 +330,7 @@ class MPSE(object):
             self.time = self.computation_history[-1]['time']
 
     def smart_initialize(self,max_iter=[50,30],lr=[1,0.1],
-                         batch_size=10,**kwargs):
+                         batch_size=10, hidden=None, **kwargs):
         """\
         Computes an mds embedding (dimension embedding_dimension) of the 
         combined distances. Only works when self.Q_is_fixed is False (as this 
