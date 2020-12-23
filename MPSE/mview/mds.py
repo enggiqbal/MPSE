@@ -10,7 +10,7 @@ import misc, setup, multigraph, gd, plots
 
 ### MDS STRESS AND GRADIENT FUNCTIONS ###
 
-def stress(distances, embedding, weights=None, normalize=True):
+def stress(distances, embedding, weights=None, normalize=True, hidden=None):
     """\
     Returns MDS stress for given set of distances and embedding.
 
@@ -387,7 +387,7 @@ class MDS(object):
     """
     def __init__(self, data, dim=2, weights=None, estimate=True, safety=1e-4,
                  normalize=True, initial_embedding='random',
-                 sample_colors=None, verbose=0, indent='', **kwargs):
+                 sample_colors=None, verbose=0, indent='', hidden=None, **kwargs):
         """\
         Initializes MDS object.
 
@@ -444,7 +444,7 @@ class MDS(object):
 
 
         self.objective = lambda X, **kwargs : stress(
-            self.distances, X, weights=self.weights, normalize=self.normalize)
+            self.distances, X, weights=self.weights, normalize=self.normalize, hidden=hidden)
         def gradient(embedding, batch_size=None, indices=None, **kwargs):
             if batch_size is None or batch_size >= self.n_samples:
                 return full_gradient(

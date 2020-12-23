@@ -161,7 +161,7 @@ class MPSE(object):
                 vis = mds.MDS(self.distances[i],
                               embedding_dimension=self.image_dimension,
                               verbose=self.verbose, indent=self.indent+'    ',
-                              **visualization_args[i])
+                              **visualization_args[i], hidden=hidden)
             elif visualization_method[i] is 'tsne':
                 vis = tsne.TSNE(self.distances[i],
                                 embedding_dimension=self.image_dimension,
@@ -354,7 +354,7 @@ class MPSE(object):
         vis = mds.MDS(distances,dim=self.embedding_dimension,min_grad=1e-4,
                       indent=self.indent+'    ',
                       initial_embedding=self.embedding,
-                      verbose=self.verbose)
+                      verbose=self.verbose, hidden=hidden)
         vis.gd(batch_size=batch_size, max_iter=max_iter[0],lr=lr[0],**kwargs)
         self.embedding = vis.X
         H = vis.computation_history[0]
