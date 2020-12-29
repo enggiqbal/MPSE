@@ -586,17 +586,18 @@ class MDS(object):
                                    
 ### TESTS ###
 
-def disk(N=128,weighted=False,**kwargs):
+def disk(N=128,weights=None,**kwargs):
+    #basic disk example
+    #N is number of points
+    #weights: use None or 'reciprocal' or array, etc
+    
     print('\n***disk example***\n')
     
     X = misc.disk(N,2); colors = misc.labels(X)
     distances = scipy.spatial.distance.pdist(X)
     
     title = 'basic disk example'
-    if weighted is False:
-        weights = None
-    else:
-        weights = 'reciprocal'
+        
     mds = MDS(distances,weights=weights,dim=2,verbose=2,title=title,
               sample_colors=colors)
 
@@ -613,6 +614,10 @@ def disk(N=128,weighted=False,**kwargs):
 if __name__=='__main__':
 
     print('mview.mds : running tests')
-    disk(N=10000,weighted=True,batch_size=50,max_iter=100)
+    N = 100
+    #weights = np.ones(N)
+    #weights = np.random.rand(100)
+    weights = np.concatenate((np.ones(int(N*0.8)),np.zeros(N-int(N*0.8))))
+    disk(N,weights=weights,batch_size=50,max_iter=100)
     plt.show()
     

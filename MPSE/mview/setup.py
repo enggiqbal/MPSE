@@ -78,7 +78,12 @@ def setup_weights(distances, weights, max_weight=2.0, min_weight=1e-2):
         except:
             weights = np.array([weights(dist) for dist in distances])
     elif isinstance(weights,np.ndarray):
-        assert distances == weights.shape
+        if len(weights) == distance.num_obs_y(distances):
+            assert min(weights) >= 0
+            weights = np.array([weights])
+            weights = weights.T * weights
+            weights = distance.squareform(weights, checks=False)
+        assert distances.shape == weights.shape
     else:
         assert weights is None
         

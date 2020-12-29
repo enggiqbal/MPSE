@@ -12,7 +12,7 @@ class MPSE(object):
     Class to set up and produce multi-perspective simultaneous embeddings.
     """
 
-    def __init__(self, data, data_args=None,
+    def __init__(self, data, weights=None, data_args=None,
                  fixed_embedding=None, fixed_projections=None,
                  initial_embedding=None, initial_projections=None,
                  visualization_method='mds', visualization_args={},
@@ -36,6 +36,19 @@ class MPSE(object):
         2) A square distance matrix
         3) An array containing features
         ***4) A dictionary describing a graph
+
+        weights : None or string or array or list
+        If visualization allows for it, weights to be used in computation of
+        cost/gradiant of each perspective.
+        IF a list is given, then the list must have length equal to the number
+        of perspectives. Otherwise, it is assumed that the given weights are the
+        same for all perspectives.
+        The possible weights are described in setup.setup_weights. These are:
+        1) None : no weights are used
+        2) string : method to compute weights based on distances
+        3) function : function to compute weights based on distances
+        4) array : array containing pairwise weights or node weights, depending
+        on size (must be of length of distances or of samples).
 
         data_args : dictionary (optional) or list
         Optional arguments to pass to distances.setup().
@@ -111,6 +124,16 @@ class MPSE(object):
         self.n_perspectives = len(self.distances)
         self.n_samples = scipy.spatial.distance.num_obs_y(self.distances[0])
 
+        ##set up weights from data
+        if isinstance(weights,list):
+            assert len(weights) == self.n_perspectives
+            self.weights = weights
+        else:
+            self.weights = [weights]*self.n_perspectives
+        for i in range(self.n_perspectives):
+            self.weights[i] = setup.setup_weights(self.distances[i], \
+                                self.weights[i], min_weight = 0)
+
         ##set up parameters
         self.embedding_dimension = embedding_dimension
         self.image_dimension = image_dimension
@@ -159,6 +182,7 @@ class MPSE(object):
                       self.perspective_labels[i],':')
             if visualization_method[i] is 'mds':
                 vis = mds.MDS(self.distances[i],
+                              weights = self.weights[i],
                               embedding_dimension=self.image_dimension,
                               verbose=self.verbose, indent=self.indent+'    ',
                               **visualization_args[i])
@@ -737,7 +761,12 @@ def e123(fixed_projections=False,fixed_embedding=False,
 if __name__=='__main__':
     print('mview.mpse : running tests')
     #disk(fixed_projections=False, batch_size=20)
+    weights1 = np.concatenate((np.ones(800),np.zeros(200)))
+    weights2 = [np.concatenate((np.ones(800),np.zeros(200))),
+                np.concatenate((np.zeros(200),np.zeros(800))),
+                np.ones(1000)]
     e123(fixed_projections=True,fixed_embedding=False,batch_size=20,
-         visualization_method='mds',max_iter=300,smart=False,min_cost=0.001)
+         visualization_method='mds',max_iter=300,smart=False,min_cost=0.001,
+         weights=weights2)
     plt.show()
     
