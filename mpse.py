@@ -174,3 +174,11 @@ if __name__ == '__main__':
     mv = mview.basic(D, Q=args.projection_type, verbose=2, smart_initialize=args.X0,
                      max_iter=args.max_iters, average_neighbors=args.average_neighbors, min_cost=args.min_cost)
     write_output(mv, args)
+    finalcost=f"<b>Final Stress</b>= {mv.cost} "
+    
+    for a in range(0, len(  mv.individual_cost)):
+        finalcost= finalcost + f" <br> Projection {a+1}:    {mv.individual_cost[a]}"
+    finalcost=finalcost+"##"
+    print(finalcost)
+    #print(mv.individual_cost)
+    

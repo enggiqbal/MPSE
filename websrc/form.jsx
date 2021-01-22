@@ -134,8 +134,7 @@ function Row2() {
                             className="list-group-item   "> Circling the Square example:
                             (sample size: 200, max_iters: 200, projection: standard, smart
                         initialization: random, visualization template: point based) </a>
-                        <a href="/MPSE" className="list-group-item   "> Description and more
-                        precomputed examples </a>
+                        
                     </div>
                 </div>
             </div>
@@ -294,7 +293,7 @@ function Row5(props) {
 
     let response = props.this.state.response;
     //console.log(response);
-
+    let finalStressInfo=""
 
     //const regex = /<br>\s+(\d+).(\d+).:.cost.=(.*?),/gm;
     const regex = /(\d+).\s(\d+)\s+(.*?)\s/gm
@@ -316,9 +315,11 @@ function Row5(props) {
     let expname = null;
  
     if (props.this.state.resultsLoaded && response.includes('cost.png'))
-        expname = props.this.state.EXPERIMENT_NAME;
-
-    
+        {expname = props.this.state.EXPERIMENT_NAME;
+            console.log(response)
+        finalStressInfo=response.substr( response.indexOf("<b>Final Stress</b>"), response.indexOf("##")-response.indexOf("<b>Final Stress</b>"))
+        finalStressInfo=finalStressInfo.replace("##","")
+    }
 
     const width = 600, height = 350, margin = 20
 
@@ -343,7 +344,7 @@ function Row5(props) {
                     </div>
                 </div>
                 <div className="col-md-6">
-                    <OutputLinks expname={expname}></OutputLinks>
+                    <OutputLinks expname={expname} finalStressInfo={finalStressInfo}></OutputLinks>
                 </div>
             </div>
         ]
@@ -352,6 +353,8 @@ function Row5(props) {
 
 function OutputLinks(props) {
     let expname = props.expname;
+    let finalStressInfo=props.finalStressInfo
+ 
     return (
         <div className="card">
             <div className="header">
@@ -363,6 +366,9 @@ function OutputLinks(props) {
                         <a target='_blank' href={'static/' + expname + '/index.html'}>Interactive visualization</a>
                         <br></br>
                         <a target='_blank' href={'static/' + expname + '/' + expname + '_pos.csv'}>Download 3D positions</a>
+                        <br></br>
+                        <div dangerouslySetInnerHTML={{__html: finalStressInfo}} />
+                        
                     </div>
                 }
             </div>
@@ -383,7 +389,7 @@ function Row6() {
 
 
                     <div className="embed-responsive embed-responsive-16by9">
-                        <iframe className="embed-responsive-item" src="https://www.youtube.com/embed/oQPNwvEY9qk"></iframe>
+                        <iframe className="embed-responsive-item" src="https://www.youtube.com/embed/KJEjlhFy_p4"></iframe>
                     </div>
 
                 </div>

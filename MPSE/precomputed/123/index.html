@@ -18,11 +18,11 @@
 	</style>
 
 
-	<script src="https://cdnjs.cloudflare.com/ajax/libs/three.js/107/three.js"></script>
-	<script src="coordinates.js"></script>
-	<script src="vis_param.js"></script>
-	<script src="https://threejs.org/examples/js/controls/OrbitControls.js"></script>
-
+<script src="three.min.js"></script>
+<script src="OrbitControls.js"></script>
+<script src="coordinates.js"></script>
+<script src="vis_param.js"></script>
+ 
 
 </head>
 
@@ -71,6 +71,7 @@
 		if ( backgroundcolor === undefined)
 			backgroundcolor='black';
 		scene.background = new THREE.Color( backgroundcolor );
+		
 		var controls = new THREE.OrbitControls(camera, renderer.domElement);
 		//var color = ["red", "green", "blue", 'yellow', 'orange']
 
