@@ -70,6 +70,10 @@ def main():
     y2 = get_distance(y2)
     y3 = get_distance(y3)
 
+    print('true distance:')
+    print(y1)
+    print(y2)
+    print(y3)
     hidden = [(3, 29)]            #hidden is the point that hidden
     #print(y3[29])              #point 30 distance to other points
 
@@ -146,6 +150,7 @@ def main():
     trans.append(nudged.estimate(y2, dis[1]))
     trans.append(nudged.estimate(y3, dis[2]))
 
+    """
     fig1, cx = plt.subplots(1, 3)
     
     Z = [x1, x2, x3]
@@ -166,7 +171,7 @@ def main():
         do_plot(cx[i], Z[i], mtransforms.Affine2D().
         rotate(r).scale(s).translate(t[0], t[1]), projections[i])
 
-
+    """
     plt.show()
     input()
 
