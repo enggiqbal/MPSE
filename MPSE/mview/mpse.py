@@ -125,7 +125,7 @@ class MPSE(object):
         self.n_samples = scipy.spatial.distance.num_obs_y(self.distances[0])
 
         ##set up weights from data
-        if isinstance(weights,list):
+        if isinstance(weights,list) or isinstance(weights, np.ndarray):
             assert len(weights) == self.n_perspectives
             self.weights = weights
         else:
