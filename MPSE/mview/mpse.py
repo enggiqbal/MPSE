@@ -598,7 +598,7 @@ class MPSE(object):
             else:
                 colors_k = colors
             plots.plot2D(self.images[k],edges=edges[k],colors=colors_k,ax=ax[k],
-                         **kwargs)
+                    weight=self.weights[k], **kwargs)
             ax[k].set_xlabel('individual cost:'+ f'{self.individual_cost[k]}')
         plt.suptitle(title)
         if plot is True:
