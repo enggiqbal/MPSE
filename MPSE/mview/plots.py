@@ -20,7 +20,7 @@ def plot_cost(cost,steps=None,title='computations',plot=True,ax=None):
         plt.pause(1.0)
         
 def plot2D(Y,save=False,colors=None,edges=None,labels=None,
-           title=None,axis=True,ax=None,plot=True,markersize=40,**kwargs):
+           title=None,axis=True,ax=None,plot=True,markersize=40, weight=None,**kwargs):
     if ax is None:
         fig, ax = plt.subplots(figsize=(5,4))
     else:
@@ -32,8 +32,20 @@ def plot2D(Y,save=False,colors=None,edges=None,labels=None,
                     [Y[i,1],Y[j,1]],'-',
                     linewidth=0.1,color='lightgray',zorder=1)
             
-    ax.scatter(Y[:,0],Y[:,1],s=markersize,c=colors,zorder=2)
     
+    ax.scatter(Y[:,0],Y[:,1],s=markersize,c=colors,zorder=2)
+    if weight is not None:
+        '''
+            if weight is not None, then the hidden points should label as color black
+        '''
+        for index in range(len(Y)//2):
+            if weight[index * (len(Y) - 1)] == 0:  
+                #print(index, 'hidden------------------------------')
+                ax.scatter(Y[index][0],Y[index][1],s=markersize,c='black',zorder=2)
+            
+
+
+
     if labels is not None:
         N = len(Y)
         if labels is True:

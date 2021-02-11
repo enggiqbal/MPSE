@@ -525,8 +525,8 @@ class MPSE(object):
         self.update()
 
         if self.verbose > 0:
-            print(self.indent+f'    final cost : {self.cost:0.2e}')
-            costs = ', '.join(f'{x:0.2e}' for x in self.individual_cost)
+            print(self.indent+f'    final cost : {self.cost:0.2f}')
+            costs = ', '.join(f'{x:0.2f}' for x in self.individual_cost)
             print(self.indent+f'    individual costs : {costs}')
  
     def plot_embedding(self,title=None,perspectives=True,edges=None,colors=True,
@@ -598,7 +598,8 @@ class MPSE(object):
             else:
                 colors_k = colors
             plots.plot2D(self.images[k],edges=edges[k],colors=colors_k,ax=ax[k],
-                         **kwargs)
+                    weight=self.weights[k], **kwargs)
+            ax[k].set_xlabel('individual cost:'+ f'{self.individual_cost[k]}')
         plt.suptitle(title)
         if plot is True:
             plt.draw()
