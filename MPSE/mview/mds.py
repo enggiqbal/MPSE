@@ -399,7 +399,7 @@ class MDS(object):
         1) a 1D condensed distance array
         2) a square distance matrix/array
         3) a feature array
-        4) a disctionary describing a graph
+        4) a dictionary describing a graph
 
         dim : int > 0
         Embedding dimension.
@@ -410,8 +410,8 @@ class MDS(object):
         verbose : int >= 0
         Print status of methods in MDS object if verbose > 0.
 
-        title : string
-        Title assigned to MDS object.
+        indent : str
+        When printing, add indent before printing every new line.
         """
         self.verbose = verbose
         self.indent = indent

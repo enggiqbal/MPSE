@@ -112,8 +112,8 @@ def mpse():
     mv.gd(max_iters=50,batch_size=16)
     mv.gd()
     mv.plot_embedding(labels=labels)#,axis=True)
-    #mv.plot_embedding(labels=labels,colors=reduced_distances[0][medici],
-    #                  axis=True,edges=edges1)
+    mv.plot_embedding(labels=labels,colors=reduced_distances[0][medici],
+                      axis=True,edges=edges1)
     #mv.plot_embedding(labels=labels,colors=reduced_distances[1][medici],
     #                  axis=True,edges=edges2)
     mv.plot_computations()

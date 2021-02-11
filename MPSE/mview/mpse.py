@@ -702,6 +702,51 @@ class MPSE(object):
     
 ##### TESTS #####
 
+def n123():
+    X = np.genfromtxt('samples/123/123.csv',delimiter=',')
+    X1 = np.genfromtxt('samples/123/1.csv',delimiter=',')
+    X2 = np.genfromtxt('samples/123/2.csv',delimiter=',')
+    X3 = np.genfromtxt('samples/123/3.csv',delimiter=',')
+    Y = [X1, X2, X3]
+    proj = projections.PROJ()
+    Q = proj.generate(number=3,method='cylinder')
+    return Y, Q
+
+def basic(example='123', fixed_projections=False, fixed_embedding=False,
+          visualization_method='mds', smart_initialization=False, **kwargs):
+    
+    if example == '123':
+        Y, Q = n123()
+
+    if fixed_projections:
+        mv = MPSE(Y,Q=Q,visualization_method=visualization_method,verbose=2,
+                  **kwargs)
+    elif fixed_embedding:
+        mv = MPSE(Y,X=X,visualization_method=visualization_method,verbose=2,
+                  **kwargs)
+    else:
+        mv = MPSE(Y,visualization_method=visualization_method,verbose=2,
+                  **kwargs)
+
+    if smart_initialization and fixed_projections is False and \
+       fixed_embedding is False:
+        mv.smart_initialize()
+        mv.plot_embedding(title='smart initialize')
+
+    mv.plot_embedding(title='initial embedding')
+    if fixed_projections:
+        mv.gd(fixed_projections=True,**kwargs)
+    elif fixed_embedding:
+        mv.gd(fixed_embedding=True,**kwargs)
+    else:
+        mv.gd(**kwargs)
+        
+    mv.plot_computations()
+    mv.plot_embedding(title='final embeding')
+    mv.plot_images()
+    plt.draw()
+    plt.pause(0.2)
+    
 def disk(N=100,fixed_projections=False,fixed_embedding=False,**kwargs):
     X = misc.disk(N,dim=3)
     proj = projections.PROJ()
@@ -765,8 +810,8 @@ if __name__=='__main__':
     weights2 = [np.concatenate((np.ones(800),np.zeros(200))),
                 np.concatenate((np.zeros(200),np.zeros(800))),
                 np.ones(1000)]
-    e123(fixed_projections=True,fixed_embedding=False,batch_size=20,
-         visualization_method='mds',max_iter=300,smart=False,min_cost=0.001,
-         weights=weights2)
+    basic(fixed_projections=False,fixed_embedding=False,batch_size=800,
+         visualization_method='tsne',max_iter=100,smart=False,min_cost=0.001,
+          weights=None,visualization_args={'perplexity':100})#weights2)
     plt.show()
     
