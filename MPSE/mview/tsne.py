@@ -68,11 +68,27 @@ def joint_probabilities(distances, perplexity):
 
 ### Cost function and gradient ###
 
-def Q(embedding, indices=None):
+def inverse_square_law_distances(embedding):
     """\
-    Computes the joint probabilities q_ij for the given embedding. If a list of
-    indices is given, then it approximates 
+    Computes the pairwise inverse square law distances for the given embedding. 
+    These are given by q_ij = 1/(1+|y_i-y_j|^2) for a given pair (i,j). The set 
+    of probabilities used in the low dimensional map of tSNE can then be computed
+    by dividing by the sum.
 
+    Parameters
+    ----------
+
+    embedding : array, shape (n_samples,dim)
+    Embedding (coordinates in low-dimensional map).
+
+    Returns
+    dist: pairwise inverse square law distances, as a condensed 1D array.
+    """
+    dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
+    dist += 1.0
+    dist **= -1.0
+    return dist
+    
 def KL(P,embedding):
     """\
     KL divergence KL(P||Q) between distributions P and Q, where Q is computed
@@ -87,7 +103,7 @@ def KL(P,embedding):
     embedding : array, shape (n_samples,dim)
     Current embedding.
 
-    Results
+    Returns
     -------
 
     kl_divergence : float
@@ -104,7 +120,7 @@ def KL(P,embedding):
         
     return kl_divergence
 
-def grad_KL(P,embedding):
+def grad_KL(P,embedding,dist=None,Q=None):
     """\
     Computes KL divergence and its gradient at the given embedding.
 
@@ -117,6 +133,9 @@ def grad_KL(P,embedding):
     embedding : array, shape (n_samples,dim)
     Current embedding.
 
+    Q : array, shape (n_samples*(n_samples-1)/2,)
+    Joint probabilities q_ij. If not included, these are computed.
+
     Results
     -------
 
@@ -126,10 +145,11 @@ def grad_KL(P,embedding):
     grad : float
     gradiet of KL(P||Q(X)) w.r.t. X.
     """
-    dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
-    dist += 1.0
-    dist **= -1.0
-    Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON) ######
+    if dist is None or Q is None:
+        dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
+        dist += 1.0
+        dist **= -1.0
+        Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON) ######
     
     kl_divergence = 2.0 * np.dot(
         P, np.log(np.maximum(P, MACHINE_EPSILON) / Q))
@@ -142,7 +162,7 @@ def grad_KL(P,embedding):
     
     return grad, kl_divergence
 
-def batch_gradient(P, embedding, batch_size=10, indices=None, weights=None):
+def batch_gradient(P, embedding, batch_size=10, indices=None):
     """\
     Returns gradient approximation.
     """
@@ -152,6 +172,7 @@ def batch_gradient(P, embedding, batch_size=10, indices=None, weights=None):
         np.random.shuffle(indices)
     else:
         assert len(indices) == n_samples
+        
     grad = np.empty(embedding.shape)
     stress = 0
     for start in range(0, n_samples, batch_size):
@@ -159,8 +180,10 @@ def batch_gradient(P, embedding, batch_size=10, indices=None, weights=None):
         batch_idx = np.sort(indices[start:end])
         embedding_batch = embedding[batch_idx]
         P_batch = P[setup.batch_indices(batch_idx,n_samples)]
-        grad[batch_idx], st0 = grad_KL(P_batch,
-                                       embedding_batch)
+        dist = inverse_square_law_distances(embedding_batch)
+        Q_batch = dist/(2.0*np.sum(dist))/(n_samples/len(batch_idx))**2
+        grad[batch_idx], st0 = grad_KL(P_batch,embedding_batch,
+                                       dist=dist,Q=Q_batch)
         stress += st0
     grad *= n_samples/batch_size
     stress *= n_samples/batch_size

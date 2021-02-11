@@ -811,8 +811,8 @@ if __name__=='__main__':
     weights2 = [np.concatenate((np.ones(800),np.zeros(200))),
                 np.concatenate((np.zeros(200),np.zeros(800))),
                 np.ones(1000)]
-    basic(fixed_projections=False,fixed_embedding=False,batch_size=800,
+    basic(fixed_projections=False,fixed_embedding=False,batch_size=50,
          visualization_method='tsne',max_iter=100,smart=False,min_cost=0.001,
-          weights=None,visualization_args={'perplexity':100})#weights2)
+          weights=None,visualization_args={'perplexity':500})#weights2)
     plt.show()
     
