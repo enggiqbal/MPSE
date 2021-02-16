@@ -3,6 +3,7 @@ sys.path.insert(0,os.path.dirname(os.path.realpath(__file__)))
 import matplotlib.pyplot as plt
 import projections, mds, mpse, misc
 from multigraph import DISS
+from projections import PROJ
 from mds import MDS
 from tsne import TSNE
 from mpse import MPSE

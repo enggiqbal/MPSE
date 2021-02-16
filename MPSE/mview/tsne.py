@@ -61,9 +61,10 @@ def joint_probabilities(distances, perplexity):
 
     #compute (symmetric) joint probabilities
     P = conditional_P + conditional_P.T
+    P = scipy.spatial.distance.squareform(P)
     sum_P = np.maximum(np.sum(P), MACHINE_EPSILON)
-    P = np.maximum(scipy.spatial.distance.squareform(P)/sum_P, MACHINE_EPSILON)
-    
+    P = np.maximum(P/sum_P, MACHINE_EPSILON)
+
     return P
 
 ### Cost function and gradient ###
@@ -113,7 +114,7 @@ def KL(P,embedding):
     dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
     dist += 1.0
     dist **= -1.0
-    Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON)
+    Q = np.maximum(dist/(np.sum(dist)), MACHINE_EPSILON)
     
     kl_divergence = 2.0 * np.dot(
         P, np.log(np.maximum(P, MACHINE_EPSILON) / Q))
@@ -149,7 +150,7 @@ def grad_KL(P,embedding,dist=None,Q=None):
         dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
         dist += 1.0
         dist **= -1.0
-        Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON) ######
+        Q = np.maximum(dist/(np.sum(dist)), MACHINE_EPSILON) ######
     
     kl_divergence = 2.0 * np.dot(
         P, np.log(np.maximum(P, MACHINE_EPSILON) / Q))
@@ -181,7 +182,7 @@ def batch_gradient(P, embedding, batch_size=10, indices=None):
         embedding_batch = embedding[batch_idx]
         P_batch = P[setup.batch_indices(batch_idx,n_samples)]
         dist = inverse_square_law_distances(embedding_batch)
-        Q_batch = dist/(2.0*np.sum(dist))/(n_samples/len(batch_idx))**2
+        Q_batch = dist/(np.sum(dist))/(n_samples/len(batch_idx))**2
         grad[batch_idx], st0 = grad_KL(P_batch,embedding_batch,
                                        dist=dist,Q=Q_batch)
         stress += st0
