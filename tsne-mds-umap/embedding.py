@@ -22,23 +22,26 @@ def load_data(n):
 
 def get_embedding(trainX,labels,fn,outfile):
     model = fn(n_components=2, random_state=0)
+    
     pos = model.fit_transform(trainX)
     
     x=pos.T[0]
     y=pos.T[1]
-    x=x/max(max(x), abs(min(x)))
-    y=y/max(max(y), abs(min(y)))
+    # x=x/max(max(x), abs(min(x)))
+    # y=y/max(max(y), abs(min(y)))
     
     data = np.vstack((x,y, labels)).T
     df = pd.DataFrame(data=data, columns=("x", "y", "label"))
     df[['x','y']].to_csv(outfile+'.csv')
     df[['label']].to_csv("label.csv")
     draw_plot(df, 'x','y','label',outfile)
-    return distance_matrix(df.values[:,0:2],df.values[:,0:2])
+    return 0#distance_matrix(df.values[:,0:2],df.values[:,0:2])
 
 def draw_plot(data, x,y, l, outfile):
+    import pdb; pdb.set_trace()
     df = pd.DataFrame(data=data, columns=(x, y, l))
     plt.clf()
+    #plt.scatter( x, y,s= 20)
     sn.FacetGrid(df, hue=l,  size=8).map(plt.scatter, x, y,s= 20).add_legend()
     plt.savefig(outfile+".png")
 
@@ -62,12 +65,37 @@ def get_MPSE( labels):
     draw_plot(df[["z","x","label"]], 'z','x','label',"3")
     return mv.X
 
-if __name__ == "__main__":
-    trainX, labels=load_data(5000)
-    tsne_dis=get_embedding(trainX,labels,TSNE,"tsne")
-    # #mds_dis=get_embedding(trainX,labels,MDS,"mds")
-    umap_dis=get_embedding(trainX,labels,umap.UMAP,"umap")
+def getText_data():
+    from sklearn.feature_extraction.text import CountVectorizer, TfidfVectorizer
+    p='/Users/iqbal/projects/devis/data.csv'
+    dataset=pd.read_csv(p)
+    dataset=dataset[dataset.is_public==True].reset_index()
+ 
+    dataset=dataset.fillna("")
+    dataset['txt']= dataset['name'].str.cat(dataset['description'],sep=" ")  
+    vectorizer = CountVectorizer(min_df=5, stop_words='english')
+    trainX = vectorizer.fit_transform(dataset.txt)
+    category_labels = [str(int(x)) for x in dataset.average_rating]
 
-    mv=get_MPSE(labels)
+    tfidf_vectorizer = TfidfVectorizer(min_df=5, stop_words='english')
+    tfidf_word_doc_matrix = tfidf_vectorizer.fit_transform(dataset.txt)
+
+    return tfidf_word_doc_matrix, category_labels
+
+
+
+
+
+if __name__ == "__main__":
+    trainXX, labels=load_data(500)
+    trainXy, labels=getText_data()
+    trainX=np.asarray(trainXy.todense(), dtype=np.float)
+    # import pdb; pdb.set_trace()
+    #tsne_dis=get_embedding(trainX,labels,TSNE,"tsne")
+    # #mds_dis=get_embedding(trainX,labels,MDS,"mds")
+    #umap_dis=get_embedding(trainX,labels,umap.UMAP,"umap")
+    tsne_dis=get_embedding(trainX,labels,TSNE,"tsneX")
+
+    #mv=get_MPSE(labels)
 
 
