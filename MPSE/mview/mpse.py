@@ -12,7 +12,7 @@ class MPSE(object):
     Class to set up and produce multi-perspective simultaneous embeddings.
     """
 
-    def __init__(self, data, data_args=None,
+    def __init__(self, data, weights=None, data_args=None,
                  fixed_embedding=None, fixed_projections=None,
                  initial_embedding=None, initial_projections=None,
                  visualization_method='mds', visualization_args={},
@@ -36,6 +36,19 @@ class MPSE(object):
         2) A square distance matrix
         3) An array containing features
         ***4) A dictionary describing a graph
+
+        weights : None or string or array or list
+        If visualization allows for it, weights to be used in computation of
+        cost/gradiant of each perspective.
+        IF a list is given, then the list must have length equal to the number
+        of perspectives. Otherwise, it is assumed that the given weights are the
+        same for all perspectives.
+        The possible weights are described in setup.setup_weights. These are:
+        1) None : no weights are used
+        2) string : method to compute weights based on distances
+        3) function : function to compute weights based on distances
+        4) array : array containing pairwise weights or node weights, depending
+        on size (must be of length of distances or of samples).
 
         data_args : dictionary (optional) or list
         Optional arguments to pass to distances.setup().
@@ -111,6 +124,16 @@ class MPSE(object):
         self.n_perspectives = len(self.distances)
         self.n_samples = scipy.spatial.distance.num_obs_y(self.distances[0])
 
+        ##set up weights from data
+        if isinstance(weights,list) or isinstance(weights, np.ndarray):
+            assert len(weights) == self.n_perspectives
+            self.weights = weights
+        else:
+            self.weights = [weights]*self.n_perspectives
+        for i in range(self.n_perspectives):
+            self.weights[i] = setup.setup_weights(self.distances[i], \
+                                self.weights[i], min_weight = 0)
+
         ##set up parameters
         self.embedding_dimension = embedding_dimension
         self.image_dimension = image_dimension
@@ -119,7 +142,6 @@ class MPSE(object):
         proj = projections.PROJ(embedding_dimension,image_dimension,
                                 projection_family,projection_constraint)
         self.proj = proj
-        self.time = 0
 
         if verbose > 0:
             print(indent+'  data details:')
@@ -160,6 +182,7 @@ class MPSE(object):
                       self.perspective_labels[i],':')
             if visualization_method[i] is 'mds':
                 vis = mds.MDS(self.distances[i],
+                              weights = self.weights[i],
                               embedding_dimension=self.image_dimension,
                               verbose=self.verbose, indent=self.indent+'    ',
                               **visualization_args[i])
@@ -280,7 +303,7 @@ class MPSE(object):
             else:
                 assert isinstance(initial_embedding,np.ndarray)
                 assert initial_embedding.shape == (
-                    self.n_samples, self.proj.embedding_dimension)
+                    self.n_samples, self.embedding_dimension)
                 if verbose > 0:
                     print(indent+'    initial embedding : given')
                 self.initial_embedding = initial_embedding
@@ -317,17 +340,20 @@ class MPSE(object):
         self.initial_cost = None
         self.initial_individual_cost = None
         self.computation_history = []
+        self.time = 0
         self.update(**kwargs)
 
     def update(self,**kwargs):
         self.images = self.proj.project(self.projections,self.embedding)
         self.cost, self.individual_cost = self.cost_function(
-            self.embedding,self.projections,Y=self.images,**kwargs) 
+            self.embedding,self.projections,Y=self.images,**kwargs)
         if self.initial_cost is None:
             self.initial_cost = self.cost
             self.initial_individual_cost = self.individual_cost
+        else:
+            self.time = self.computation_history[-1]['time']
 
-    def smart_initialize(self,max_iter=[100,50],lr=[1,0.1],
+    def smart_initialize(self,max_iter=[50,30],lr=[1,0.1],
                          batch_size=10,**kwargs):
         """\
         Computes an mds embedding (dimension embedding_dimension) of the 
@@ -420,6 +446,8 @@ class MPSE(object):
                 F = lambda X : self.gradient(X,self.projections,
                                              return_projections=False)
             else:
+                if self.verbose > 0:
+                    print(self.indent+'      batch size :',batch_size)
                 def Xi():
                     indices = np.arange(self.n_samples)
                     np.random.shuffle(indices)
@@ -445,6 +473,8 @@ class MPSE(object):
                 F = lambda Q : self.gradient(self.embedding,Q,
                                              return_embedding=False)
             else:
+                if self.verbose > 0:
+                    print(self.indent+'      batch size :',batch_size)
                 def Xi():
                     indices = np.arange(self.n_samples)
                     np.random.shuffle(indices)
@@ -470,7 +500,8 @@ class MPSE(object):
                 Xi = None
                 F = lambda params : self.gradient(params[0],params[1])
             else:
-                print(self.indent+'      batch size :',batch_size)
+                if self.verbose > 0:
+                    print(self.indent+'      batch size :',batch_size)
                 def Xi():
                     indices = np.arange(self.n_samples)
                     np.random.shuffle(indices)
@@ -494,8 +525,8 @@ class MPSE(object):
         self.update()
 
         if self.verbose > 0:
-            print(self.indent+f'    final cost : {self.cost:0.2e}')
-            costs = ', '.join(f'{x:0.2e}' for x in self.individual_cost)
+            print(self.indent+f'    final cost : {self.cost:0.2f}')
+            costs = ', '.join(f'{x:0.2f}' for x in self.individual_cost)
             print(self.indent+f'    individual costs : {costs}')
  
     def plot_embedding(self,title=None,perspectives=True,edges=None,colors=True,
@@ -517,6 +548,29 @@ class MPSE(object):
             colors = self.sample_colors
         plots.plot3D(self.embedding,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,ax=ax,**kwargs)
+
+    def plot_image(self,index,title='embedding',edges=False,colors='default',
+                       labels=None,
+                       axis=True,plot=True,
+                       ax=None,**kwargs):
+        assert self.image_dimension >= 2
+        if edges is True:
+            edges = self.distances['edge_list']
+        elif edges is False:
+            edges = None
+        if colors == 'default':
+            colors = self.sample_colors
+
+        if self.image_dimension == 2:
+            plots.plot2D(self.images[index],edges=edges,colors=colors,
+                         labels=labels,
+                         axis=axis,ax=ax,title=title,**kwargs)
+        else:
+            plots.plot3D(self.X,edges=edges,colors=colors,title=title,
+                         ax=ax,**kwargs)
+        if plot is True:
+            plt.draw()
+            plt.pause(1)
 
     def plot_images(self,title=None,edges=False,
                 colors=True,plot=True,
@@ -544,7 +598,8 @@ class MPSE(object):
             else:
                 colors_k = colors
             plots.plot2D(self.images[k],edges=edges[k],colors=colors_k,ax=ax[k],
-                         **kwargs)
+                    weight=self.weights[k], **kwargs)
+            ax[k].set_xlabel('individual cost:'+ f'{self.individual_cost[k]}')
         plt.suptitle(title)
         if plot is True:
             plt.draw()
@@ -553,8 +608,8 @@ class MPSE(object):
     def plot_computations(self,title='computations',plot=True,ax=None):
         if self.fixed_embedding is True or self.fixed_projections is True:
             if ax is None:
-                fig, ax = plt.subplots()
-                fig.suptitle('computations')
+                fig, ax = plt.subplots(1,2,figsize=(6,3))
+                fig.subplots_adjust(top=0.8)
             costs = np.array([])
             grads = np.array([])
             lrs = np.array([])
@@ -568,18 +623,23 @@ class MPSE(object):
                 grads = np.concatenate((grads,H['grads']))
                 lrs = np.concatenate((lrs,H['lrs']))
                 steps = np.concatenate((steps,H['steps']))
-            ax.semilogy(costs,label='stress',linewidth=3)
-            ax.semilogy(grads,label='grad size')
-            ax.semilogy(lrs,label='lr')
-            ax.semilogy(steps,label='step size')
-            ax.legend()
+            ax[0].semilogy(costs,label='stress',linewidth=3)
+            ax[1].semilogy(grads,label='gradient size')
+            ax[1].semilogy(lrs,label='learning rate')
+            ax[1].semilogy(steps,label='step size')
+            ax[1].legend()
+            ax[0].set_xlabel('iterations')
+            ax[0].set_ylabel('stress')
+            ax[1].set_xlabel('iterations')
+            ax[1].set_ylabel('size')
+            ax[0].set_title('MPSE stress')
+            ax[1].set_title('embedding parameters')
             if plot is True:
                 plt.draw()
                 plt.pause(1.0)
         else:
             if ax is None:
                 fig, ax = plt.subplots(1,3,figsize=(3*3,3))
-                fig.suptitle('computations')
                 fig.subplots_adjust(top=0.80)
             costs = np.array([])
             grads_Q = np.array([])
@@ -620,21 +680,22 @@ class MPSE(object):
                     steps_Q = np.concatenate((steps_Q,H['steps'][:,1]))
                     
             ax[0].semilogy(costs,linewidth=3)
-            ax[0].set_title('cost')                                            
+            ax[0].set_title('MPSE stress')                                            
 
-            ax[1].semilogy(grads_X, label='grad size', linestyle='--')
+            ax[1].semilogy(grads_X, label='gradient size', linestyle='--')
             ax[1].semilogy(lrs_X,label='learning rate', linestyle='--')
             ax[1].semilogy(steps_X,label='step size', linestyle='--')
-            ax[1].set_title('X')
+            ax[1].set_title('embedding stats')
             ax[1].legend()
-            ax[1].set_xlabel('iterations')
+            #ax[1].set_xlabel('iterations')
+            ax[1].set_xlim([0,len(costs)])
 
-            ax[2].semilogy(grads_Q,label='grad size',linestyle='--')
+            ax[2].semilogy(grads_Q,label='gradient size',linestyle='--')
             ax[2].semilogy(lrs_Q,label='learning rate', linestyle='--')
             ax[2].semilogy(steps_Q,label='step size',linestyle='--')
-            ax[2].set_title('Q')
+            ax[2].set_title('projections stats')
             ax[2].legend()
-            ax[2].set_xlabel('iterations')
+            ax[2].set_xlim([0,len(costs)])
                 
         if plot is True:
             plt.draw()
@@ -642,6 +703,51 @@ class MPSE(object):
     
 ##### TESTS #####
 
+def n123():
+    X = np.genfromtxt('samples/123/123.csv',delimiter=',')
+    X1 = np.genfromtxt('samples/123/1.csv',delimiter=',')
+    X2 = np.genfromtxt('samples/123/2.csv',delimiter=',')
+    X3 = np.genfromtxt('samples/123/3.csv',delimiter=',')
+    Y = [X1, X2, X3]
+    proj = projections.PROJ()
+    Q = proj.generate(number=3,method='cylinder')
+    return Y, Q
+
+def basic(example='123', fixed_projections=False, fixed_embedding=False,
+          visualization_method='mds', smart_initialization=False, **kwargs):
+    
+    if example == '123':
+        Y, Q = n123()
+
+    if fixed_projections:
+        mv = MPSE(Y,Q=Q,visualization_method=visualization_method,verbose=2,
+                  **kwargs)
+    elif fixed_embedding:
+        mv = MPSE(Y,X=X,visualization_method=visualization_method,verbose=2,
+                  **kwargs)
+    else:
+        mv = MPSE(Y,visualization_method=visualization_method,verbose=2,
+                  **kwargs)
+
+    if smart_initialization and fixed_projections is False and \
+       fixed_embedding is False:
+        mv.smart_initialize()
+        mv.plot_embedding(title='smart initialize')
+
+    mv.plot_embedding(title='initial embedding')
+    if fixed_projections:
+        mv.gd(fixed_projections=True,**kwargs)
+    elif fixed_embedding:
+        mv.gd(fixed_embedding=True,**kwargs)
+    else:
+        mv.gd(**kwargs)
+        
+    mv.plot_computations()
+    mv.plot_embedding(title='final embeding')
+    mv.plot_images()
+    plt.draw()
+    plt.pause(0.2)
+    
 def disk(N=100,fixed_projections=False,fixed_embedding=False,**kwargs):
     X = misc.disk(N,dim=3)
     proj = projections.PROJ()
@@ -662,11 +768,11 @@ def disk(N=100,fixed_projections=False,fixed_embedding=False,**kwargs):
         mv.gd(**kwargs)
     mv.plot_computations()
     mv.plot_embedding(title='final embeding')
-    mv.plot_projections(colors=False)
+    mv.plot_images()
     plt.draw()
     plt.pause(0.2)
 
-def e123(N=100,fixed_projections=False,fixed_embedding=False,
+def e123(fixed_projections=False,fixed_embedding=False,
          visualization_method='mds',smart=False,**kwargs):
     X = np.genfromtxt('samples/123/123.csv',delimiter=',')
     X1 = np.genfromtxt('samples/123/1.csv',delimiter=',')
@@ -700,14 +806,13 @@ def e123(N=100,fixed_projections=False,fixed_embedding=False,
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
-    e123(fixed_projections=False,fixed_embedding=False,batch_size=10,
-         visualization_method='mds',max_iter=100,smart=True)
-    e123(fixed_projections=True,fixed_embedding=False,batch_size=10,
-         visualization_method='mds',max_iter=100,smart=True)
-    e123(fixed_projections=False,fixed_embedding=True,batch_size=10,
-         visualization_method='mds',max_iter=100,smart=True)
-    #e123(fixed_projections=False,fixed_embedding=False,batch_size=None,
-     #    lr=[1,.1],#lr=[100,10],
-      #   visualization_method='tsne',max_iter=100,smart=True)
+    #disk(fixed_projections=False, batch_size=20)
+    weights1 = np.concatenate((np.ones(800),np.zeros(200)))
+    weights2 = [np.concatenate((np.ones(800),np.zeros(200))),
+                np.concatenate((np.zeros(200),np.zeros(800))),
+                np.ones(1000)]
+    basic(fixed_projections=False,fixed_embedding=False,batch_size=50,
+         visualization_method='tsne',max_iter=100,smart=False,min_cost=0.001,
+          weights=None,visualization_args={'perplexity':500})#weights2)
     plt.show()
     

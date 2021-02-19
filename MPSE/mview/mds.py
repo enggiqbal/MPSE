@@ -48,7 +48,7 @@ def stress(distances, embedding, weights=None, normalize=True):
     return stress
 
 def full_gradient(distances, embedding, weights=None, normalize=True,
-                return_objective=True):
+                  minimum_distance=None, return_objective=True):
     """\
     Returns gradient of MDS stress function, along with MDS stress function
     value (optional).
@@ -70,6 +70,9 @@ def full_gradient(distances, embedding, weights=None, normalize=True,
     normalize : boolean
     If set to True, returns normalized stress.
 
+    minimum_distance : float or None
+    Minimum distance allowed in embedding.
+
     Return
     ------
 
@@ -80,18 +83,20 @@ def full_gradient(distances, embedding, weights=None, normalize=True,
     Stress (or estimate) for given embedding. This is returned by default, but
     can be suppresed by setting return_objective to False.
     """
-    #safety parameters:
+    #stability parameters:
     min_dist = 1e-6 #minimum embedding distance used
     
     grad = np.zeros(embedding.shape)
     stress = 0
     dist = scipy.spatial.distance.pdist(embedding)
+    if minimum_distance is not None:
+        dist = np.maximum(minimum_distance,dist)
     diff = dist-distances
 
     if weights is None:
-        constants = 2*diff/np.maximum(dist,min_dist)
+        constants = 2*diff/dist
     else:
-        constants = 2*weights*diff/np.maximum(dist,min_dist)
+        constants = 2*weights*diff/dist
 
     grad_terms = scipy.spatial.distance.squareform(constants)
     for i in range(len(embedding)):
@@ -121,7 +126,8 @@ def full_gradient(distances, embedding, weights=None, normalize=True,
         return grad
 
 def batch_gradient(distances, embedding, batch_size=10, indices=None,
-                   weights=None, normalize=True, return_objective=True):
+                   weights=None, normalize=True, minimum_distance=None,
+                   return_objective=True):
     """\
     Returns gradient of MDS stress function for given batch, along with the
     corrresponding portion of the MDS stress function value (optional).
@@ -174,7 +180,8 @@ def batch_gradient(distances, embedding, batch_size=10, indices=None,
         if weights is not None:
             weights_batch = weights[batch_indices]
         grad[batch_idx], st0 = full_gradient(distances_batch, embedding_batch,
-                                             weights=weights_batch)
+                                             weights=weights_batch,
+                                             minimum_distance=minimum_distance)
         stress += st0**2
     if normalize:
         n_batches = math.ceil(n_samples/batch_size)
@@ -378,7 +385,7 @@ class MDS(object):
     """\
     Class with methods to solve multi-dimensional scaling problems.
     """
-    def __init__(self, data, dim=2, weights=None, estimate=True,
+    def __init__(self, data, dim=2, weights=None, estimate=True, safety=1e-4,
                  normalize=True, initial_embedding='random',
                  sample_colors=None, verbose=0, indent='', **kwargs):
         """\
@@ -392,7 +399,7 @@ class MDS(object):
         1) a 1D condensed distance array
         2) a square distance matrix/array
         3) a feature array
-        4) a disctionary describing a graph
+        4) a dictionary describing a graph
 
         dim : int > 0
         Embedding dimension.
@@ -403,17 +410,24 @@ class MDS(object):
         verbose : int >= 0
         Print status of methods in MDS object if verbose > 0.
 
-        title : string
-        Title assigned to MDS object.
+        indent : str
+        When printing, add indent before printing every new line.
         """
         self.verbose = verbose
         self.indent = indent
         if self.verbose > 0:
             print(self.indent+'mview.MDS():')
-
-        self.distances = setup.setup_distances(data)
+            
+        self.distances = setup.setup_distances(data, **kwargs)
         self.n_samples = scipy.spatial.distance.num_obs_y(self.distances)
 
+        if safety is None:
+            self.minimum_distance = None
+        else:
+            assert safety > 0 and safety <= 1e-2
+            self.minimum_distance = np.max(self.distances)*safety
+            self.distances = np.maximum(self.distances,self.minimum_distance)
+            
         self.weights = setup.setup_weights(self.distances, weights=weights)
         self.normalize = normalize
                 
@@ -435,16 +449,22 @@ class MDS(object):
             if batch_size is None or batch_size >= self.n_samples:
                 return full_gradient(
                     self.distances,embedding,
-                    weights=self.weights, normalize=self.normalize)
+                    weights=self.weights, normalize=self.normalize,
+                    minimum_distance=self.minimum_distance)
             else:
                 return batch_gradient(
                     self.distances,embedding, batch_size, indices,
-                    weights=self.weights, normalize=self.normalize)
+                    weights=self.weights, normalize=self.normalize,
+                    minimum_distance=self.minimum_distance)
         self.gradient = gradient
 
         if verbose > 0:
             print(indent+'  data details:')
             print(indent+f'    number of samples : {self.n_samples}')
+            if self.weights is None:
+                print(indent+f'    weighted : False')
+            else:
+                print(indent+f'    weighted : True')
             print(indent+'  embedding details:')
             print(indent+f'    embedding dimension : {self.dim}')
 
@@ -566,17 +586,18 @@ class MDS(object):
                                    
 ### TESTS ###
 
-def disk(N=128,weighted=False,**kwargs):
+def disk(N=128,weights=None,**kwargs):
+    #basic disk example
+    #N is number of points
+    #weights: use None or 'reciprocal' or array, etc
+    
     print('\n***disk example***\n')
     
     X = misc.disk(N,2); colors = misc.labels(X)
     distances = scipy.spatial.distance.pdist(X)
     
     title = 'basic disk example'
-    if weighted is False:
-        weights = None
-    else:
-        weights = 'reciprocal'
+        
     mds = MDS(distances,weights=weights,dim=2,verbose=2,title=title,
               sample_colors=colors)
 
@@ -593,6 +614,10 @@ def disk(N=128,weighted=False,**kwargs):
 if __name__=='__main__':
 
     print('mview.mds : running tests')
-    disk(N=1000,weighted=True,batch_size=10,max_iter=100)
+    N = 100
+    #weights = np.ones(N)
+    #weights = np.random.rand(100)
+    weights = np.concatenate((np.ones(int(N*0.8)),np.zeros(N-int(N*0.8))))
+    disk(N,weights=weights,batch_size=50,max_iter=100)
     plt.show()
     

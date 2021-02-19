@@ -10,13 +10,13 @@ import misc, gd, plots, setup
 
 def joint_probabilities(distances, perplexity):
     """\
-    Computes the joint probabilities p_ij from distances D.
+    Computes the joint probabilities p_ij from given distances (see tsne paper).
 
     Parameters
     ----------
 
     distances : array, shape (n_samples*(n_samples-1)/2,)
-    Condensed distances.
+    Pairwise distances, given as a condensed 1D array.
 
     perpelxity : float, >0
     Desired perpelxity of the joint probability distribution.
@@ -24,12 +24,14 @@ def joint_probabilities(distances, perplexity):
     Returns
     -------
 
-    P : array, shape (N*(N-1)/2),)
-    Condensed joint probability matrix.
+    P : array, shape (n_samples*(n_samples-1)/2),)
+    Joint probability matrix, given as a condensed 1D array.
     """
+    #change condensed distance array to square form
     distances = scipy.spatial.distance.squareform(distances)
     n_samples = len(distances)
-    #Find optimal neighborhood parameters to achieve desired perplexity
+    
+    #find optimal neighborhood parameters to achieve desired perplexity
     lower_bound=1e-2; upper_bound=1e2; iters=10 #parameters for binary search
     sigma = np.empty(n_samples) #bandwith array
     for i in range(n_samples):
@@ -52,17 +54,42 @@ def joint_probabilities(distances, perplexity):
         #final bandwith parameter for sample i:
         sigma[i] = (lower_bound*upper_bound)**(1/2)
 
+    #compute conditional joint probabilities
     conditional_P = np.exp(-distances**2/(2*sigma**2))
     np.fill_diagonal(conditional_P,0)
     conditional_P /= np.sum(conditional_P,axis=1)
-    
+
+    #compute (symmetric) joint probabilities
     P = conditional_P + conditional_P.T
+    P = scipy.spatial.distance.squareform(P)
     sum_P = np.maximum(np.sum(P), MACHINE_EPSILON)
-    P = np.maximum(scipy.spatial.distance.squareform(P)/sum_P, MACHINE_EPSILON)
+    P = np.maximum(P/sum_P, MACHINE_EPSILON)
+
     return P
 
 ### Cost function and gradient ###
 
+def inverse_square_law_distances(embedding):
+    """\
+    Computes the pairwise inverse square law distances for the given embedding. 
+    These are given by q_ij = 1/(1+|y_i-y_j|^2) for a given pair (i,j). The set 
+    of probabilities used in the low dimensional map of tSNE can then be computed
+    by dividing by the sum.
+
+    Parameters
+    ----------
+
+    embedding : array, shape (n_samples,dim)
+    Embedding (coordinates in low-dimensional map).
+
+    Returns
+    dist: pairwise inverse square law distances, as a condensed 1D array.
+    """
+    dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
+    dist += 1.0
+    dist **= -1.0
+    return dist
+    
 def KL(P,embedding):
     """\
     KL divergence KL(P||Q) between distributions P and Q, where Q is computed
@@ -72,12 +99,12 @@ def KL(P,embedding):
     ----------
 
     P : array, shape (n_samples*(n_samples-1)/2,)
-    Condensed probability array.
+    Joint probabilities, given as a condensed 1D array.
     
     embedding : array, shape (n_samples,dim)
     Current embedding.
 
-    Results
+    Returns
     -------
 
     kl_divergence : float
@@ -87,14 +114,14 @@ def KL(P,embedding):
     dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
     dist += 1.0
     dist **= -1.0
-    Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON)
+    Q = np.maximum(dist/(np.sum(dist)), MACHINE_EPSILON)
     
     kl_divergence = 2.0 * np.dot(
         P, np.log(np.maximum(P, MACHINE_EPSILON) / Q))
         
     return kl_divergence
 
-def grad_KL(P,embedding,only_gradient=False):
+def grad_KL(P,embedding,dist=None,Q=None):
     """\
     Computes KL divergence and its gradient at the given embedding.
 
@@ -107,6 +134,9 @@ def grad_KL(P,embedding,only_gradient=False):
     embedding : array, shape (n_samples,dim)
     Current embedding.
 
+    Q : array, shape (n_samples*(n_samples-1)/2,)
+    Joint probabilities q_ij. If not included, these are computed.
+
     Results
     -------
 
@@ -116,10 +146,11 @@ def grad_KL(P,embedding,only_gradient=False):
     grad : float
     gradiet of KL(P||Q(X)) w.r.t. X.
     """
-    dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
-    dist += 1.0
-    dist **= -1.0
-    Q = np.maximum(dist/(2.0*np.sum(dist)), MACHINE_EPSILON) ######
+    if dist is None or Q is None:
+        dist = scipy.spatial.distance.pdist(embedding,metric='sqeuclidean')
+        dist += 1.0
+        dist **= -1.0
+        Q = np.maximum(dist/(np.sum(dist)), MACHINE_EPSILON) ######
     
     kl_divergence = 2.0 * np.dot(
         P, np.log(np.maximum(P, MACHINE_EPSILON) / Q))
@@ -132,8 +163,7 @@ def grad_KL(P,embedding,only_gradient=False):
     
     return grad, kl_divergence
 
-def batch_gradient(P, embedding, batch_size=10, indices=None, weights=None,
-                   return_objective=True):
+def batch_gradient(P, embedding, batch_size=10, indices=None):
     """\
     Returns gradient approximation.
     """
@@ -143,6 +173,7 @@ def batch_gradient(P, embedding, batch_size=10, indices=None, weights=None,
         np.random.shuffle(indices)
     else:
         assert len(indices) == n_samples
+        
     grad = np.empty(embedding.shape)
     stress = 0
     for start in range(0, n_samples, batch_size):
@@ -150,10 +181,13 @@ def batch_gradient(P, embedding, batch_size=10, indices=None, weights=None,
         batch_idx = np.sort(indices[start:end])
         embedding_batch = embedding[batch_idx]
         P_batch = P[setup.batch_indices(batch_idx,n_samples)]
-        grad[batch_idx], st0 = grad_KL(P_batch,
-                                       embedding_batch)
+        dist = inverse_square_law_distances(embedding_batch)
+        Q_batch = dist/(np.sum(dist))/(n_samples/len(batch_idx))**2
+        grad[batch_idx], st0 = grad_KL(P_batch,embedding_batch,
+                                       dist=dist,Q=Q_batch)
         stress += st0
-
+    grad *= n_samples/batch_size
+    stress *= n_samples/batch_size
     return grad, stress
 
 class TSNE(object):
@@ -161,8 +195,7 @@ class TSNE(object):
     Class to solve tsne problems
     """
     def __init__(self, data, dim=2, perplexity=30.0, sample_colors=None,
-                 verbose=0,
-                 indent='', title='', **kwargs):
+                 verbose=0, indent='', **kwargs):
         """\
         Initializes TSNE object.
 
@@ -187,17 +220,29 @@ class TSNE(object):
 
         perplexity : float > 0
         Perplexity used in determining the conditional probabilities p(i|j).
+
+        verbose : int >= 0
+        Print status of methods in MDS object if verbose > 0.
+
+        indent : str
+        When printing, add indent before printing every new line.
         """
-        if verbose > 0:
-            print(indent+'mview.TSNE():')
+        self.verbose = verbose
+        self.indent = indent
+        if self.verbose > 0:
+            print(self.indent+'mview.TSNE():')
+
+        self.distances = setup.setup_distances(data, **kwargs)
+        self.n_samples = scipy.spatial.distance.num_obs_y(self.distances)
+
+        
 
         self.sample_colors = sample_colors
-        self.verbose = verbose; self.title = title; self.indent = indent
         
-        self.distances = setup.setup_distances(data)
-        self.n_samples = scipy.spatial.distance.num_obs_y(self.distances)
         self.N = self.n_samples
         self.D = self.distances
+
+        
 
         assert isinstance(dim,int); assert dim > 0
         self.dim = dim
@@ -241,26 +286,26 @@ class TSNE(object):
         Set initial embedding.
         """
         if self.verbose > 0:
-            print(f'  MDS.initialize({self.title}):')
+            print(self.indent+'  TSNE.initialize():')
             
         if X0 is None:
             X0 = misc.initial_embedding(self.N,dim=self.dim,
                                         radius=1,**kwargs)
                                         #radius=self.D['rms'],**kwargs)
             if self.verbose > 0:
-                print('    method : random')
+                print(self.indent+'    method : random')
         else:
             assert isinstance(X0,np.ndarray)
             assert X0.shape == (self.N,self.dim)
             if self.verbose > 0:
-                print('    method : initialization given')
+                print(self.indent+'    method : initialization given')
             
         self.embedding = X0
         self.update(**kwargs)
         self.embedding0 = self.embedding.copy()
         
         if self.verbose > 0:
-            print(f'    initial cost : {self.cost:0.2e}')
+            print(self.indent+f'    initial cost : {self.cost:0.2e}')
 
 
     def update(self,**kwargs):
