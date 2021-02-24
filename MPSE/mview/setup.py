@@ -54,7 +54,7 @@ def setup_distances(data, shortest_path=False, **kwargs):
         distances = distance.squareform(distances, checks=False)
     return distances
 
-def setup_weights(distances, weights, max_weight=2.0, min_weight=1e-2):
+def setup_weights(distances, weights, max_weight=2.0, min_weight=1e-4):
     """\
     Sets up condensed weights array.
 

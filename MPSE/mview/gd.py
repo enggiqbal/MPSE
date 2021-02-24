@@ -503,7 +503,7 @@ def multiple(X,F,Xi=None,p=None,scheme='mm',min_cost=None,
                     KWARGS[k]['df0x'] = df0X[k]
                 else:
                     KWARGS[k]['df0x'] = df0Y[k]
-                    
+
             X[k], KWARGS[k] = algorithm[k](X[k],dfX[k],p=p[k],**KWARGS[k])
             if constraint is True:
                 Y = [KWARGS[k]['y'] for k in range(K)]

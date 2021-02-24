@@ -19,7 +19,8 @@ class MPSE(object):
                  total_cost_function='rms',
                  embedding_dimension=3, image_dimension=2,
                  projection_family='linear',projection_constraint='orthogonal',
-                 sample_labels=None, sample_colors=None,
+                 hidden_samples=None,
+                 sample_labels=None, sample_colors=None, image_colors=None,
                  perspective_labels=None,
                  verbose=0, indent='',
                  **kwargs):
@@ -113,6 +114,9 @@ class MPSE(object):
 
         sample_colors : array (optional)
         Array containing color value of samples (used in plots).
+
+        image_colors : array-like, shape (n_perspectives, n_samples)
+        Colors for each image.
         """
         self.verbose, self.indent = verbose, indent
         if verbose > 0:
@@ -143,6 +147,12 @@ class MPSE(object):
                                 projection_family,projection_constraint)
         self.proj = proj
 
+        ##set up hidden samples
+        if hidden_samples is not None:
+            assert isinstance(hidden_samples, list)
+            assert len(hidden_samples) == self.n_perspectives
+        self.hidden_samples = hidden_samples
+
         if verbose > 0:
             print(indent+'  data details:')
             print(indent+f'    number of perspectives : {self.n_perspectives}')
@@ -167,7 +177,11 @@ class MPSE(object):
         self.perspective_labels = perspective_labels
         #setup sample colors:
         self.sample_colors = sample_colors
-
+        #setup image colors:
+        if image_colors is not None:
+            assert len(image_colors) == self.n_perspectives
+        self.image_colors = image_colors
+            
         #setup visualization instances:
         self.visualization_instances = []
         self.visualization_method = visualization_method
@@ -592,7 +606,10 @@ class MPSE(object):
             
         for k in range(self.n_perspectives):
             if colors is True:
-                colors_k = [0]+list(self.distances[k][0:self.n_samples-1]) ####
+                if self.image_colors is None:
+                    colors_k = [0]+list(self.distances[k][0:self.n_samples-1])
+                else:
+                    colors_k = self.image_colors[k]
             elif colors is False:
                 colors_k = None
             else:
@@ -703,21 +720,18 @@ class MPSE(object):
     
 ##### TESTS #####
 
-def n123():
-    X = np.genfromtxt('samples/123/123.csv',delimiter=',')
-    X1 = np.genfromtxt('samples/123/1.csv',delimiter=',')
-    X2 = np.genfromtxt('samples/123/2.csv',delimiter=',')
-    X3 = np.genfromtxt('samples/123/3.csv',delimiter=',')
-    Y = [X1, X2, X3]
-    proj = projections.PROJ()
-    Q = proj.generate(number=3,method='cylinder')
-    return Y, Q
-
-def basic(example='123', fixed_projections=False, fixed_embedding=False,
+def basic(example='123', n_samples=1000,
+          fixed_projections=False, fixed_embedding=False,
           visualization_method='mds', smart_initialization=False, **kwargs):
-    
+
+    image_colors = None
+    import samples
+    if example == 'disk':
+        Y, X, Q = samples.disk(n_samples)
     if example == '123':
-        Y, Q = n123()
+        Y, X, Q = samples.e123()
+    if example == 'cluster':
+        Y, image_colors = samples.cluster()
 
     if fixed_projections:
         mv = MPSE(Y,Q=Q,visualization_method=visualization_method,verbose=2,
@@ -728,6 +742,7 @@ def basic(example='123', fixed_projections=False, fixed_embedding=False,
     else:
         mv = MPSE(Y,visualization_method=visualization_method,verbose=2,
                   **kwargs)
+    mv.image_colors = image_colors
 
     if smart_initialization and fixed_projections is False and \
        fixed_embedding is False:
@@ -748,29 +763,6 @@ def basic(example='123', fixed_projections=False, fixed_embedding=False,
     plt.draw()
     plt.pause(0.2)
     
-def disk(N=100,fixed_projections=False,fixed_embedding=False,**kwargs):
-    X = misc.disk(N,dim=3)
-    proj = projections.PROJ()
-    Q = proj.generate(number=3,method='standard')
-    X1, X2, X3 = proj.project(Q,X)
-    if fixed_projections:
-        mv = MPSE([X1,X2,X3],Q=Q,verbose=2,sample_colors=X1[:,0])
-    elif fixed_embedding:
-        mv = MPSE([X1,X2,X3],X=X,verbose=2,sample_colors=X1[:,0])
-    else:
-        mv = MPSE([X1,X2,X3],verbose=2,sample_colors=X1[:,0])
-    mv.plot_embedding(title='initial embedding')
-    if fixed_projections:
-        mv.gd(fixed_projections=True,**kwargs)
-    elif fixed_embedding:
-        mv.gd(fixed_embedding=True,**kwargs)
-    else:
-        mv.gd(**kwargs)
-    mv.plot_computations()
-    mv.plot_embedding(title='final embeding')
-    mv.plot_images()
-    plt.draw()
-    plt.pause(0.2)
 
 def e123(fixed_projections=False,fixed_embedding=False,
          visualization_method='mds',smart=False,**kwargs):
@@ -806,13 +798,15 @@ def e123(fixed_projections=False,fixed_embedding=False,
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
-    #disk(fixed_projections=False, batch_size=20)
     weights1 = np.concatenate((np.ones(800),np.zeros(200)))
-    weights2 = [np.concatenate((np.ones(800),np.zeros(200))),
-                np.concatenate((np.zeros(200),np.zeros(800))),
-                np.ones(1000)]
-    basic(fixed_projections=False,fixed_embedding=False,batch_size=50,
-         visualization_method='tsne',max_iter=100,smart=False,min_cost=0.001,
-          weights=None,visualization_args={'perplexity':500})#weights2)
+    weights2 = [np.concatenate((np.zeros(100),np.ones(900))),
+                np.concatenate((np.zeros(100),np.ones(900))),
+                np.concatenate((np.zeros(100),np.ones(900)))]
+    basic(example='123',
+          fixed_projections=False,fixed_embedding=False,batch_size=None,
+          visualization_method='mds',max_iter=100,
+          smart_initialization=False,min_cost=0.001,
+          visualization_args={'perplexity':50},
+          weights = weights2)
     plt.show()
     
