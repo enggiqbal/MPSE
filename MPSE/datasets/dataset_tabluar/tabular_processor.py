@@ -3,6 +3,7 @@ import numpy as np
 import sys
 from scipy.spatial import distance
 from sklearn.metrics.pairwise import euclidean_distances
+from sklearn.metrics import pairwise_distances
 from sklearn.manifold import MDS
 import matplotlib.pyplot as plt
 
@@ -31,8 +32,8 @@ def draw2d(points,filename,titlearray):
 #filename='application_train_head.csv'
 #expname="simple"
 
-filename='application_head_1000.csv'
-expname="credit3_1000"
+filename='data/application_head_1000.csv'
+expname="credit3_tsne_cluster_1000"
 #comments
 
 data=pd.read_csv(filename)
@@ -81,28 +82,56 @@ p1=p1.values
 p1=p1.T[0]
 #p1.sort()
 import matplotlib.pyplot as plt
-import pdb; pdb.set_trace() 
+# import pdb; pdb.set_trace() 
+
+
+
+
+data['AMT_INCOME_TOTAL']= [ r['AMT_INCOME_TOTAL'] for i, r in data.iterrows() ]
+AMT_INCOME_TOTAL=[]
+for i, r in data.iterrows() :
+    if  r['AMT_INCOME_TOTAL'] < 70000:
+        AMT_INCOME_TOTAL.append(0)
+    elif  r['AMT_INCOME_TOTAL'] > 70000 and r['AMT_INCOME_TOTAL'] < 100000:
+        AMT_INCOME_TOTAL.append(1)
+    else:
+        AMT_INCOME_TOTAL.append(2)
+data["AMT_INCOME_TOTAL"]=AMT_INCOME_TOTAL
+
+# import pdb; pdb.set_trace()
+# data=(data-data.mean())/data.std()
+
+p1 = data[projections[0]].values
+p2 = data[projections[1]].values
+p3 = data[projections[2]].values
+
 plt.plot(p1) # Plot list. x-values assumed to be [0, 1, 2, 3]
-plt.show()
- 
+plt.savefig("p1.png")
 
-data=(data-data.mean())/data.std()
+plt.plot(p2) # Plot list. x-values assumed to be [0, 1, 2, 3]
+plt.savefig("p2.png")
 
-p1 = data[projections[0]].copy()
-p2 = data[projections[1]].copy()
-p3 = data[projections[2]].copy()
+plt.plot(p3) # Plot list. x-values assumed to be [0, 1, 2, 3]
+plt.savefig("p3.png")
 
 
- 
+# p1=data.values[:,2]
+
+#pairwise_distances
+# import pdb; pdb.set_trace()
+p1=p1.reshape(-1, 1)
+p2=p2.reshape(-1, 1)
+p3=p3.reshape(-1, 1)
+
 dst1 = euclidean_distances(p1)
 dst2 = euclidean_distances(p2)
 dst3 = euclidean_distances(p3)
 
-from sklearn.preprocessing import normalize
+# from sklearn.preprocessing import normalize
  
-dst1=normalize(dst1)
-dst2=normalize(dst2)
-dst3=normalize(dst3)
+# dst1=normalize(dst1)
+# dst2=normalize(dst2)
+# dst3=normalize(dst3)
  
 np.savetxt('dis'+expname+'_1.csv',dst1, fmt='%.6e', delimiter=',' )
 np.savetxt('dis'+expname+'_2.csv',dst2, fmt='%.6e', delimiter=',' )
