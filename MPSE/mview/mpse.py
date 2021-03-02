@@ -389,9 +389,11 @@ class MPSE(object):
             print(self.indent+'  MPSE.smart_initialize():')
 
         distances = np.sum(self.distances,axis=0)/self.n_perspectives
+        weights = np.product(self.weights,axis=0)
         vis = mds.MDS(distances,dim=self.embedding_dimension,min_grad=1e-4,
                       indent=self.indent+'    ',
                       initial_embedding=self.embedding,
+                      weights = weights,
                       verbose=self.verbose)
         vis.gd(batch_size=batch_size, max_iter=max_iter[0],lr=lr[0],**kwargs)
         self.embedding = vis.X
@@ -803,9 +805,9 @@ if __name__=='__main__':
                 np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900)))]
     basic(example='123',
-          fixed_projections=False,fixed_embedding=False,batch_size=None,
+          fixed_projections=False,fixed_embedding=False,batch_size=50,
           visualization_method='mds',max_iter=100,
-          smart_initialization=False,min_cost=0.001,
+          smart_initialization=True,min_cost=0.001,
           visualization_args={'perplexity':50},
           weights = weights2)
     plt.show()
