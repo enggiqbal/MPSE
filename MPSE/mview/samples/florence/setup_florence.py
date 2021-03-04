@@ -6,14 +6,10 @@ import pandas as pd
 from scipy.sparse.csgraph import shortest_path
 import matplotlib.pyplot as plt
 
-sys.path.insert(1,'../..')
-import mview
-
 #file and pandas object with data:
-#path = os.path.join(sys.path[0],
- #                   'florentine_families_relations_matrix_sample.csv')
-path = 'florentine_families_relations_matrix_sample.csv'
-with open(path) as csvfile:
+path = os.path.dirname(os.path.realpath(__file__))
+file = path+'/florentine_families_relations_matrix_sample.csv'
+with open(file) as csvfile:
     df = pd.read_csv(csvfile)
 
 #list with attributes:
@@ -94,43 +90,11 @@ labels = [None]*len(reduced_families)
 labels[medici] = 'Medici'
 labels[strozzi] = 'Strozzi'
 
-def mds(i):
-    mds = mview.MDS(reduced_distances[i],weights=lambda x:x**(-1),
-                    dim=2,verbose=2)
-    mds.gd(batch_size=None,max_iter=30)
-    mds.plot_embedding(labels=labels,
-                       colors=reduced_distances[i][medici],
-                       axis=False,
-                       title=' MDS embedding of '+perspectives[i]+' network'
-                       ,edges=edges[i])
-    mds.plot_computations()
-
-def mpse():
-    mv = mview.MPSE(reduced_distances,
-                    data_args={'weights':lambda x:x**(-1)},verbose=2)
-    mv.gd(bach_size=9,max_iters=50)
-    mv.gd(max_iters=50,batch_size=16)
-    mv.gd()
-    mv.plot_embedding(labels=labels)#,axis=True)
-    mv.plot_embedding(labels=labels,colors=reduced_distances[0][medici],
-                      axis=True,edges=edges1)
-    #mv.plot_embedding(labels=labels,colors=reduced_distances[1][medici],
-    #                  axis=True,edges=edges2)
-    mv.plot_computations()
-    mv.plot_image(0,labels=labels,colors=reduced_distances[0][medici],
-                  axis=False,title='MPSE embedding: marriage view',
-                  edges=edges1)
-    mv.plot_image(1,labels=labels,colors=reduced_distances[1][medici],
-                  axis=False,title='MPSE embedding: loan view',
-                  edges=edges2)
-    ave_medici = np.linalg.norm(mv.embedding-mv.embedding[medici])/ \
-        np.sqrt(len(reduced_families)-1)
-    print('medici average',ave_medici)
-    ave_strozzi = np.linalg.norm(mv.embedding-mv.embedding[strozzi])/ \
-        np.sqrt(len(reduced_families)-1)
-    print('strozzi average',ave_strozzi)
+def setup2():
+    dictionary = {
+        'data' : reduced_distances,
+        'edges' : edges,
+        'labels' : labels
+        }
+    return dictionary
     
-#mds(0)
-#mds(1)
-mpse()
-plt.show()

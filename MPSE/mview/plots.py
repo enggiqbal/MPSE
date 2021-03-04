@@ -30,7 +30,7 @@ def plot2D(Y,save=False,colors=None,edges=None,labels=None,
         for i,j in edges:
             ax.plot([Y[i,0],Y[j,0]],
                     [Y[i,1],Y[j,1]],'-',
-                    linewidth=0.1,color='lightgray',zorder=1)
+                    linewidth=0.2,color='gray',zorder=1)
             
     
     ax.scatter(Y[:,0],Y[:,1],s=markersize,c=colors,zorder=2)

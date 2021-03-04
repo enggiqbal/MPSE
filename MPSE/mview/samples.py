@@ -34,3 +34,8 @@ def cluster():
     labels = open(path+'labels.csv')
     labels = np.array(list(csv.reader(labels)),dtype=int).T
     return Y, labels
+
+def florence():
+    sys.path.insert(1,'samples/florence/')
+    import setup_florence as setup
+    return setup.setup2()

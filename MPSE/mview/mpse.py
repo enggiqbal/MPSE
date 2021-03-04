@@ -389,7 +389,10 @@ class MPSE(object):
             print(self.indent+'  MPSE.smart_initialize():')
 
         distances = np.sum(self.distances,axis=0)/self.n_perspectives
-        weights = np.product(self.weights,axis=0)
+        if self.weights is not None and self.weights[0] is not None:
+            weights = np.product(self.weights,axis=0)
+        else:
+            weights = None
         vis = mds.MDS(distances,dim=self.embedding_dimension,min_grad=1e-4,
                       indent=self.indent+'    ',
                       initial_embedding=self.embedding,
@@ -727,6 +730,8 @@ def basic(example='123', n_samples=1000,
           visualization_method='mds', smart_initialization=False, **kwargs):
 
     image_colors = None
+    edges = None
+    labels = None
     import samples
     if example == 'disk':
         Y, X, Q = samples.disk(n_samples)
@@ -734,6 +739,11 @@ def basic(example='123', n_samples=1000,
         Y, X, Q = samples.e123()
     if example == 'cluster':
         Y, image_colors = samples.cluster()
+    if example == 'florence':
+        dict = samples.florence()
+        Y = dict['data']
+        labels = dict['labels']
+        edges = dict['edges']
 
     if fixed_projections:
         mv = MPSE(Y,Q=Q,visualization_method=visualization_method,verbose=2,
@@ -761,7 +771,7 @@ def basic(example='123', n_samples=1000,
         
     mv.plot_computations()
     mv.plot_embedding(title='final embeding')
-    mv.plot_images()
+    mv.plot_images(edges=edges, labels=labels)
     plt.draw()
     plt.pause(0.2)
     
@@ -804,11 +814,11 @@ if __name__=='__main__':
     weights2 = [np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900)))]
-    basic(example='123',
-          fixed_projections=False,fixed_embedding=False,batch_size=50,
+    basic(example='florence',
+          fixed_projections=False,fixed_embedding=False,batch_size=20,
           visualization_method='mds',max_iter=100,
           smart_initialization=True,min_cost=0.001,
           visualization_args={'perplexity':50},
-          weights = weights2)
+          weights = None)
     plt.show()
     
