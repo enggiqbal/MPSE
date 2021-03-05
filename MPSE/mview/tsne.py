@@ -39,7 +39,7 @@ def joint_probabilities(distances, perplexity):
         sigma_i = (lower_bound*upper_bound)**(1/2)
         for iter in range(iters):
             #distances to sample i, not including self:
-            D_i = np.delete(distances[i],i) 
+            D_i = np.delete(distances[i],i)
             #compute array with conditional probabilities w.r.t. sample i:
             P_i = np.exp(-D_i**2/(2*sigma_i**2))
             P_i /= np.sum(P_i) ####

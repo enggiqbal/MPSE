@@ -591,7 +591,7 @@ class MPSE(object):
             plt.draw()
             plt.pause(1)
 
-    def plot_images(self,title=None,edges=False,
+    def plot_images(self,title=None,edges=None,
                 colors=True,plot=True,
                 ax=None,**kwargs):
         if ax is None:
@@ -600,12 +600,8 @@ class MPSE(object):
         else:
             plot = False
 
-        if edges is False:
+        if edges is None:
             edges = [None]*self.n_perspectives
-        elif edges is True:
-            edges = []
-            for k in range(self.n_perspectives):
-                edges.append(self.distances[k]['edge_list'])
         else:
             edges = edges
             
@@ -729,6 +725,7 @@ def basic(example='123', n_samples=1000,
           fixed_projections=False, fixed_embedding=False,
           visualization_method='mds', smart_initialization=False, **kwargs):
 
+    sample_colors = None
     image_colors = None
     edges = None
     labels = None
@@ -744,6 +741,12 @@ def basic(example='123', n_samples=1000,
         Y = dict['data']
         labels = dict['labels']
         edges = dict['edges']
+    if example == 'credit':
+        Y = samples.credit()
+    if example == 'phishing':
+        Y, sample_colors, plabels = \
+            samples.phishing(groups=[0,1,3], n_samples=200)
+        #image_colors = [sample_colors]*len(Y)
 
     if fixed_projections:
         mv = MPSE(Y,Q=Q,visualization_method=visualization_method,verbose=2,
@@ -755,13 +758,15 @@ def basic(example='123', n_samples=1000,
         mv = MPSE(Y,visualization_method=visualization_method,verbose=2,
                   **kwargs)
     mv.image_colors = image_colors
+    mv.sample_colors = sample_colors
+
+    mv.plot_embedding(title='initial embedding')
 
     if smart_initialization and fixed_projections is False and \
        fixed_embedding is False:
         mv.smart_initialize()
         mv.plot_embedding(title='smart initialize')
 
-    mv.plot_embedding(title='initial embedding')
     if fixed_projections:
         mv.gd(fixed_projections=True,**kwargs)
     elif fixed_embedding:
@@ -775,39 +780,6 @@ def basic(example='123', n_samples=1000,
     plt.draw()
     plt.pause(0.2)
     
-
-def e123(fixed_projections=False,fixed_embedding=False,
-         visualization_method='mds',smart=False,**kwargs):
-    X = np.genfromtxt('samples/123/123.csv',delimiter=',')
-    X1 = np.genfromtxt('samples/123/1.csv',delimiter=',')
-    X2 = np.genfromtxt('samples/123/2.csv',delimiter=',')
-    X3 = np.genfromtxt('samples/123/3.csv',delimiter=',')  
-    proj = projections.PROJ()
-    Q = proj.generate(number=3,method='cylinder')
-    if fixed_projections:
-        fixed_projections = Q
-    else:
-        fixed_projections = None
-    if fixed_embedding:
-        fixed_embedding = X
-    else:
-        fixed_embedding = None
-    mv = MPSE([X1,X2,X3],fixed_embedding=fixed_embedding,
-              fixed_projections=fixed_projections,verbose=2,
-              sample_colors=X1[:,0],
-              visualization_method=visualization_method,**kwargs)
-    mv.plot_embedding(title='initial embedding')
-    if smart and fixed_projections is False and fixed_embedding is False:
-        mv.smart_initialize()
-        mv.plot_embedding(title='smart initialize')
-    mv.gd(**kwargs)
-    mv.plot_computations()
-    mv.plot_embedding(title='final embeding')
-    mv.plot_images()
-    plt.draw()
-    plt.pause(0.2)
-
-    
 if __name__=='__main__':
     print('mview.mpse : running tests')
     weights1 = np.concatenate((np.ones(800),np.zeros(200)))
@@ -815,10 +787,10 @@ if __name__=='__main__':
                 np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900)))]
     basic(example='florence',
-          fixed_projections=False,fixed_embedding=False,batch_size=20,
-          visualization_method='mds',max_iter=100,
+          fixed_projections=False,fixed_embedding=False,batch_size=None,
+          visualization_method='tsne',max_iter=100,
           smart_initialization=True,min_cost=0.001,
-          visualization_args={'perplexity':50},
+          visualization_args={'perplexity':40},
           weights = None)
     plt.show()
     

@@ -8,7 +8,7 @@ import itertools
 
 ### Functions to setup condensed distances from data ###
 
-def setup_distances(data, shortest_path=False, **kwargs):
+def setup_distances(data, shortest_path=False, min_distance=1e-4, **kwargs):
     """\
     Sets up condensed distances.
 
@@ -52,6 +52,8 @@ def setup_distances(data, shortest_path=False, **kwargs):
         distances = distance.squareform(distances)
         distances = csgraph.shortest_path(distances)
         distances = distance.squareform(distances, checks=False)
+    if min_distance is not None:
+        distances = np.maximum(distances,min_distance*np.max(distances))
     return distances
 
 def setup_weights(distances, weights, max_weight=2.0, min_weight=1e-4):
