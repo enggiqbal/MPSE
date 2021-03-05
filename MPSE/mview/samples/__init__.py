@@ -1,6 +1,7 @@
 import os, sys
 directory = os.path.dirname(os.path.realpath(__file__))
 sys.path.insert(1,directory)
+import csv
 
 import numpy as np
 
@@ -63,3 +64,13 @@ def phishing(groups=[0,1,2,3], n_samples=None):
         
     sample_colors = phishing.results[0:n_samples]
     return Y, sample_colors, perspective_labels
+
+def mnist():
+    Y = []
+    for ind in ['1','2']:
+        filec = open(directory+'/MNIST/MNIST_'+ind+'.csv')
+        array = np.array(list(csv.reader(filec)),dtype='float')
+        Y.append(array)
+    filec = open(directory+'/MNIST/MNIST_labels.csv')
+    labels =  np.array(list(csv.reader(filec)),dtype='float')
+    return Y, labels

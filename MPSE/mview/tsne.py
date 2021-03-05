@@ -377,6 +377,18 @@ def example_tsne(**kwargs):
     vis.plot_embedding()
     plt.show()
 
+def example_mnist(**kwargs):
+    import samples
+    D,labels = samples.mnist()
+    labels = labels.T[0]
+    D = D[0]
+    vis = TSNE(D,verbose=2,perplexity=40)
+    vis.initialize()
+    vis.plot_embedding()
+    vis.gd(plot=True,**kwargs)
+    vis.plot_embedding(colors=labels)
+    plt.show()
+
 def sk_tsne():
 
     X_true = np.load('examples/123/true2.npy')#[0:500]
@@ -391,5 +403,6 @@ def sk_tsne():
     
 if __name__=='__main__':
     print('mview.tsne : tests')
-    example_tsne()
+    #example_tsne()
+    example_mnist()
     
