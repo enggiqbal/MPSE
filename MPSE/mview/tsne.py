@@ -32,37 +32,42 @@ def joint_probabilities(distances, perplexity):
     n_samples = len(distances)
     
     #find optimal neighborhood parameters to achieve desired perplexity
-    lower_bound=1e-2; upper_bound=1e3; iters=20 #parameters for binary search
+    lower_bound=1e-1; upper_bound=1e1; iters=10 #parameters for binary search
     sigma = np.empty(n_samples) #bandwith array
     for i in range(n_samples):
-        #distances to sample i, not including self:
-        D_i = np.delete(distances[i],i)
-        lower_bound=1e-2; upper_bound=1e2;
+        D_i = np.delete(distances[i],i) #distances to ith sample
+        estimate = np.sum(D_i)/(n_samples-1)/5
+        lower_bound_i=lower_bound*estimate; upper_bound_i=upper_bound*estimate;
         for iter in range(iters):
             #initialize bandwith parameter for sample i:
-            sigma_i = (lower_bound*upper_bound)**(1/2)
+            sigma_i = (lower_bound_i*upper_bound_i)**(1/2)
             #compute array with conditional probabilities w.r.t. sample i:
             P_i = np.exp(-D_i**2/(2*sigma_i**2))
-            P_i /= np.sum(P_i) ####
+            if np.isfinite(P_i).all() is False:
+                print('infinite value')
+            if np.nan in P_i:
+                print('nan found')
+            if np.sum(P_i) == 0:
+                print('adds to 0')
+            P_i /= np.sum(P_i)
             #compute perplexity w.r.t sample i:
             HP_i = -np.dot(P_i,np.log2(P_i+MACHINE_EPSILON))
             PerpP_i = 2**(HP_i)
             #update bandwith parameter for sample i:
             if PerpP_i > perplexity:
-                upper_bound = sigma_i
+                upper_bound_i = sigma_i
             else:
-                lower_bound = sigma_i
+                lower_bound_i = sigma_i
         #final bandwith parameter for sample i:
-        sigma[i] = (lower_bound*upper_bound)**(1/2)
+        sigma[i] = (lower_bound_i*upper_bound_i)**(1/2)
 
-    #compute conditional joint probabilities
+    #compute conditional joint probabilities (note: these are transposed)
     conditional_P = np.exp(-distances**2/(2*sigma**2))
     np.fill_diagonal(conditional_P,0)
     conditional_P /= np.sum(conditional_P,axis=0)
-    print(np.sum(conditional_P))
 
     #compute (symmetric) joint probabilities
-    P = conditional_P + conditional_P.T
+    P = (conditional_P + conditional_P.T)
     P = scipy.spatial.distance.squareform(P)
     sum_P = np.maximum(np.sum(P), MACHINE_EPSILON)
     P = np.maximum(P/sum_P, MACHINE_EPSILON)
@@ -344,7 +349,7 @@ class TSNE(object):
         if self.verbose > 0:
             print(self.indent+f'    final stress : {self.cost:0.2e}')
             
-    def plot_embedding(self,title='',edges=False,colors='default',labels=None,
+    def plot_embedding(self,title='',edges=False,colors=None,labels=None,
                 axis=True,plot=True,ax=None,**kwargs):
         assert self.dim >= 2
         if ax is None:
@@ -355,7 +360,7 @@ class TSNE(object):
             edges = self.D['edge_list']
         elif edges is False:
             edges = None
-        if colors == 'default':
+        if colors is True:
             colors = self.sample_colors
         plots.plot2D(self.embedding,edges=edges,colors=colors,labels=labels,
                      axis=axis,ax=ax,title=title,**kwargs)
@@ -381,7 +386,7 @@ def example_tsne(**kwargs):
 
 def example_mnist(**kwargs):
     import samples
-    D,labels = samples.mnist(n_samples=3000)
+    D,labels = samples.mnist(n_samples=2000)
     #labels = labels.T[0]
     #D = D[0]
     from mds import MDS
@@ -391,7 +396,9 @@ def example_mnist(**kwargs):
     #X0 = vis.X
     vis = TSNE(D,verbose=2,perplexity=30)
     vis.initialize()
-    vis.gd(plot=True,batch_size=30,**kwargs, max_iter=400)
+    #vis.gd(plot=True,batch_size=30,**kwargs, max_iter=30)
+    #vis.gd(plot=True,batch_size=70)
+    vis.gd(plot=True)
     vis.gd(plot=True,batch_size=70)
     vis.gd(plot=True)
     vis.plot_embedding(colors=labels)
