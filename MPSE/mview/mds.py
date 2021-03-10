@@ -586,6 +586,26 @@ class MDS(object):
                                    
 ### TESTS ###
 
+def basic(example='mnist', **kwargs):
+    import samples
+    if example == 'mnist':
+        X, labels, = samples.mnist()
+    distances = X
+        
+    mds = MDS(distances,dim=2,verbose=2,
+              sample_colors=labels)
+
+    fig, ax = plt.subplots(1,3,figsize=(9,3))
+    fig.suptitle('MDS - disk data')
+    fig.subplots_adjust(top=0.80)
+    mds.plot_embedding(title='initial embedding',ax=ax[0])
+    mds.gd(min_cost=1e-6,batch_size=50,**kwargs)
+    mds.gd(batch_size=200)
+    mds.plot_computations(ax=ax[1])
+    mds.plot_embedding(title='final embedding',ax=ax[2])
+    plt.draw()
+    plt.pause(1.0)
+        
 def disk(N=128,weights=None,**kwargs):
     #basic disk example
     #N is number of points
@@ -617,7 +637,8 @@ if __name__=='__main__':
     N = 100
     #weights = np.ones(N)
     #weights = np.random.rand(100)
-    weights = np.concatenate((np.ones(int(N*0.8)),np.zeros(N-int(N*0.8))))
-    disk(N,weights=weights,batch_size=50,max_iter=100)
+    #weights = np.concatenate((np.ones(int(N*0.8)),np.zeros(N-int(N*0.8))))
+    #disk(N,batch_size=50,max_iter=100)
+    basic()
     plt.show()
     

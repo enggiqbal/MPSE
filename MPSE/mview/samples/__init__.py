@@ -65,7 +65,7 @@ def phishing(groups=[0,1,2,3], n_samples=None):
     sample_colors = phishing.results[0:n_samples]
     return Y, sample_colors, perspective_labels
 
-def mnist():
+def mnist0():
     Y = []
     for ind in ['1','2']:
         filec = open(directory+'/MNIST/MNIST_'+ind+'.csv')
@@ -73,4 +73,15 @@ def mnist():
         Y.append(array)
     filec = open(directory+'/MNIST/MNIST_labels.csv')
     labels =  np.array(list(csv.reader(filec)),dtype='float')
-    return Y, labels
+    filec = open(directory+'/MNIST/MNIST_labels.csv')
+    X = np.array(list(csv.reader(filec)),dtype='float')
+    return Y, labels, X
+
+def mnist(n_samples=1000):
+    from keras.datasets import mnist
+    (X_train,Y_train),(X_test,Y_test) = mnist.load_data()
+    X = X_train[0:n_samples]
+    labels = Y_train[0:n_samples]
+    X = X.reshape(n_samples,28*28)
+    X = np.array(X,dtype='float')/256
+    return X, labels

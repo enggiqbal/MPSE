@@ -32,14 +32,15 @@ def joint_probabilities(distances, perplexity):
     n_samples = len(distances)
     
     #find optimal neighborhood parameters to achieve desired perplexity
-    lower_bound=1e-2; upper_bound=1e2; iters=10 #parameters for binary search
+    lower_bound=1e-2; upper_bound=1e3; iters=20 #parameters for binary search
     sigma = np.empty(n_samples) #bandwith array
     for i in range(n_samples):
-        #initialize bandwith parameter for sample i:
-        sigma_i = (lower_bound*upper_bound)**(1/2)
+        #distances to sample i, not including self:
+        D_i = np.delete(distances[i],i)
+        lower_bound=1e-2; upper_bound=1e2;
         for iter in range(iters):
-            #distances to sample i, not including self:
-            D_i = np.delete(distances[i],i)
+            #initialize bandwith parameter for sample i:
+            sigma_i = (lower_bound*upper_bound)**(1/2)
             #compute array with conditional probabilities w.r.t. sample i:
             P_i = np.exp(-D_i**2/(2*sigma_i**2))
             P_i /= np.sum(P_i) ####
@@ -57,7 +58,8 @@ def joint_probabilities(distances, perplexity):
     #compute conditional joint probabilities
     conditional_P = np.exp(-distances**2/(2*sigma**2))
     np.fill_diagonal(conditional_P,0)
-    conditional_P /= np.sum(conditional_P,axis=1)
+    conditional_P /= np.sum(conditional_P,axis=0)
+    print(np.sum(conditional_P))
 
     #compute (symmetric) joint probabilities
     P = conditional_P + conditional_P.T
@@ -370,7 +372,7 @@ def example_tsne(**kwargs):
     from scipy import spatial
     D = spatial.distance_matrix(X_true,X_true)
 
-    vis = TSNE(D,verbose=2,perplexity=50,sample_colors=colors)
+    vis = TSNE(D,verbose=2,perplexity=10,sample_colors=colors)
     vis.initialize(X0=X_true)
     vis.plot_embedding()
     vis.gd(plot=True,**kwargs)
@@ -379,13 +381,19 @@ def example_tsne(**kwargs):
 
 def example_mnist(**kwargs):
     import samples
-    D,labels = samples.mnist()
-    labels = labels.T[0]
-    D = D[0]
-    vis = TSNE(D,verbose=2,perplexity=40)
+    D,labels = samples.mnist(n_samples=3000)
+    #labels = labels.T[0]
+    #D = D[0]
+    from mds import MDS
+    #vis = MDS(D)
+    #vis.gd(batch_size=50)
+    #vis.plot_embedding(colors=labels)
+    #X0 = vis.X
+    vis = TSNE(D,verbose=2,perplexity=30)
     vis.initialize()
-    vis.plot_embedding()
-    vis.gd(plot=True,**kwargs)
+    vis.gd(plot=True,batch_size=30,**kwargs, max_iter=400)
+    vis.gd(plot=True,batch_size=70)
+    vis.gd(plot=True)
     vis.plot_embedding(colors=labels)
     plt.show()
 
