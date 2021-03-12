@@ -748,11 +748,9 @@ def basic(example='123', n_samples=1000,
             samples.phishing(groups=[0,1,3], n_samples=200)
         #image_colors = [sample_colors]*len(Y)
     if example == 'mnist':
-        Y, sample_colors = samples.mnist()
-        sample_colors = sample_colors.T[0]
-        #image_colors = sample_colors
-        print(sample_colors)
-        
+        X, sample_colors = samples.mnist()
+        Y = [X[:,0:28*14],X[:,28*14::]]
+        image_colors = [sample_colors, sample_colors]
     if fixed_projections:
         mv = MPSE(Y,Q=Q,visualization_method=visualization_method,verbose=2,
                   **kwargs)
@@ -792,10 +790,10 @@ if __name__=='__main__':
                 np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900)))]
     basic(example='mnist',
-          fixed_projections=False,fixed_embedding=False,batch_size=100,
-          visualization_method='tsne',max_iter=60,
+          fixed_projections=False,fixed_embedding=False,batch_size=None,
+          visualization_method='tsne',max_iter=400,
           smart_initialization=True,min_cost=0.001,
-          visualization_args={'perplexity':20},
+          visualization_args={'perplexity':30},
           weights = None)
     plt.show()
     

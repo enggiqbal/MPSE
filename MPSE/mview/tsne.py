@@ -384,9 +384,12 @@ def example_tsne(**kwargs):
     vis.plot_embedding()
     plt.show()
 
-def example_mnist(**kwargs):
+def example_mnist(top=False, **kwargs,):
     import samples
     D,labels = samples.mnist(n_samples=2000)
+
+    if top is True:
+        D = D[:,0:28*14]
     #labels = labels.T[0]
     #D = D[0]
     from mds import MDS
@@ -419,5 +422,5 @@ def sk_tsne():
 if __name__=='__main__':
     print('mview.tsne : tests')
     #example_tsne()
-    example_mnist()
+    example_mnist(top=True)
     
