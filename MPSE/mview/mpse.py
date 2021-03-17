@@ -789,7 +789,7 @@ if __name__=='__main__':
     weights2 = [np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900)))]
-    basic(example='mnist',
+    basic(example='florence',
           fixed_projections=False,fixed_embedding=False,batch_size=None,
           visualization_method='tsne',max_iter=400,
           smart_initialization=True,min_cost=0.001,

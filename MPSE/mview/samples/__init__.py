@@ -6,6 +6,7 @@ import csv
 import numpy as np
 
 def disk(n_samples=1000):
+    import misc, projections
     X = misc.disk(n_samples, dim=3)
     proj = projections.PROJ()
     Q = proj.generate(number=3, method='standard')
@@ -85,3 +86,6 @@ def mnist(n_samples=1000):
     X = X.reshape(n_samples,28*28)
     X = np.array(X,dtype='float')/256
     return X, labels
+
+def load(dataset, **kwargs):
+    "returns dictionary with 
