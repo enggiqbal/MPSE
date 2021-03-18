@@ -14,10 +14,11 @@ def disk(n_samples=1000):
     return Y, X, Q
 
 def e123():
-    X = np.genfromtxt(path+'123/123.csv',delimiter=',')
-    X1 = np.genfromtxt(path+'123/1.csv',delimiter=',')
-    X2 = np.genfromtxt(path+'123/2.csv',delimiter=',')
-    X3 = np.genfromtxt(path+'123/3.csv',delimiter=',')
+    import projections
+    X = np.genfromtxt(directory+'/123/123.csv',delimiter=',')
+    X1 = np.genfromtxt(directory+'/123/1.csv',delimiter=',')
+    X2 = np.genfromtxt(directory+'/123/2.csv',delimiter=',')
+    X3 = np.genfromtxt(directory+'/123/3.csv',delimiter=',')
     proj = projections.PROJ()
     Q = proj.generate(number=3,method='cylinder')
     return [X1,X2,X3], X, Q
@@ -88,4 +89,37 @@ def mnist(n_samples=1000):
     return X, labels
 
 def load(dataset, **kwargs):
-    "returns dictionary with 
+    "returns dictionary with datasets"
+    datasets = ['disk','123','cluster','florence','credit','phishing','mnist']
+    assert dataset in datasets
+    
+    data = {}
+    keys = ['D','X','Q','Y','colors','embedding_colors','image_colors',
+            'edges','labels']
+    for key in keys:
+        data[key] = None
+    
+    if dataset == 'disk':
+        data['Y'], data['X'], data['Q'] = disk(**kwargs)
+        data['D'] = data['Y']
+        data['colors'] = True
+    elif dataset == '123':
+        data['Y'], data['X'], data['Q'] = e123(**kwargs)
+        data['D'] = data['Y']
+        data['colors'] = True
+    elif dataset == 'cluster':
+        data['D'], data['image_colors'] = cluster(**kwargs)
+    elif dataset == 'florence':
+        dictf = florence()
+        data['D'] = dictf['data']
+        data['labels'] = dictf['edges']
+    elif dataset == 'credit':
+        data['D'] = credit()
+    elif dataset == 'phishing':
+        data['D'], data['colors'], data['perspective_labels'] = \
+            phishing(groups=[0,1,3], n_samples=200)
+    elif dataset == 'mnist':
+        X, data['colors'] = mnist()
+        data['D'] = [X[:,0:28*14],X[:,28*14::]]
+        data['Q'] = 'standard'
+    return data

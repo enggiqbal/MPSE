@@ -20,8 +20,8 @@ class MPSE(object):
                  embedding_dimension=3, image_dimension=2,
                  projection_family='linear',projection_constraint='orthogonal',
                  hidden_samples=None,
-                 sample_labels=None, sample_colors=None, image_colors=None,
-                 perspective_labels=None,
+                 sample_labels=None,perspective_labels=None,
+                 colors=True, embedding_colors=None, image_colors=None,
                  verbose=0, indent='',
                  **kwargs):
         """\
@@ -63,7 +63,7 @@ class MPSE(object):
 
         fixed_projections : list
         If a list is given, this is assumed to be the true projections and by
-        defulat optimization is done w.r.t. the embedding coordinates only.
+        default optimization is done w.r.t. the embedding coordinates only.
 
         initial_embedding : array
         If given, this is the initial embedding used.
@@ -175,12 +175,37 @@ class MPSE(object):
         else:
             assert len(perspective_labels) == self.n_perspectives
         self.perspective_labels = perspective_labels
+        
         #setup sample colors:
-        self.sample_colors = sample_colors
-        #setup image colors:
+        if embedding_colors is not None:
+            assert len(embedding_colors) == self.n_samples
+            self.embedding_colors = embedding_colors
+        else:
+            if colors is None:
+                self.embedding_colors = None
+            elif colors is True:
+                self.embedding_colors = \
+                list(self.distances[0][0:self.n_samples-1])
+                self.embedding_colors.insert(0,0)
+            else:
+                assert len(colors) == self.n_samples
+                self.embedding_colors = colors
         if image_colors is not None:
-            assert len(image_colors) == self.n_perspectives
-        self.image_colors = image_colors
+            assert len(image_colors) in [self.n_samples, self.n_perspectives]
+            self.image_colors = image_colors
+        else:
+            if colors is None:
+                self.image_colors = None
+            elif colors is True:
+                image_colors = []
+                for distances in self.distances:
+                    imcol = list(distances[0:self.n_samples-1])
+                    imcol.insert(0,0)
+                    image_colors.append(imcol)
+                self.image_colors = image_colors
+            else:
+                assert len(colors) == self.n_samples
+                self.image_colors = colors
             
         #setup visualization instances:
         self.visualization_instances = []
@@ -563,8 +588,9 @@ class MPSE(object):
         if edges is not None:
             if isinstance(edges,numbers.Number):
                 edges = edges-self.D
+                
         if colors is True:
-            colors = self.sample_colors
+            colors = self.embedding_colors
         plots.plot3D(self.embedding,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,ax=ax,**kwargs)
 
@@ -609,6 +635,8 @@ class MPSE(object):
             if colors is True:
                 if self.image_colors is None:
                     colors_k = [0]+list(self.distances[k][0:self.n_samples-1])
+                elif len(self.image_colors) == self.n_samples:
+                    colors_k = self.image_colors
                 else:
                     colors_k = self.image_colors[k]
             elif colors is False:
@@ -719,69 +747,39 @@ class MPSE(object):
             plt.draw()
             plt.pause(0.2)
     
-##### TESTS #####
+##### TESTS ##### 
 
-def basic(example='123', n_samples=1000,
-          fixed_projections=False, fixed_embedding=False,
-          visualization_method='mds', smart_initialization=False, **kwargs):
-
-    sample_colors = None
-    image_colors = None
-    edges = None
-    labels = None
+def basic(dataset='disk', fixed_projections=False,
+             smart_initialization=True,
+             verbose=2, **kwargs):
     import samples
-    if example == 'disk':
-        Y, X, Q = samples.disk(n_samples)
-    if example == '123':
-        Y, X, Q = samples.e123()
-    if example == 'cluster':
-        Y, image_colors = samples.cluster()
-    if example == 'florence':
-        dict = samples.florence()
-        Y = dict['data']
-        labels = dict['labels']
-        edges = dict['edges']
-    if example == 'credit':
-        Y = samples.credit()
-    if example == 'phishing':
-        Y, sample_colors, plabels = \
-            samples.phishing(groups=[0,1,3], n_samples=200)
-        #image_colors = [sample_colors]*len(Y)
-    if example == 'mnist':
-        X, sample_colors = samples.mnist()
-        Y = [X[:,0:28*14],X[:,28*14::]]
-        image_colors = [sample_colors, sample_colors]
+    data = samples.load(dataset, **kwargs)
     if fixed_projections:
-        mv = MPSE(Y,Q=Q,visualization_method=visualization_method,verbose=2,
-                  **kwargs)
-    elif fixed_embedding:
-        mv = MPSE(Y,X=X,visualization_method=visualization_method,verbose=2,
-                  **kwargs)
+        mv = MPSE(data['D'],fixed_projections=data['Q'],verbose=verbose,
+                  colors=data['colors'],
+                  image_colors=data['image_colors'],**kwargs)
     else:
-        mv = MPSE(Y,visualization_method=visualization_method,verbose=2,
-                  **kwargs)
-    mv.image_colors = image_colors
-    mv.sample_colors = sample_colors
-
+        mv = MPSE(data['D'],verbose=verbose,colors=data['colors'],
+                  image_colors=data['image_colors'], **kwargs)
     mv.plot_embedding(title='initial embedding')
-
-    if smart_initialization and fixed_projections is False and \
-       fixed_embedding is False:
+    
+    if smart_initialization and fixed_projections is False:
         mv.smart_initialize()
         mv.plot_embedding(title='smart initialize')
 
     if fixed_projections:
         mv.gd(fixed_projections=True,**kwargs)
-    elif fixed_embedding:
-        mv.gd(fixed_embedding=True,**kwargs)
     else:
         mv.gd(**kwargs)
+
+    mv.gd(**kwargs) ###
         
-    mv.plot_computations()
+    #mv.plot_computations()
     mv.plot_embedding(title='final embeding')
-    mv.plot_images(edges=edges, labels=labels)
+    mv.plot_images()#edges=edges, labels=labels)
     plt.draw()
     plt.pause(0.2)
+    plt.show()
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
@@ -789,11 +787,14 @@ if __name__=='__main__':
     weights2 = [np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900))),
                 np.concatenate((np.zeros(100),np.ones(900)))]
-    basic(example='florence',
-          fixed_projections=False,fixed_embedding=False,batch_size=None,
-          visualization_method='tsne',max_iter=400,
-          smart_initialization=True,min_cost=0.001,
-          visualization_args={'perplexity':30},
-          weights = None)
-    plt.show()
+    #basic(example='phishing',
+      #    fixed_projections=False,fixed_embedding=False,batch_size=None,
+     #     visualization_method='tsne',max_iter=100,
+       #   smart_initialization=True,min_cost=0.001,
+        #  visualization_args={'perplexity':30},
+         # weights = None)
+
+    basic(dataset='mnist',fixed_projections=True,visualization_method='tsne',
+          max_iter=200)
+    
     
