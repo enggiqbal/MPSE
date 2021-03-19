@@ -469,14 +469,15 @@ class MPSE(object):
                     lr = 0.01
                 else:
                     lr = [1,0.01]
-            else:
-                assert self.visualization_method == 'tsne'
+            elif self.visualization_method == 'tsne':
                 if fixed_projections:
                     lr = 100
                 elif fixed_embedding:
                     lr = 10
                 else:
                     lr = [100,10]
+            else:
+                lr = [1,1]
                 
         if self.verbose > 0:
             print(self.indent+'  MPSE.gd():')
@@ -774,12 +775,13 @@ def basic(dataset='disk', fixed_projections=False,
 
     mv.gd(**kwargs) ###
         
-    #mv.plot_computations()
+    mv.plot_computations()
     mv.plot_embedding(title='final embeding')
     mv.plot_images()#edges=edges, labels=labels)
     plt.draw()
     plt.pause(0.2)
     plt.show()
+    return mv.embedding
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
@@ -794,7 +796,7 @@ if __name__=='__main__':
         #  visualization_args={'perplexity':30},
          # weights = None)
 
-    basic(dataset='mnist',fixed_projections=True,visualization_method='tsne',
-          max_iter=200)
-    
-    
+    X = basic(dataset='mnist0',fixed_projections=True,
+              visualization_method='tsne',
+              max_iter=200)
+    np.savetxt("foo.csv", X, delimiter=",")

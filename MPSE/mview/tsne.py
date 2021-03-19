@@ -68,7 +68,7 @@ def joint_probabilities(distances, perplexity):
 
     #compute (symmetric) joint probabilities
     P = (conditional_P + conditional_P.T)
-    P = scipy.spatial.distance.squareform(P)
+    P = scipy.spatial.distance.squareform(P, checks=False)
     sum_P = np.maximum(np.sum(P), MACHINE_EPSILON)
     P = np.maximum(P/sum_P, MACHINE_EPSILON)
 

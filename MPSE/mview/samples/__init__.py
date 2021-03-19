@@ -71,12 +71,13 @@ def mnist0():
     Y = []
     for ind in ['1','2']:
         filec = open(directory+'/MNIST/MNIST_'+ind+'.csv')
-        array = np.array(list(csv.reader(filec)),dtype='float')
+        array = np.array(list(csv.reader(filec)),dtype='float')/256
         Y.append(array)
     filec = open(directory+'/MNIST/MNIST_labels.csv')
     labels =  np.array(list(csv.reader(filec)),dtype='float')
+    labels = labels.T[0]
     filec = open(directory+'/MNIST/MNIST_labels.csv')
-    X = np.array(list(csv.reader(filec)),dtype='float')
+    X = np.array(list(csv.reader(filec)),dtype='float')/256
     return Y, labels, X
 
 def mnist(n_samples=1000):
@@ -90,7 +91,8 @@ def mnist(n_samples=1000):
 
 def load(dataset, **kwargs):
     "returns dictionary with datasets"
-    datasets = ['disk','123','cluster','florence','credit','phishing','mnist']
+    datasets = ['disk','123','cluster','florence','credit','phishing','mnist',
+                'mnist0']
     assert dataset in datasets
     
     data = {}
@@ -120,6 +122,9 @@ def load(dataset, **kwargs):
             phishing(groups=[0,1,3], n_samples=200)
     elif dataset == 'mnist':
         X, data['colors'] = mnist()
+        data['X'] = X
         data['D'] = [X[:,0:28*14],X[:,28*14::]]
         data['Q'] = 'standard'
+    elif dataset == 'mnist0':
+        data['D'], data['colors'], data['X'] = mnist0()
     return data
