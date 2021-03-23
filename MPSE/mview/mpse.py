@@ -594,29 +594,6 @@ class MPSE(object):
         plots.plot3D(self.embedding,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,ax=ax,**kwargs)
 
-    def plot_image(self,index,title='embedding',edges=False,colors='default',
-                       labels=None,
-                       axis=True,plot=True,
-                       ax=None,**kwargs):
-        assert self.image_dimension >= 2
-        if edges is True:
-            edges = self.distances['edge_list']
-        elif edges is False:
-            edges = None
-        if colors == 'default':
-            colors = self.sample_colors
-
-        if self.image_dimension == 2:
-            plots.plot2D(self.images[index],edges=edges,colors=colors,
-                         labels=labels,
-                         axis=axis,ax=ax,title=title,**kwargs)
-        else:
-            plots.plot3D(self.X,edges=edges,colors=colors,title=title,
-                         ax=ax,**kwargs)
-        if plot is True:
-            plt.draw()
-            plt.pause(1)
-
     def plot_images(self,title=None,edges=None,
                 colors=True,plot=True,
                 ax=None,**kwargs):
@@ -645,7 +622,7 @@ class MPSE(object):
                 colors_k = colors
             plots.plot2D(self.images[k],edges=edges[k],colors=colors_k,ax=ax[k],
                     weight=self.weights[k], **kwargs)
-            ax[k].set_xlabel('individual cost:'+ f'{self.individual_cost[k]}')
+            #ax[k].set_xlabel('individual cost:'+ f'{self.individual_cost[k]}')
         plt.suptitle(title)
         if plot is True:
             plt.draw()
@@ -766,6 +743,7 @@ def basic(dataset='disk', fixed_projections=False,
     if smart_initialization and fixed_projections is False:
         mv.smart_initialize()
         mv.plot_embedding(title='smart initialize')
+        mv.plot_images(title='smart init')
 
     if fixed_projections:
         mv.gd(fixed_projections=True,**kwargs)
@@ -784,10 +762,6 @@ def basic(dataset='disk', fixed_projections=False,
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
-    weights1 = np.concatenate((np.ones(800),np.zeros(200)))
-    weights2 = [np.concatenate((np.zeros(100),np.ones(900))),
-                np.concatenate((np.zeros(100),np.ones(900))),
-                np.concatenate((np.zeros(100),np.ones(900)))]
     #basic(example='phishing',
       #    fixed_projections=False,fixed_embedding=False,batch_size=None,
      #     visualization_method='tsne',max_iter=100,
@@ -795,6 +769,8 @@ if __name__=='__main__':
         #  visualization_args={'perplexity':30},
          # weights = None)
 
-    X = basic(dataset='clusters',fixed_projections=False,
+    X = basic(dataset='clusters', n_samples=200, n_perspectives=4,
+              fixed_projections=False,
               visualization_method='tsne',scheme='bb',
-              max_iter=100, visualization_args={'perplexity':90})
+              smart_initialization=True,
+              max_iter=200, visualization_args={'perplexity':20})

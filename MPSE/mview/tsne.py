@@ -348,6 +348,14 @@ class TSNE(object):
         self.update()
         if self.verbose > 0:
             print(self.indent+f'    final stress : {self.cost:0.2e}')
+
+    def optimized(self, iters=[50,50,100], **kwargs):
+        "attempts to find best embedding"
+        if self.verbose > 0:
+            print(self.indent+'  TSNE.optimized():')
+        self.gd(batch_size=self.n_samples//20, max_iter=iters[0])
+        self.gd(batch_size=self.n_samples//10, max_iter=iters[1])
+        self.gd(max_iter=iters[2],scheme='bb')
             
     def plot_embedding(self,title='',edges=False,colors=None,labels=None,
                 axis=True,plot=True,ax=None,**kwargs):
@@ -372,47 +380,19 @@ class TSNE(object):
 ### TESTS ###
 
 def basic(dataset='clusters',**kwargs):
+    print()
+    print('***mview.tsne.basic()***')
+    print('description: a basic run of mview.TSNE on a sample dataset')
+    print('dataset :',dataset)
+    print()
+    
     import samples
-    data = samples.load0(dataset,**kwargs)
-    vis = TSNE(data['D'], verbose=2, **kwargs)
-    vis.gd(plot=True, **kwargs)
-    vis.plot_embedding()
-    plt.show()
-
-def example_tsne(**kwargs):
-    X_true = np.load('examples/123/true2.npy')#[0:500]
-    colors = misc.labels(X_true)
-    from scipy import spatial
-    D = spatial.distance_matrix(X_true,X_true)
-
-    vis = TSNE(D,verbose=2,perplexity=10,sample_colors=colors)
-    vis.initialize(X0=X_true)
-    vis.plot_embedding()
-    vis.gd(plot=True,**kwargs)
-    vis.plot_embedding()
-    plt.show()
-
-def example_mnist(top=False, **kwargs,):
-    import samples
-    D,labels = samples.mnist(n_samples=2000)
-
-    if top is True:
-        D = D[:,0:28*14]
-    #labels = labels.T[0]
-    #D = D[0]
-    from mds import MDS
-    #vis = MDS(D)
-    #vis.gd(batch_size=50)
-    #vis.plot_embedding(colors=labels)
-    #X0 = vis.X
-    vis = TSNE(D,verbose=2,perplexity=30)
-    vis.initialize()
-    #vis.gd(plot=True,batch_size=30,**kwargs, max_iter=30)
-    #vis.gd(plot=True,batch_size=70)
-    vis.gd(plot=True)
-    vis.gd(plot=True,batch_size=70)
-    vis.gd(plot=True)
-    vis.plot_embedding(colors=labels)
+    data = samples.load_single(dataset,**kwargs)
+    vis = TSNE(data['D'], sample_colors=data['colors'], verbose=2, indent='  ',
+               **kwargs)
+    #vis.gd(plot=True, **kwargs)
+    vis.optimized()
+    vis.plot_embedding(colors=True)
     plt.show()
 
 def sk_tsne():
@@ -428,8 +408,7 @@ def sk_tsne():
     plt.show()
     
 if __name__=='__main__':
-    print('mview.tsne : tests')
     #example_tsne()
     #example_mnist(top=True)
-    
-    basic(n_samples=30, n_clusters=3, perplexity=5, max_iter=200, scheme='bb')
+
+    basic(dataset='mnist', n_samples=1000, n_clusters=5, batch_size=50, perplexity=30, max_iter=200, scheme='mm')

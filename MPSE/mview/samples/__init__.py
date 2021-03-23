@@ -87,7 +87,7 @@ def mnist0():
     X = np.array(list(csv.reader(filec)),dtype='float')/256
     return Y, labels, X
 
-def mnist(n_samples=1000):
+def mnist(n_samples=1000, **kwargs):
     from keras.datasets import mnist
     (X_train,Y_train),(X_test,Y_test) = mnist.load_data()
     X = X_train[0:n_samples]
@@ -113,7 +113,7 @@ def load(dataset, **kwargs):
         data['D'] = data['Y']
         data['colors'] = True
     elif dataset == 'clusters':
-        data['D'], data['image_labels'] = clusters(**kwargs)
+        data['D'], data['image_colors'] = clusters(**kwargs)
     elif dataset == '123':
         data['Y'], data['X'], data['Q'] = e123(**kwargs)
         data['D'] = data['Y']
@@ -130,7 +130,7 @@ def load(dataset, **kwargs):
         data['D'], data['colors'], data['perspective_labels'] = \
             phishing(groups=[0,1,3], n_samples=200)
     elif dataset == 'mnist':
-        X, data['colors'] = mnist()
+        X, data['colors'] = mnist(**kwargs)
         data['X'] = X
         data['D'] = [X[:,0:28*14],X[:,28*14::]]
         data['Q'] = 'standard'
@@ -138,8 +138,8 @@ def load(dataset, **kwargs):
         data['D'], data['colors'], data['X'] = mnist0()
     return data
 
-def load0(dataset, **kwargs):
-    datasets = ['clusters']
+def load_single(dataset, **kwargs):
+    datasets = ['clusters','mnist']
     assert dataset in datasets
     
     data = {}
@@ -151,5 +151,8 @@ def load0(dataset, **kwargs):
     if dataset == 'clusters':
         import single
         data['D'] = single.clusters(**kwargs)
+    elif dataset == 'mnist':
+        X, data['colors'] = mnist(**kwargs)
+        data['D'] = X
 
     return data

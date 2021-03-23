@@ -1,6 +1,5 @@
 import numpy as np
 import matplotlib.pyplot as plt
-import sklearn as skl
 import math
 
 def createClusters(numbPoints, numbPerspectives):
@@ -30,7 +29,7 @@ def createClusters(numbPoints, numbPerspectives):
         retClusters.append(z)
         currlabels = [0]*numbPoints
         for i in range(numbPoints):
-            if perm[i] > numbPoints/2:
+            if perm[i] >= numbPoints/2:
                 currlabels[i] = 1
         print(currlabels)
         labels.append(currlabels)

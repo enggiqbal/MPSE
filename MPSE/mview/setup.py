@@ -47,7 +47,7 @@ def setup_distances(data, shortest_path=False, min_distance=1e-4, **kwargs):
         if b == a:
             distances = distance.squareform(data, checks=False)
         else:
-            distances = distance.pdist(data,**kwargs)
+            distances = distance.pdist(data)######,**kwargs)
     if shortest_path:
         distances = distance.squareform(distances)
         distances = csgraph.shortest_path(distances)
