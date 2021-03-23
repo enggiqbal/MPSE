@@ -13,6 +13,13 @@ def disk(n_samples=1000):
     Y = proj.project(Q,X)
     return Y, X, Q
 
+def clusters(n_samples=500, n_perspectives=3,**kwargs):
+    from createClusters import createClusters
+    a,b = createClusters(n_samples, n_perspectives)
+    print(a)
+    print(b)
+    return a, b
+
 def e123():
     import projections
     X = np.genfromtxt(directory+'/123/123.csv',delimiter=',')
@@ -91,7 +98,7 @@ def mnist(n_samples=1000):
 
 def load(dataset, **kwargs):
     "returns dictionary with datasets"
-    datasets = ['disk','123','cluster','florence','credit','phishing','mnist',
+    datasets = ['disk','clusters','123','cluster','florence','credit','phishing','mnist',
                 'mnist0']
     assert dataset in datasets
     
@@ -105,12 +112,14 @@ def load(dataset, **kwargs):
         data['Y'], data['X'], data['Q'] = disk(**kwargs)
         data['D'] = data['Y']
         data['colors'] = True
+    elif dataset == 'clusters':
+        data['D'], data['image_labels'] = clusters(**kwargs)
     elif dataset == '123':
         data['Y'], data['X'], data['Q'] = e123(**kwargs)
         data['D'] = data['Y']
         data['colors'] = True
     elif dataset == 'cluster':
-        data['D'], data['image_colors'] = cluster(**kwargs)
+        data['D'], data['colors'] = cluster(**kwargs)
     elif dataset == 'florence':
         dictf = florence()
         data['D'] = dictf['data']
@@ -127,4 +136,20 @@ def load(dataset, **kwargs):
         data['Q'] = 'standard'
     elif dataset == 'mnist0':
         data['D'], data['colors'], data['X'] = mnist0()
+    return data
+
+def load0(dataset, **kwargs):
+    datasets = ['clusters']
+    assert dataset in datasets
+    
+    data = {}
+    keys = ['D','X','colors','colors','edges','labels']
+    
+    for key in keys:
+        data[key] = None
+        
+    if dataset == 'clusters':
+        import single
+        data['D'] = single.clusters(**kwargs)
+
     return data

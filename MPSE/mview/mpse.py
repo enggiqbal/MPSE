@@ -162,7 +162,6 @@ class MPSE(object):
             print(indent+f'    image dimension : {self.image_dimension}')
             print(indent+f'    visualization type : {visualization_method}')
 
-        ##setup labels and colors:
         #setup sample labels:
         if sample_labels is None:
             sample_labels = range(1,self.n_samples+1)
@@ -773,7 +772,7 @@ def basic(dataset='disk', fixed_projections=False,
     else:
         mv.gd(**kwargs)
 
-    mv.gd(**kwargs) ###
+    #mv.gd(**kwargs) ###
         
     mv.plot_computations()
     mv.plot_embedding(title='final embeding')
@@ -796,7 +795,6 @@ if __name__=='__main__':
         #  visualization_args={'perplexity':30},
          # weights = None)
 
-    X = basic(dataset='mnist0',fixed_projections=True,
-              visualization_method='tsne',
-              max_iter=200)
-    np.savetxt("foo.csv", X, delimiter=",")
+    X = basic(dataset='clusters',fixed_projections=False,
+              visualization_method='tsne',scheme='bb',
+              max_iter=100, visualization_args={'perplexity':90})

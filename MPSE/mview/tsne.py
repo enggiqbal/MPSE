@@ -371,6 +371,14 @@ class TSNE(object):
 
 ### TESTS ###
 
+def basic(dataset='clusters',**kwargs):
+    import samples
+    data = samples.load0(dataset,**kwargs)
+    vis = TSNE(data['D'], verbose=2, **kwargs)
+    vis.gd(plot=True, **kwargs)
+    vis.plot_embedding()
+    plt.show()
+
 def example_tsne(**kwargs):
     X_true = np.load('examples/123/true2.npy')#[0:500]
     colors = misc.labels(X_true)
@@ -422,5 +430,6 @@ def sk_tsne():
 if __name__=='__main__':
     print('mview.tsne : tests')
     #example_tsne()
-    example_mnist(top=True)
+    #example_mnist(top=True)
     
+    basic(n_samples=30, n_clusters=3, perplexity=5, max_iter=200, scheme='bb')
