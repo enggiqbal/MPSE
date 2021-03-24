@@ -1,4 +1,7 @@
-import sys
+import os, sys
+directory = os.path.dirname(os.path.realpath(__file__))
+sys.path.insert(1, directory)
+
 import numbers, math, random
 import numpy as np
 import matplotlib.pyplot as plt
@@ -20,7 +23,7 @@ class MPSE(object):
                  embedding_dimension=3, image_dimension=2,
                  projection_family='linear',projection_constraint='orthogonal',
                  hidden_samples=None,
-                 sample_labels=None,perspective_labels=None,
+                 sample_labels=None, perspective_labels=None,
                  colors=True, embedding_colors=None, image_colors=None,
                  verbose=0, indent='',
                  **kwargs):
@@ -163,9 +166,7 @@ class MPSE(object):
             print(indent+f'    visualization type : {visualization_method}')
 
         #setup sample labels:
-        if sample_labels is None:
-            sample_labels = range(1,self.n_samples+1)
-        else:
+        if sample_labels is not None:
             assert len(sample_labels) == self.n_samples
         self.sample_labels = sample_labels
         #setup perspective labels:
@@ -733,6 +734,22 @@ class MPSE(object):
         if plot is True:
             plt.draw()
             plt.pause(0.2)
+
+    def save(self):
+        "save results to csv files"
+        location=directory+'/temp/'
+        if not os.path.exists(location):
+            os.makedirs(location)
+            
+        np.savetxt(location+'embedding.csv', self.embedding)
+        for i in range(self.n_perspectives):
+            np.savetxt(location+'projection_'+str(i)+'.csv',
+                       self.projections[i])
+            np.savetxt(location+'images_'+str(i)+'.csv',
+                       self.images[i])
+        if self.sample_labels is not None:
+            np.savetxt(location+'sample_labels.csv', self.sample_labels,
+                       fmt='%d')
     
 ##### TESTS ##### 
 
@@ -744,10 +761,13 @@ def basic(dataset='disk', fixed_projections=False,
     if fixed_projections:
         mv = MPSE(data['D'],fixed_projections=data['Q'],verbose=verbose,
                   colors=data['colors'],
+                  sample_labels = data['sample_labels'],
                   image_colors=data['image_colors'],**kwargs)
     else:
         mv = MPSE(data['D'],verbose=verbose,colors=data['colors'],
-                  image_colors=data['image_colors'], **kwargs)
+                  image_colors=data['image_colors'],
+                  sample_labels=data['sample_labels'],
+                  **kwargs)
     
     if smart_initialization and fixed_projections is False:
         mv.smart_initialize()
@@ -759,8 +779,10 @@ def basic(dataset='disk', fixed_projections=False,
     else:
         #mv.gd(**kwargs)
         mv.optimized(**kwargs)
-
     #mv.gd(**kwargs) ###
+
+    #save outputs:
+    mv.save()
         
     mv.plot_computations()
     mv.plot_embedding(title='final embeding')
@@ -780,10 +802,10 @@ if __name__=='__main__':
      #         smart_initialization=False,
       #        max_iter=200, visualization_args={'perplexity':300})
 
-    X = basic(dataset='clusters2', digits=[1,8], n_samples=400,
-              n_clusters=[4,4,4],
-              n_perspectives=3,
+    X = basic(dataset='mnist', digits=[1,7], n_samples=500,
+              #n_clusters=[4,4,4],
+              #n_perspectives=3,
               fixed_projections=False,
               visualization_method='tsne',
               smart_initialization=False,
-              max_iter=200, visualization_args={'perplexity':150})
+              visualization_args={'perplexity':150})

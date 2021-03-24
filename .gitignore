@@ -8,3 +8,4 @@ MPSE/outputs/*
 old/*
 .vscode
 .DS_Store
+MPSE/mview/temp/*

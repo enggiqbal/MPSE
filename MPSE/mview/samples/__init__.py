@@ -125,7 +125,7 @@ def mload(dataset, n_samples=100, n_perspectives=2, **kwargs):
     
     data = {}
     keys = ['D','X','Q','Y','colors','embedding_colors','image_colors',
-            'edges','labels']
+            'edges','labels','sample_labels']
     for key in keys:
         data[key] = None
 
@@ -178,6 +178,7 @@ def mload(dataset, n_samples=100, n_perspectives=2, **kwargs):
         data['X'] = X
         data['D'] = [X[:,0:28*14],X[:,28*14::]]
         data['Q'] = 'standard'
+        data['sample_labels'] = data['colors'].copy()
     elif dataset == 'mnist0':
         data['D'], data['colors'], data['X'] = mnist0()
     else:
