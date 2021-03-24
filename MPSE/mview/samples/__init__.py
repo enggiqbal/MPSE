@@ -109,6 +109,9 @@ def sload(dataset, n_samples=100, **kwargs):
     elif dataset == 'clusters':
         import clusters
         data['D'], data['colors'] = clusters.clusters(n_samples, **kwargs)
+    elif dataset == 'clusters2':
+        from clusters import clusters2
+        data['D'], data['colors'] = clusters2(n_samples, **kwargs)
     elif dataset == 'mnist':
         X, data['colors'] = mnist(n_samples, **kwargs)
         data['D'] = X
@@ -137,7 +140,7 @@ def mload(dataset, n_samples=100, n_perspectives=2, **kwargs):
         data['Y'], data['X'], data['Q'] = disk(**kwargs)
         data['D'] = data['Y']
         data['colors'] = True
-    elif dataset == 'clusters2':
+    elif dataset == 'clusters2a':
         from clusters import createClusters
         data['D'], data['image_colors'] = \
             createClusters(n_samples, n_perspectives)
@@ -146,6 +149,16 @@ def mload(dataset, n_samples=100, n_perspectives=2, **kwargs):
         data['D'] = []; data['image_colors'] = []
         for persp in range(n_perspectives):
             d, c = clusters(n_samples, **kwargs)
+            data['D'].append(d); data['image_colors'].append(c)
+    elif dataset == 'clusters2':
+        from clusters import clusters2
+        data['D'] = []; data['image_colors'] = []
+        if 'n_clusters' in kwargs:
+            n_clusters = kwargs['n_clusters']
+        if isinstance(n_clusters, int):
+            n_clusters = [n_clusters]*n_perspectives
+        for persp in range(n_perspectives):
+            d, c = clusters2(n_samples,n_clusters[persp])
             data['D'].append(d); data['image_colors'].append(c)
     elif dataset == '123':
         data['Y'], data['X'], data['Q'] = e123(**kwargs)

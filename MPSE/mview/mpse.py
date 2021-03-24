@@ -780,9 +780,10 @@ if __name__=='__main__':
      #         smart_initialization=False,
       #        max_iter=200, visualization_args={'perplexity':300})
 
-    X = basic(dataset='mnist', digits=[1,8], n_samples=400, n_clusters=2,
+    X = basic(dataset='clusters2', digits=[1,8], n_samples=400,
+              n_clusters=[4,4,4],
               n_perspectives=3,
               fixed_projections=False,
               visualization_method='tsne',
               smart_initialization=False,
-              max_iter=200, visualization_args={'perplexity':60})
+              max_iter=200, visualization_args={'perplexity':150})

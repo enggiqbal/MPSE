@@ -353,7 +353,7 @@ class TSNE(object):
         "attempts to find best embedding"
         if self.verbose > 0:
             print(self.indent+'  TSNE.optimized():')
-        self.gd(batch_size=self.n_samples//20, max_iter=iters[0], scheme='mm')
+        self.gd(batch_size=self.n_samples//50, max_iter=iters[0], scheme='mm')
         self.gd(batch_size=self.n_samples//10, max_iter=iters[1], scheme='mm')
         self.gd(batch_size=self.n_samples//5, max_iter=iters[2], scheme='mm')
         self.gd(max_iter=iters[3],scheme='bb')
@@ -414,4 +414,4 @@ def basic(dataset='clusters',**kwargs):
     
 if __name__=='__main__':
 
-    basic(dataset='clusters', n_samples=400, n_clusters=3, perplexity=100,)
+    basic(dataset='clusters2', n_samples=500, n_clusters=2, perplexity=5)

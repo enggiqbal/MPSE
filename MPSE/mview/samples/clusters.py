@@ -27,6 +27,36 @@ def clusters(n_samples, n_clusters=2, inner_distance=1.0, outer_distance=15.0,
         distances[indices] = np.random.normal(inner_distance,noise,len(indices))
     return distances, colors
 
+def clusters2(n_samples, n_clusters=2, outer_distance=10.0, **kwargs):
+    
+    od = outer_distance
+    if n_clusters == 1:
+        centers = [[0,0]]
+    elif n_clusters == 2:
+        centers = [[0,0],[od,0]]
+    elif n_clusters == 3:
+        centers = [[0,0],[od,0],[od/2,od*3**(1/2)/2]]
+    elif n_clusters == 4:
+        centers = [[0,0],[od,0],[od,od],[0,od]]
+    elif n_clusters == 5:
+        od2 = od*2**(1/2)/2
+        centers = [[0,0],[od2,od2],[od2,-od2],[-od2,-od2],[-od2,od2]]
+    elif n_clusters == 6:
+        centers = [[0,0],[0,od],[0,2*od],[od,2*od],[od,od],[od,0]]
+    else:
+        print('cluster2() not difined for this number of clusters')
+            
+    x = np.random.normal(0,1,(n_samples,2))
+    colors = np.empty(n_samples, dtype=int)
+    permutation = np.random.permutation(n_samples)
+    size = math.ceil(n_samples/n_clusters)
+    for i in range(n_clusters):
+        ia=i*size; ib=min((i+1)*size, n_samples)
+        indices = permutation[ia:ib]
+        colors[indices] = i
+        x[indices] += centers[i]
+
+    return x, colors
 
 def createClusters(numbPoints, numbPerspectives):
     "creates data set with 2 clusters for each perspective"
