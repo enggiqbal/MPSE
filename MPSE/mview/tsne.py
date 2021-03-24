@@ -349,13 +349,14 @@ class TSNE(object):
         if self.verbose > 0:
             print(self.indent+f'    final stress : {self.cost:0.2e}')
 
-    def optimized(self, iters=[50,50,100], **kwargs):
+    def optimized(self, iters=[20,20,20,100], **kwargs):
         "attempts to find best embedding"
         if self.verbose > 0:
             print(self.indent+'  TSNE.optimized():')
-        self.gd(batch_size=self.n_samples//20, max_iter=iters[0])
-        self.gd(batch_size=self.n_samples//10, max_iter=iters[1])
-        self.gd(max_iter=iters[2],scheme='bb')
+        self.gd(batch_size=self.n_samples//20, max_iter=iters[0], scheme='mm')
+        self.gd(batch_size=self.n_samples//10, max_iter=iters[1], scheme='mm')
+        self.gd(batch_size=self.n_samples//5, max_iter=iters[2], scheme='mm')
+        self.gd(max_iter=iters[3],scheme='bb')
             
     def plot_embedding(self,title='',edges=False,colors=None,labels=None,
                 axis=True,plot=True,ax=None,**kwargs):
@@ -376,7 +377,22 @@ class TSNE(object):
             plt.draw()
             plt.pause(1)
 
+### COMPARISON ###
 
+def sk_tsne():
+    "tsne using sk-learn"
+
+    X_true = np.load('examples/123/true2.npy')#[0:500]
+    from scipy import spatial
+    D = spatial.distance_matrix(X_true,X_true)
+    
+    from sklearn.manifold import TSNE as tsne
+    X_embedded = tsne(n_components=2,
+                      verbose=2,method='exact').fit_transform(X_true)
+    plt.figure()
+    plt.plot(X_embedded[:,0],X_embedded[:,1],'o')
+    plt.show()
+    
 ### TESTS ###
 
 def basic(dataset='clusters',**kwargs):
@@ -387,28 +403,15 @@ def basic(dataset='clusters',**kwargs):
     print()
     
     import samples
-    data = samples.load_single(dataset,**kwargs)
+    data = samples.sload(dataset,**kwargs)
+    
     vis = TSNE(data['D'], sample_colors=data['colors'], verbose=2, indent='  ',
                **kwargs)
-    #vis.gd(plot=True, **kwargs)
-    vis.optimized()
+
+    vis.optimized(**kwargs)
     vis.plot_embedding(colors=True)
-    plt.show()
-
-def sk_tsne():
-
-    X_true = np.load('examples/123/true2.npy')#[0:500]
-    from scipy import spatial
-    D = spatial.distance_matrix(X_true,X_true)
-    
-    from sklearn.manifold import TSNE as tsne
-    X_embedded = tsne(n_components=2,verbose=2,method='exact').fit_transform(X_true)
-    plt.figure()
-    plt.plot(X_embedded[:,0],X_embedded[:,1],'o')
     plt.show()
     
 if __name__=='__main__':
-    #example_tsne()
-    #example_mnist(top=True)
 
-    basic(dataset='mnist', n_samples=1000, n_clusters=5, batch_size=50, perplexity=30, max_iter=200, scheme='mm')
+    basic(dataset='clusters', n_samples=400, n_clusters=3, perplexity=100,)

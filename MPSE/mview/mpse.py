@@ -572,6 +572,15 @@ class MPSE(object):
             print(self.indent+f'    final cost : {self.cost:0.2f}')
             costs = ', '.join(f'{x:0.2f}' for x in self.individual_cost)
             print(self.indent+f'    individual costs : {costs}')
+
+    def optimized(self, iters=[40,40,40,100], **kwargs):
+        "find optimal solution"
+        if self.verbose > 0:
+            print(self.indent+'  MPSE.optimized():')
+        self.gd(batch_size=self.n_samples//20, max_iter=iters[0], scheme='mm')
+        self.gd(batch_size=self.n_samples//10, max_iter=iters[1], scheme='mm')
+        self.gd(batch_size=self.n_samples//5, max_iter=iters[2], scheme='mm')
+        self.gd(max_iter=iters[3],scheme='bb')
  
     def plot_embedding(self,title=None,perspectives=True,edges=None,colors=True,
                 plot=True,ax=None,**kwargs):
@@ -611,7 +620,8 @@ class MPSE(object):
         for k in range(self.n_perspectives):
             if colors is True:
                 if self.image_colors is None:
-                    colors_k = [0]+list(self.distances[k][0:self.n_samples-1])
+                    colors_k = None
+                    #colors_k = [0]+list(self.distances[k][0:self.n_samples-1])
                 elif len(self.image_colors) == self.n_samples:
                     colors_k = self.image_colors
                 else:
@@ -730,7 +740,7 @@ def basic(dataset='disk', fixed_projections=False,
              smart_initialization=True,
              verbose=2, **kwargs):
     import samples
-    data = samples.load(dataset, **kwargs)
+    data = samples.mload(dataset, **kwargs)
     if fixed_projections:
         mv = MPSE(data['D'],fixed_projections=data['Q'],verbose=verbose,
                   colors=data['colors'],
@@ -738,7 +748,6 @@ def basic(dataset='disk', fixed_projections=False,
     else:
         mv = MPSE(data['D'],verbose=verbose,colors=data['colors'],
                   image_colors=data['image_colors'], **kwargs)
-    mv.plot_embedding(title='initial embedding')
     
     if smart_initialization and fixed_projections is False:
         mv.smart_initialize()
@@ -748,7 +757,8 @@ def basic(dataset='disk', fixed_projections=False,
     if fixed_projections:
         mv.gd(fixed_projections=True,**kwargs)
     else:
-        mv.gd(**kwargs)
+        #mv.gd(**kwargs)
+        mv.optimized(**kwargs)
 
     #mv.gd(**kwargs) ###
         
@@ -762,15 +772,17 @@ def basic(dataset='disk', fixed_projections=False,
     
 if __name__=='__main__':
     print('mview.mpse : running tests')
-    #basic(example='phishing',
-      #    fixed_projections=False,fixed_embedding=False,batch_size=None,
-     #     visualization_method='tsne',max_iter=100,
-       #   smart_initialization=True,min_cost=0.001,
-        #  visualization_args={'perplexity':30},
-         # weights = None)
 
-    X = basic(dataset='clusters', n_samples=200, n_perspectives=4,
+ #   X = basic(dataset='clusters', n_samples=400, n_clusters=2,
+  #            n_perspectives=3,
+   #           fixed_projections=False,
+    #          visualization_method='tsne',
+     #         smart_initialization=False,
+      #        max_iter=200, visualization_args={'perplexity':300})
+
+    X = basic(dataset='mnist', digits=[1,8], n_samples=400, n_clusters=2,
+              n_perspectives=3,
               fixed_projections=False,
-              visualization_method='tsne',scheme='bb',
-              smart_initialization=True,
-              max_iter=200, visualization_args={'perplexity':20})
+              visualization_method='tsne',
+              smart_initialization=False,
+              max_iter=200, visualization_args={'perplexity':60})

@@ -13,13 +13,6 @@ def disk(n_samples=1000):
     Y = proj.project(Q,X)
     return Y, X, Q
 
-def clusters(n_samples=500, n_perspectives=3,**kwargs):
-    from createClusters import createClusters
-    a,b = createClusters(n_samples, n_perspectives)
-    print(a)
-    print(b)
-    return a, b
-
 def e123():
     import projections
     X = np.genfromtxt(directory+'/123/123.csv',delimiter=',')
@@ -30,7 +23,7 @@ def e123():
     Q = proj.generate(number=3,method='cylinder')
     return [X1,X2,X3], X, Q
     
-def cluster():
+def cluster_old():
     import csv
     path = directory+'/cluster/'
     Y = []
@@ -87,39 +80,77 @@ def mnist0():
     X = np.array(list(csv.reader(filec)),dtype='float')/256
     return Y, labels, X
 
-def mnist(n_samples=1000, **kwargs):
+def mnist(n_samples=1000, digits=None, **kwargs):
     from keras.datasets import mnist
     (X_train,Y_train),(X_test,Y_test) = mnist.load_data()
+
+    if digits is not None:
+        indices = [i for i in range(len(Y_train)) if Y_train[i] in digits]
+        X_train = X_train[indices]
+        Y_train = Y_train[indices]
+    
     X = X_train[0:n_samples]
     labels = Y_train[0:n_samples]
     X = X.reshape(n_samples,28*28)
     X = np.array(X,dtype='float')/256
     return X, labels
 
-def load(dataset, **kwargs):
+def sload(dataset, n_samples=100, **kwargs):
+    
+    data = {}
+    keys = ['D','X','colors','colors','edges','labels']
+    
+    for key in keys:
+        data[key] = None
+
+    if dataset == 'equidistant':
+        length = n_samples*(n_samples-1)//2
+        data['D'] = np.random.normal(1,0.01,length)
+    elif dataset == 'clusters':
+        import clusters
+        data['D'], data['colors'] = clusters.clusters(n_samples, **kwargs)
+    elif dataset == 'mnist':
+        X, data['colors'] = mnist(n_samples, **kwargs)
+        data['D'] = X
+    else:
+        print('***dataset not found***')
+
+    return data
+
+def mload(dataset, n_samples=100, n_perspectives=2, **kwargs):
     "returns dictionary with datasets"
-    datasets = ['disk','clusters','123','cluster','florence','credit','phishing','mnist',
-                'mnist0']
-    assert dataset in datasets
     
     data = {}
     keys = ['D','X','Q','Y','colors','embedding_colors','image_colors',
             'edges','labels']
     for key in keys:
         data[key] = None
-    
-    if dataset == 'disk':
+
+    if dataset == 'equidistant':
+        D = []
+        length = n_samples*(n_samples-1)//2
+        for persp in range(n_perspectives):      
+            D.append(np.random.normal(1,0.01,length))
+        data['D'] = D
+        data['colors'] = None
+    elif dataset == 'disk':
         data['Y'], data['X'], data['Q'] = disk(**kwargs)
         data['D'] = data['Y']
         data['colors'] = True
+    elif dataset == 'clusters2':
+        from clusters import createClusters
+        data['D'], data['image_colors'] = \
+            createClusters(n_samples, n_perspectives)
     elif dataset == 'clusters':
-        data['D'], data['image_colors'] = clusters(**kwargs)
+        from clusters import clusters
+        data['D'] = []; data['image_colors'] = []
+        for persp in range(n_perspectives):
+            d, c = clusters(n_samples, **kwargs)
+            data['D'].append(d); data['image_colors'].append(c)
     elif dataset == '123':
         data['Y'], data['X'], data['Q'] = e123(**kwargs)
         data['D'] = data['Y']
         data['colors'] = True
-    elif dataset == 'cluster':
-        data['D'], data['colors'] = cluster(**kwargs)
     elif dataset == 'florence':
         dictf = florence()
         data['D'] = dictf['data']
@@ -136,23 +167,6 @@ def load(dataset, **kwargs):
         data['Q'] = 'standard'
     elif dataset == 'mnist0':
         data['D'], data['colors'], data['X'] = mnist0()
-    return data
-
-def load_single(dataset, **kwargs):
-    datasets = ['clusters','mnist']
-    assert dataset in datasets
-    
-    data = {}
-    keys = ['D','X','colors','colors','edges','labels']
-    
-    for key in keys:
-        data[key] = None
-        
-    if dataset == 'clusters':
-        import single
-        data['D'] = single.clusters(**kwargs)
-    elif dataset == 'mnist':
-        X, data['colors'] = mnist(**kwargs)
-        data['D'] = X
-
+    else:
+        print('***dataset not found***')
     return data
