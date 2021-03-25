@@ -174,3 +174,6 @@ def batch_indices(samples,n_samples):
     indices = n_samples*pairs[:,0]-pairs[:,0]*(pairs[:,0]+1)//2 + \
         pairs[:,1]-1-pairs[:,0]
     return indices
+
+def distance_to_sample(distances,sample):
+    return scipy.spatial.distance.squareform(distances)[sample]

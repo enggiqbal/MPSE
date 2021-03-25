@@ -9,7 +9,7 @@ def equidistant(n_samples, distance=1.0, noise=0.1, **kwargs):
     distances = np.random.normal(distance,noise,length) #distance+noise
     return distances
 
-def clusters(n_samples, n_clusters=2, inner_distance=1.0, outer_distance=15.0,
+def clusters(n_samples, n_clusters=2, inner_distance=1.0, outer_distance=2.0,
              noise=0.1, **kwargs):
     "condensed distance array for n_clusters clusters"
     length = n_samples*(n_samples-1)//2 #length of condensed distance array
@@ -19,7 +19,7 @@ def clusters(n_samples, n_clusters=2, inner_distance=1.0, outer_distance=15.0,
     size = math.ceil(n_samples/n_clusters) #cluster size
     for i in range(n_clusters):
         ia=i*size; ib=min((i+1)*size, n_samples)
-        indices = permutation[ia:ib]
+        indices = np.sort(permutation[ia:ib])
         colors[indices] = i
         pairs = np.array(list(itertools.combinations(indices,2)))
         indices = n_samples*pairs[:,0]-pairs[:,0]*(pairs[:,0]+1)//2 + \

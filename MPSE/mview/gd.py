@@ -216,7 +216,7 @@ def single(x,F,Xi=None,p=None,scheme='mm',min_cost=None,
         print(indent+f'    stochastic : {stochastic}')
         print(indent+f'    constraint : {constraint}')
         print(indent+f'    scheme : {scheme}')
-        print(indent+f'    initial lr : {lr}')
+        print(indent+f'    initial lr : {lr:0.2e}')
         if min_cost is not None:
             print(indent+f'    min_cost : {min_cost:0.2e}')
         if min_grad is not None:

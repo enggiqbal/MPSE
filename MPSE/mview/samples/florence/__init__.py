@@ -90,11 +90,11 @@ labels = [None]*len(reduced_families)
 labels[medici] = 'Medici'
 labels[strozzi] = 'Strozzi'
 
-def setup2():
+def setup():
     dictionary = {
-        'data' : reduced_distances,
         'edges' : edges,
-        'labels' : labels
+        'labels' : labels,
+        'image_colors' : medici
         }
-    return dictionary
+    return reduced_distances, dictionary
     

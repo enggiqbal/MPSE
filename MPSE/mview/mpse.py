@@ -7,6 +7,7 @@ import numpy as np
 import matplotlib.pyplot as plt
 from mpl_toolkits.mplot3d import Axes3D
 import scipy.spatial.distance
+from scipy.spatial.distance import squareform
 
 import misc, setup, multigraph, gd, projections, mds, tsne, plots
 
@@ -24,7 +25,7 @@ class MPSE(object):
                  projection_family='linear',projection_constraint='orthogonal',
                  hidden_samples=None,
                  sample_labels=None, perspective_labels=None,
-                 colors=True, embedding_colors=None, image_colors=None,
+                 sample_colors=None, image_colors=None,
                  verbose=0, indent='',
                  **kwargs):
         """\
@@ -176,37 +177,10 @@ class MPSE(object):
             assert len(perspective_labels) == self.n_perspectives
         self.perspective_labels = perspective_labels
         
-        #setup sample colors:
-        if embedding_colors is not None:
-            assert len(embedding_colors) == self.n_samples
-            self.embedding_colors = embedding_colors
-        else:
-            if colors is None:
-                self.embedding_colors = None
-            elif colors is True:
-                self.embedding_colors = \
-                list(self.distances[0][0:self.n_samples-1])
-                self.embedding_colors.insert(0,0)
-            else:
-                assert len(colors) == self.n_samples
-                self.embedding_colors = colors
-        if image_colors is not None:
-            assert len(image_colors) in [self.n_samples, self.n_perspectives]
-            self.image_colors = image_colors
-        else:
-            if colors is None:
-                self.image_colors = None
-            elif colors is True:
-                image_colors = []
-                for distances in self.distances:
-                    imcol = list(distances[0:self.n_samples-1])
-                    imcol.insert(0,0)
-                    image_colors.append(imcol)
-                self.image_colors = image_colors
-            else:
-                assert len(colors) == self.n_samples
-                self.image_colors = colors
-            
+        #setup colors:
+        self.sample_colors = sample_colors
+        self.image_colors = image_colors
+
         #setup visualization instances:
         self.visualization_instances = []
         self.visualization_method = visualization_method
@@ -600,7 +574,11 @@ class MPSE(object):
                 edges = edges-self.D
                 
         if colors is True:
-            colors = self.embedding_colors
+            colors = self.sample_colors
+        if isinstance(colors, int):
+            assert colors in range(self.n_samples)
+            colors = squareform(self.distances[0])[colors]
+            
         plots.plot3D(self.embedding,perspectives=perspectives,edges=edges,
                      colors=colors,title=title,ax=ax,**kwargs)
 
@@ -617,20 +595,23 @@ class MPSE(object):
             edges = [None]*self.n_perspectives
         else:
             edges = edges
+
+        #setup colors
+        if colors is True:
+            colors = self.image_colors
+        if colors is None:
+            colors = self.sample_colors
             
         for k in range(self.n_perspectives):
-            if colors is True:
-                if self.image_colors is None:
-                    colors_k = None
-                    #colors_k = [0]+list(self.distances[k][0:self.n_samples-1])
-                elif len(self.image_colors) == self.n_samples:
-                    colors_k = self.image_colors
-                else:
-                    colors_k = self.image_colors[k]
-            elif colors is False:
-                colors_k = None
+
+            if isinstance(colors,list) and len(colors)==self.n_perspectives:
+                colors_k = colors[k]
             else:
                 colors_k = colors
+            if isinstance(colors_k, int):
+                assert colors_k in range(self.n_samples)
+                colors_k = scipy.spatial.distance.squareform(self.distances[k])[colors_k]
+
             plots.plot2D(self.images[k],edges=edges[k],colors=colors_k,ax=ax[k],
                     weight=self.weights[k], **kwargs)
             #ax[k].set_xlabel('individual cost:'+ f'{self.individual_cost[k]}')
@@ -750,8 +731,51 @@ class MPSE(object):
         if self.sample_labels is not None:
             np.savetxt(location+'sample_labels.csv', self.sample_labels,
                        fmt='%d')
+
+def mpse_tsne(data, perplexity=30, iters=[10,10,10,100],
+              verbose=2, show_plots=True, save_results = False,**kwargs):
+    "Runs MPSE optimized for tsne"
     
-##### TESTS ##### 
+    #load data
+    if isinstance(data,str):
+        import samples
+        kwargs0 = kwargs
+        distances, kwargs = samples.mload(data, verbose=verbose, **kwargs0)
+        for key, value in kwargs0.items():
+            kwargs[key] = value
+        
+    #start MPSE object
+    mv =  MPSE(distances, visualization_method='tsne',
+               visualization_args={'perplexity':perplexity}, verbose=verbose,
+               indent='  ', **kwargs)
+    n_samples = mv.n_samples
+
+    #search for global minima
+    if isinstance(iters,int):
+        iters = [20,20,iters]
+    elif len(iters)==1:
+        iters = [20,20,iters[0]]
+    elif len(iters)==2:
+        iters = [20,iters[0],iters[1]]
+    mv.gd(fixed_projections=True, max_iter=iters[0], scheme='bb')
+    for i, its in enumerate(iters[1:-1]):
+        batch_size = min(100//(2**i),n_samples//(2**i))
+        mv.gd(batch_size=batch_size, max_iter=its, scheme='mm')     
+    mv.gd(max_iter=iters[-1], scheme='bb', **kwargs)
+        
+    #save outputs:
+    if save_results is True:
+        mv.save()
+
+    if show_plots is True:
+        mv.plot_computations()
+        mv.plot_embedding(title='solution')
+        mv.plot_images(title='solution', **kwargs)
+        plt.show()
+    return mv
+    
+    
+##### TESTS #####
 
 def basic(dataset='disk', fixed_projections=False,
              smart_initialization=True,
@@ -802,10 +826,23 @@ if __name__=='__main__':
      #         smart_initialization=False,
       #        max_iter=200, visualization_args={'perplexity':300})
 
-    X = basic(dataset='mnist', digits=[1,7], n_samples=500,
-              #n_clusters=[4,4,4],
-              #n_perspectives=3,
-              fixed_projections=False,
-              visualization_method='tsne',
-              smart_initialization=False,
-              visualization_args={'perplexity':150})
+    #X = basic(dataset='florence', digits=[1,7], n_samples=500,
+     #         #n_clusters=[4,4,4],
+      #        #n_perspectives=3,
+       #       fixed_projections=False,
+        #      visualization_method='tsne',
+         #     smart_initialization=False,
+          #    visualization_args={'perplexity':20})
+
+    
+    mpse_tsne('equidistant')
+    mpse_tsne('disk', n_perspectives=10)
+    mpse_tsne('clusters', n_clusters=[3,4,2], n_perspectives=3)
+    mpse_tsne('clusters2', n_clusters=2, n_perspectives=4, perplexity=80)
+    mpse_tsne('florence', perplexity = 40)
+    mpse_tsne('123', perplexity = 980)
+    mpse_tsne('credit')
+    mpse_tsne('mnist',n_samples=1000,perplexity=30)
+    mpse_tsne('mnist',n_samples=1000,perplexity=100)
+    mpse_tsne('phishing')
+    
