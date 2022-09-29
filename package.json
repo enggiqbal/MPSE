@@ -11,7 +11,7 @@
     "connect-multiparty": "^2.2.0",
     "cookie-parser": "^1.4.4",
     "cookie-session": "^1.4.0",
-    "d3": "^5.15.0",
+    "d3": "^7.6.1",
     "dotenv": "^8.2.0",
     "ejs": "^2.7.4",
     "express": "^4.17.1",
