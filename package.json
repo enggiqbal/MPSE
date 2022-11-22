@@ -43,7 +43,7 @@
     "react": "^16.13.1",
     "react-dom": "^16.13.1",
     "webpack": "^4.41.5",
-    "webpack-cli": "^3.3.10"
+    "webpack-cli": "^3.3.12"
   },
   "scripts": {
     "build": "rm -rf dist && webpack --progress --config webpack.config.js --mode development",
