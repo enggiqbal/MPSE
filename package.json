@@ -14,7 +14,7 @@
     "d3": "^5.15.0",
     "dotenv": "^8.2.0",
     "ejs": "^2.7.4",
-    "express": "^4.17.1",
+    "express": "^4.17.3",
     "express-session": "^1.17.0",
     "file-saver": "^2.0.2",
     "mapbox-gl": "^1.10.0",
